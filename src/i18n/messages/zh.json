@@ -1,0 +1,89 @@
+{
+  "nav": {
+    "home": "首页",
+    "about": "关于",
+    "skills": "技能",
+    "projects": "项目",
+    "research": "研究",
+    "blog": "博客",
+    "creative": "创作",
+    "contact": "联系"
+  },
+  "hero": {
+    "greeting": "你好，我是",
+    "name": "你的名字",
+    "tagline": "AI 工程师 · 全栈开发者 · 内容创作者",
+    "description": "专注于视频生成、图像生成与多模态 AI 研究，同时是一个热爱用 AI 创作短片的全能博主。",
+    "cta_projects": "查看项目",
+    "cta_contact": "联系我"
+  },
+  "about": {
+    "title": "关于我",
+    "subtitle": "AI 研究者 × 全栈工程师 × 内容创作者",
+    "career_direction": "求职方向",
+    "career_roles": "AI Engineer / Machine Learning Engineer",
+    "research_title": "研究领域",
+    "research_areas": ["视频模型与视频生成", "图像生成", "时序模型", "多模态学习"],
+    "identity_title": "三重身份",
+    "identity_dev": "全栈开发者",
+    "identity_dev_desc": "产品设计、算法研发、工程开发、测试部署，全链路能力",
+    "identity_researcher": "AI 研究者",
+    "identity_researcher_desc": "深耕视频生成与多模态领域，追踪前沿论文与技术",
+    "identity_creator": "内容创作者",
+    "identity_creator_desc": "编导剪辑全能，用 AI 制作短片，驾驶拍摄记录生活"
+  },
+  "skills": {
+    "title": "技能点",
+    "subtitle": "跨领域的复合技能栈",
+    "category_ai": "AI / 机器学习",
+    "category_dev": "工程开发",
+    "category_creative": "内容创作"
+  },
+  "projects": {
+    "title": "项目作品",
+    "subtitle": "从 Agent 到应用，从 Web 到小程序",
+    "filter_all": "全部",
+    "filter_agent": "Agent",
+    "filter_webapp": "Web 应用",
+    "filter_miniapp": "小程序",
+    "filter_other": "其他",
+    "view_github": "查看源码",
+    "view_demo": "在线演示"
+  },
+  "research": {
+    "title": "研究论文",
+    "subtitle": "学术研究与技术探索",
+    "view_paper": "阅读论文",
+    "view_code": "查看代码"
+  },
+  "blog": {
+    "title": "博客",
+    "subtitle": "技术分享与思考",
+    "read_more": "阅读全文",
+    "view_all": "查看全部文章",
+    "min_read": "分钟阅读",
+    "back_to_blog": "返回博客"
+  },
+  "creative": {
+    "title": "创作作品",
+    "subtitle": "AI 短片 · 驾驶拍摄 · 视觉故事",
+    "watch": "观看",
+    "view_all": "查看全部作品"
+  },
+  "contact": {
+    "title": "联系我",
+    "subtitle": "期待与你交流",
+    "email": "邮箱",
+    "github": "GitHub",
+    "wechat": "微信",
+    "description": "无论是工作机会、技术交流还是创作合作，都欢迎联系我。"
+  },
+  "footer": {
+    "copyright": "版权所有",
+    "built_with": "使用 Next.js 构建"
+  },
+  "common": {
+    "language": "语言",
+    "switch_lang": "English"
+  }
+}

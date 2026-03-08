@@ -1,0 +1,89 @@
+{
+  "nav": {
+    "home": "Home",
+    "about": "About",
+    "skills": "Skills",
+    "projects": "Projects",
+    "research": "Research",
+    "blog": "Blog",
+    "creative": "Creative",
+    "contact": "Contact"
+  },
+  "hero": {
+    "greeting": "Hi, I'm",
+    "name": "Your Name",
+    "tagline": "AI Engineer · Full-Stack Developer · Content Creator",
+    "description": "Focused on video generation, image generation, and multimodal AI research. Also a passionate content creator making AI-powered short films.",
+    "cta_projects": "View Projects",
+    "cta_contact": "Contact Me"
+  },
+  "about": {
+    "title": "About Me",
+    "subtitle": "AI Researcher × Full-Stack Engineer × Content Creator",
+    "career_direction": "Career Direction",
+    "career_roles": "AI Engineer / Machine Learning Engineer",
+    "research_title": "Research Areas",
+    "research_areas": ["Video Models & Generation", "Image Generation", "Temporal Models", "Multimodal Learning"],
+    "identity_title": "Triple Identity",
+    "identity_dev": "Full-Stack Developer",
+    "identity_dev_desc": "Product design, algorithm R&D, engineering, testing & deployment — end-to-end capability",
+    "identity_researcher": "AI Researcher",
+    "identity_researcher_desc": "Deep dive into video generation and multimodal domains, tracking cutting-edge papers",
+    "identity_creator": "Content Creator",
+    "identity_creator_desc": "Directing, filming & editing — creating AI short films and cinematic driving footage"
+  },
+  "skills": {
+    "title": "Skills",
+    "subtitle": "Cross-disciplinary skill stack",
+    "category_ai": "AI / Machine Learning",
+    "category_dev": "Engineering",
+    "category_creative": "Content Creation"
+  },
+  "projects": {
+    "title": "Projects",
+    "subtitle": "From Agents to apps, from Web to mini-programs",
+    "filter_all": "All",
+    "filter_agent": "Agent",
+    "filter_webapp": "Web App",
+    "filter_miniapp": "Mini Program",
+    "filter_other": "Other",
+    "view_github": "Source Code",
+    "view_demo": "Live Demo"
+  },
+  "research": {
+    "title": "Research Papers",
+    "subtitle": "Academic research and technical exploration",
+    "view_paper": "Read Paper",
+    "view_code": "View Code"
+  },
+  "blog": {
+    "title": "Blog",
+    "subtitle": "Technical insights and reflections",
+    "read_more": "Read More",
+    "view_all": "View All Posts",
+    "min_read": "min read",
+    "back_to_blog": "Back to blog"
+  },
+  "creative": {
+    "title": "Creative Works",
+    "subtitle": "AI Short Films · Cinematic Driving · Visual Stories",
+    "watch": "Watch",
+    "view_all": "View All Works"
+  },
+  "contact": {
+    "title": "Contact",
+    "subtitle": "Let's connect",
+    "email": "Email",
+    "github": "GitHub",
+    "wechat": "WeChat",
+    "description": "Whether it's job opportunities, technical discussions, or creative collaborations — feel free to reach out."
+  },
+  "footer": {
+    "copyright": "All Rights Reserved",
+    "built_with": "Built with Next.js"
+  },
+  "common": {
+    "language": "Language",
+    "switch_lang": "中文"
+  }
+}
