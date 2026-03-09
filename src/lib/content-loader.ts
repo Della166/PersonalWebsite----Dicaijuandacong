@@ -14,9 +14,8 @@ export type ListEntry = {
   readingTime?: number;
 };
 
-export async function loadBlogList(locale: "zh" | "en"): Promise<ListEntry[]> {
+export async function loadBlogList(_locale: "zh" | "en"): Promise<ListEntry[]> {
   const mdxItems = getAllMdx("blog").filter((x) => x.frontmatter.published !== false);
-  const notionItems = await fetchNotionPosts();
   const fromMdx: ListEntry[] = mdxItems.map((x) => ({
     slug: x.slug,
     title: x.frontmatter.title,
@@ -28,16 +27,23 @@ export async function loadBlogList(locale: "zh" | "en"): Promise<ListEntry[]> {
     category: x.frontmatter.category,
     readingTime: x.readingTime,
   }));
-  const fromNotion: ListEntry[] = notionItems.map((x) => ({
-    slug: `notion-${x.slug}`,
-    title: x.frontmatter.title,
-    date: x.frontmatter.date ?? "",
-    category: "blog",
-  }));
-  const merged = [...fromMdx, ...fromNotion].sort(
+
+  if (process.env.NOTION_API_KEY) {
+    try {
+      const notionItems = await fetchNotionPosts();
+      const fromNotion: ListEntry[] = notionItems.map((x) => ({
+        slug: `notion-${x.slug}`,
+        title: x.frontmatter.title,
+        date: x.frontmatter.date ?? "",
+        category: "blog",
+      }));
+      fromMdx.push(...fromNotion);
+    } catch { /* Notion unavailable */ }
+  }
+
+  return fromMdx.sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
-  return merged;
 }
 
 export async function loadBlogPost(slug: string) {

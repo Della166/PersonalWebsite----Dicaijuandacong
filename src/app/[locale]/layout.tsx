@@ -1,6 +1,6 @@
-import { hasLocale } from "next-intl";
+import { NextIntlClientProvider } from "next-intl";
+import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
-import { setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -16,16 +16,26 @@ export function generateStaticParams() {
 
 export default async function LocaleLayout({ children, params }: Props) {
   const { locale } = await params;
-  if (!hasLocale(routing.locales, locale)) {
+  if (!routing.locales.includes(locale as typeof routing.locales[number])) {
     notFound();
   }
-  setRequestLocale(locale);
+
+  let messages = {};
+  try {
+    messages = (await import(`@/messages/${locale}.json`)).default;
+  } catch {
+    messages = (await import(`@/messages/zh.json`)).default;
+  }
 
   return (
-    <>
-      <Navbar />
-      {children}
-      <Footer />
-    </>
+    <html lang={locale} suppressHydrationWarning>
+      <body>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <Navbar />
+          {children}
+          <Footer />
+        </NextIntlClientProvider>
+      </body>
+    </html>
   );
 }

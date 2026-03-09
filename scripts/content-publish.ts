@@ -5,13 +5,16 @@ import { exportWechat } from "./exporters/wechat";
 import { exportXiaohongshu } from "./exporters/xiaohongshu";
 import { exportDouyin } from "./exporters/douyin";
 
-const slug = process.argv.find((a) => !a.startsWith("--"));
-const skipPush = process.argv.includes("--no-push");
+const args = process.argv.slice(2);
+const slugArg = args.find((a) => !a.startsWith("--"));
+const skipPush = args.includes("--no-push");
 
-if (!slug) {
+if (!slugArg) {
   console.error("Usage: npm run content:publish -- <slug> [--no-push]");
   process.exit(1);
 }
+
+const slug: string = slugArg;
 
 async function main() {
   console.log("1. Media upload (if _media has files)...");

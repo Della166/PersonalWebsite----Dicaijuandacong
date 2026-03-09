@@ -1,4 +1,3 @@
-import { setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { loadBlogPost } from "@/lib/content-loader";
 import { getBlogSlugs } from "@/lib/mdx";
@@ -15,7 +14,6 @@ export function generateStaticParams() {
 
 export default async function BlogSlugPage({ params }: Props) {
   const { locale, slug } = await params;
-  setRequestLocale(locale);
   const post = await loadBlogPost(slug);
   if (!post) notFound();
 

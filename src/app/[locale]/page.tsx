@@ -1,4 +1,3 @@
-import { setRequestLocale } from "next-intl/server";
 import { loadBlogList } from "@/lib/content-loader";
 import Hero from "@/components/sections/Hero";
 import About from "@/components/sections/About";
@@ -17,7 +16,6 @@ export function generateStaticParams() {
 
 export default async function HomePage({ params }: Props) {
   const { locale } = await params;
-  setRequestLocale(locale);
   const blogList = await loadBlogList(locale as "zh" | "en");
 
   return (
