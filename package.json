@@ -13,7 +13,7 @@
     "content:new": "tsx scripts/content-new.ts",
     "content:list": "tsx scripts/content-list.ts",
     "content:publish": "tsx scripts/content-publish.ts",
-    "save": "git add -A && git commit -m \"update: auto save\" && git push",
+    "save": "git add -A && git commit -m \"update: auto save\" && git push -u origin master",
     "content:export": "tsx scripts/content-export.ts"
   },
   "dependencies": {
