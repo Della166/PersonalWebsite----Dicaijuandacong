@@ -13,6 +13,10 @@ export const metadata: Metadata = {
   description: "AI Engineer, Full-Stack Developer, and Content Creator portfolio",
 };
 
+export function generateStaticParams() {
+  return [{ locale: 'zh' }, { locale: 'en' }];
+}
+
 export default async function LocaleLayout({
   children,
   params,
