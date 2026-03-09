@@ -1,0 +1,60 @@
+import { getAllMdx, getMdxBySlug } from "./mdx";
+import { fetchNotionPosts } from "./notion";
+import type { ContentCategory } from "@/types/content";
+
+export type ListEntry = {
+  slug: string;
+  title: string;
+  titleEn?: string;
+  date: string;
+  excerpt?: string;
+  excerptEn?: string;
+  cover?: string;
+  category: ContentCategory;
+  readingTime?: number;
+};
+
+export async function loadBlogList(locale: "zh" | "en"): Promise<ListEntry[]> {
+  const mdxItems = getAllMdx("blog").filter((x) => x.frontmatter.published !== false);
+  const notionItems = await fetchNotionPosts();
+  const fromMdx: ListEntry[] = mdxItems.map((x) => ({
+    slug: x.slug,
+    title: x.frontmatter.title,
+    titleEn: x.frontmatter.title_en,
+    date: x.frontmatter.date,
+    excerpt: x.frontmatter.excerpt,
+    excerptEn: x.frontmatter.excerpt_en,
+    cover: x.frontmatter.cover,
+    category: x.frontmatter.category,
+    readingTime: x.readingTime,
+  }));
+  const fromNotion: ListEntry[] = notionItems.map((x) => ({
+    slug: `notion-${x.slug}`,
+    title: x.frontmatter.title,
+    date: x.frontmatter.date ?? "",
+    category: "blog",
+  }));
+  const merged = [...fromMdx, ...fromNotion].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+  return merged;
+}
+
+export async function loadBlogPost(slug: string) {
+  return getMdxBySlug("blog", slug);
+}
+
+export function loadCategoryList(category: ContentCategory): ListEntry[] {
+  const items = getAllMdx(category).filter((x) => x.frontmatter.published !== false);
+  return items.map((x) => ({
+    slug: x.slug,
+    title: x.frontmatter.title,
+    titleEn: x.frontmatter.title_en,
+    date: x.frontmatter.date,
+    excerpt: x.frontmatter.excerpt,
+    excerptEn: x.frontmatter.excerpt_en,
+    cover: x.frontmatter.cover,
+    category: x.frontmatter.category,
+    readingTime: x.readingTime,
+  }));
+}

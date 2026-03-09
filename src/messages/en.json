@@ -1,0 +1,58 @@
+{
+  "Nav": {
+    "home": "Home",
+    "about": "About",
+    "skills": "Skills",
+    "projects": "Projects",
+    "research": "Research",
+    "blog": "Blog",
+    "creative": "Creative",
+    "contact": "Contact",
+    "langSwitch": "中文"
+  },
+  "Hero": {
+    "tagline": "Full-stack Developer · AI Researcher · Content Creator",
+    "cta": "Learn more"
+  },
+  "About": {
+    "title": "About Me",
+    "role": "Looking for",
+    "research": "Research areas"
+  },
+  "Skills": {
+    "title": "Skills",
+    "ai": "AI / ML",
+    "engineering": "Engineering",
+    "creative": "Content"
+  },
+  "Projects": {
+    "title": "Projects",
+    "all": "All",
+    "agent": "Agent",
+    "webapp": "Web App",
+    "miniapp": "Mini App",
+    "other": "Other",
+    "viewOnGitHub": "GitHub"
+  },
+  "Research": {
+    "title": "Research",
+    "venue": "Venue",
+    "readMore": "Read"
+  },
+  "Blog": {
+    "title": "Blog",
+    "viewAll": "View all",
+    "readMore": "Read more"
+  },
+  "Creative": {
+    "title": "Creative Work"
+  },
+  "Contact": {
+    "title": "Contact",
+    "email": "Email",
+    "github": "GitHub"
+  },
+  "Footer": {
+    "rights": "All rights reserved"
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "Nav": {
+    "home": "首页",
+    "about": "关于",
+    "skills": "技能",
+    "projects": "项目",
+    "research": "研究",
+    "blog": "博客",
+    "creative": "创作",
+    "contact": "联系",
+    "langSwitch": "English"
+  },
+  "Hero": {
+    "tagline": "全栈开发者 · AI 研究者 · 全能内容创作者",
+    "cta": "了解更多"
+  },
+  "About": {
+    "title": "关于我",
+    "role": "求职方向",
+    "research": "研究领域"
+  },
+  "Skills": {
+    "title": "技能",
+    "ai": "AI / 机器学习",
+    "engineering": "工程开发",
+    "creative": "内容创作"
+  },
+  "Projects": {
+    "title": "项目",
+    "all": "全部",
+    "agent": "Agent",
+    "webapp": "Web 应用",
+    "miniapp": "小程序",
+    "other": "其他",
+    "viewOnGitHub": "GitHub"
+  },
+  "Research": {
+    "title": "研究",
+    "venue": "会议/期刊",
+    "readMore": "阅读"
+  },
+  "Blog": {
+    "title": "博客",
+    "viewAll": "查看全部",
+    "readMore": "阅读全文"
+  },
+  "Creative": {
+    "title": "创作作品"
+  },
+  "Contact": {
+    "title": "联系",
+    "email": "邮箱",
+    "github": "GitHub"
+  },
+  "Footer": {
+    "rights": "保留所有权利"
+  }
+}
