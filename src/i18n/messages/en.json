@@ -41,14 +41,22 @@
   },
   "projects": {
     "title": "Projects",
-    "subtitle": "From Agents to apps, from Web to mini-programs",
+    "subtitle": "Full-stack AI platforms, document intelligence systems, and model-tuning workflows",
     "filter_all": "All",
+    "filter_platform": "Platform",
+    "filter_document": "Document AI",
     "filter_agent": "Agent",
-    "filter_webapp": "Web App",
-    "filter_miniapp": "Mini Program",
-    "filter_other": "Other",
+    "filter_ml": "Model Tuning",
+    "case_study": "Case Study",
+    "featured_case_study": "Featured",
+    "action_details": "View",
+    "action_demo": "Demo",
+    "action_code": "Code",
+    "view_case_study": "Case Study",
+    "back_to_projects": "Back to projects",
     "view_github": "Source Code",
-    "view_demo": "Live Demo"
+    "view_demo": "Try Live",
+    "try_preview": "Try Preview"
   },
   "research": {
     "title": "Research Papers",

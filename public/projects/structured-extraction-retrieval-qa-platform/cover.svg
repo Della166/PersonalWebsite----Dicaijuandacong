@@ -1,0 +1,35 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="240" y1="70" x2="1360" y2="830" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111917"/>
+      <stop offset="0.5" stop-color="#0F1714"/>
+      <stop offset="1" stop-color="#1B1410"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" rx="40" fill="url(#bg)"/>
+  <rect x="170" y="108" width="1260" height="684" rx="34" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.08)"/>
+  <text x="232" y="208" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="46" font-weight="800">Structured Extraction and Retrieval QA</text>
+  <text x="232" y="254" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="24">One document workflow for extraction, search, and grounded answers.</text>
+
+  <rect x="232" y="324" width="330" height="356" rx="28" fill="rgba(255,255,255,0.05)"/>
+  <text x="270" y="384" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Scenario Extractors</text>
+  <text x="270" y="430" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="20">Radiology, medication, finance, news, and custom rules.</text>
+  <rect x="270" y="486" width="248" height="44" rx="14" fill="rgba(127,188,140,0.14)"/>
+  <rect x="270" y="546" width="248" height="44" rx="14" fill="rgba(255,255,255,0.06)"/>
+  <rect x="270" y="606" width="248" height="44" rx="14" fill="rgba(255,255,255,0.06)"/>
+
+  <rect x="630" y="294" width="340" height="416" rx="30" fill="rgba(127,188,140,0.12)" stroke="rgba(127,188,140,0.22)"/>
+  <text x="670" y="362" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="800">Core Pipeline</text>
+  <text x="670" y="408" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="21">PDF to Markdown, extraction rules, vector indexing, and QA orchestration.</text>
+  <rect x="670" y="474" width="260" height="64" rx="18" fill="rgba(0,0,0,0.15)"/>
+  <rect x="670" y="560" width="260" height="64" rx="18" fill="rgba(0,0,0,0.15)"/>
+  <text x="706" y="514" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700">Qdrant / Chroma</text>
+  <text x="706" y="600" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700">LangChain + DeepSeek QA</text>
+
+  <rect x="1038" y="324" width="330" height="356" rx="28" fill="rgba(255,255,255,0.05)"/>
+  <text x="1076" y="384" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Delivery Layer</text>
+  <text x="1076" y="430" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="20">React + FastAPI application with upload, search, and answer flows.</text>
+  <rect x="1076" y="486" width="248" height="44" rx="14" fill="rgba(212,165,116,0.15)"/>
+  <rect x="1076" y="546" width="248" height="44" rx="14" fill="rgba(255,255,255,0.06)"/>
+  <rect x="1076" y="606" width="248" height="44" rx="14" fill="rgba(255,255,255,0.06)"/>
+</svg>

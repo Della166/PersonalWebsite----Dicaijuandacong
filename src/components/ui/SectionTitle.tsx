@@ -19,9 +19,7 @@ export default function SectionTitle({ title, subtitle }: SectionTitleProps) {
       <h2 className="text-3xl md:text-4xl font-bold text-[var(--color-text-primary)] mb-3">
         {title}
       </h2>
-      {subtitle && (
-        <p className="text-lg text-[var(--color-text-muted)]">{subtitle}</p>
-      )}
+      {subtitle && <p className="mx-auto max-w-3xl text-lg leading-[1.65] tracking-[-0.006em] text-[var(--color-text-muted)]">{subtitle}</p>}
       <div className="mt-4 mx-auto w-20 h-1 rounded-full bg-gradient-to-r from-[var(--color-green-300)] to-[var(--color-amber-300)]" />
     </motion.div>
   );

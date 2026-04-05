@@ -1,0 +1,32 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="180" y1="70" x2="1380" y2="840" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#101815"/>
+      <stop offset="0.48" stop-color="#0F1714"/>
+      <stop offset="1" stop-color="#18140F"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" rx="40" fill="url(#bg)"/>
+  <rect x="162" y="108" width="1276" height="684" rx="34" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.08)"/>
+  <text x="230" y="208" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="46" font-weight="800">RL-Tuned Function-Calling Agent Pipeline</text>
+  <text x="230" y="254" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="24">Generate traces, build preference pairs, and evaluate tool-using agents beyond raw text quality.</text>
+
+  <rect x="232" y="324" width="318" height="354" rx="28" fill="rgba(255,255,255,0.05)"/>
+  <text x="270" y="384" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Trace Collection</text>
+  <text x="270" y="430" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="20">Multi-turn tool traces from simulated agent tasks and validations.</text>
+  <rect x="270" y="492" width="242" height="48" rx="14" fill="rgba(127,188,140,0.15)"/>
+  <rect x="270" y="556" width="242" height="48" rx="14" fill="rgba(255,255,255,0.06)"/>
+
+  <rect x="608" y="296" width="390" height="410" rx="30" fill="rgba(127,188,140,0.12)" stroke="rgba(127,188,140,0.22)"/>
+  <text x="650" y="366" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="800">Preference Data Pipeline</text>
+  <text x="650" y="412" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="21">Chosen / rejected pairs, DPO-ready export, and modular execution with logs and progress tracking.</text>
+  <rect x="650" y="478" width="306" height="68" rx="18" fill="rgba(0,0,0,0.15)"/>
+  <rect x="650" y="568" width="306" height="68" rx="18" fill="rgba(0,0,0,0.15)"/>
+  <text x="690" y="521" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700">DPO dataset export</text>
+  <text x="690" y="611" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700">validation + progress updates</text>
+
+  <rect x="1056" y="324" width="318" height="354" rx="28" fill="rgba(255,255,255,0.05)"/>
+  <text x="1094" y="384" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Agent Quality Eval</text>
+  <text x="1094" y="430" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="20">Tool choice, argument quality, and judge-assisted comparison between base and tuned models.</text>
+  <rect x="1094" y="520" width="242" height="48" rx="14" fill="rgba(212,165,116,0.15)"/>
+</svg>

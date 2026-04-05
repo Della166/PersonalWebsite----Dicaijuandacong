@@ -1,0 +1,76 @@
+---
+title: "函数调用 Agent 偏好优化流水线"
+title_en: "RL-Tuned Function-Calling Agent Pipeline"
+date: "2026-03-14"
+category: project
+tags: ["DPO", "Function Calling", "Agents", "Evaluation", "FastAPI", "WebSocket"]
+lang: both
+cover: "/projects/rl-tuned-function-calling-agent-pipeline/cover.svg"
+excerpt: "面向函数调用 Agent 的偏好数据构建与评估流水线，把 agent 质量优化从文本输出推进到工具调用决策层。"
+excerpt_en: "A preference-data and evaluation pipeline for function-calling agents, focused on improving tool-use decisions instead of raw text formatting."
+platforms: [website]
+github: ""
+demo: ""
+published: true
+---
+
+<Callout type="tip">
+  This project works especially well as a compact but high-signal portfolio item because it shows advanced agent quality thinking:
+  traces, preference pairs, and evaluation criteria tied to decision quality.
+</Callout>
+
+## Overview
+
+Function-calling agents are not only judged by the text they generate.
+They are judged by whether they choose the right tool, pass the right arguments, and take efficient action sequences.
+
+This project was designed around that idea.
+Instead of stopping at supervised examples, it builds a data-generation and evaluation loop for agent optimization:
+
+- collect multi-turn traces from tool-using runs
+- construct chosen and rejected preference pairs
+- export DPO-ready datasets
+- compare base and tuned models on tool-use behavior
+
+## Why This Is a Valuable Portfolio Project
+
+Many AI portfolios show agents that can call tools.
+Far fewer show a workflow for measuring and improving how those agents make decisions.
+
+That is what makes this project useful in interviews.
+It signals that I am thinking about agent quality as a systems problem, not just a prompt-design problem.
+
+## Pipeline Design
+
+The system is organized around modular stages:
+
+- task generation for agent scenarios
+- trace collection from tool-using runs
+- validation and logging
+- chosen / rejected pair construction
+- evaluation of tool-call correctness and argument quality
+
+FastAPI and WebSocket-based progress reporting make the workflow easier to operate than a purely offline script bundle.
+
+## Best Demo Format
+
+The strongest public demo for this project would be:
+
+- a small set of sample tasks
+- replay views of tool traces
+- side-by-side comparison of weaker vs. stronger agent behavior
+- simple metrics or judge summaries for tool-call quality
+
+That gives visitors a concrete way to understand what “agent tuning” means in practice.
+
+<DemoStatus
+  title="Recommended public demo format"
+  description="The strongest public version would be an agent replay screen: a few sample tasks, the tool traces they produced, and a comparison between weaker and stronger agent runs. That makes the evaluation story visible without exposing a full training environment."
+/>
+
+## What This Project Signals
+
+- advanced agent workflow understanding
+- evaluation-first thinking
+- data generation for preference optimization
+- applied AI engineering beyond standard prompt-and-demo projects

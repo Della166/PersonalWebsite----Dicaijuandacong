@@ -1,0 +1,88 @@
+---
+title: "结构化抽取与问答平台"
+title_en: "Structured Extraction and Retrieval QA Platform"
+date: "2026-03-14"
+category: project
+tags: ["FastAPI", "LangExtract", "LangChain", "DeepSeek", "Qdrant", "Chroma", "React"]
+lang: both
+cover: "/projects/structured-extraction-retrieval-qa-platform/cover.svg"
+excerpt: "把结构化信息抽取、向量检索与有依据问答放进同一套文档工作流里，适用于多个垂直场景。"
+excerpt_en: "A document intelligence platform that unifies structured extraction, vector retrieval, and grounded QA across multiple vertical workflows."
+platforms: [website]
+github: ""
+demo: ""
+published: true
+---
+
+<Callout type="tip">
+  The differentiator of this project is not just retrieval. It is the combination of extraction-first pipelines and QA,
+  which is closer to real business document processing than generic “chat with PDF.”
+</Callout>
+
+## Overview
+
+This project was built for document scenarios where plain summarization is not enough.
+In vertical workflows such as radiology, medication, finance, and news, teams often need two things at once:
+
+- structured fields that can be consumed by downstream systems
+- grounded natural-language answers over the same document set
+
+So the system was designed as one workflow that handles parsing, extraction, indexing, and QA instead of splitting them into unrelated tools.
+
+## Core Workflow
+
+The platform processes documents in several stages:
+
+1. convert source files into Markdown or normalized text
+2. apply scenario-specific extraction rules and model logic
+3. index content in Qdrant or Chroma
+4. expose semantic search and grounded QA
+5. return both structured results and answerable context
+
+This makes the platform useful for product teams that need more than search and more than one-off extraction.
+
+## Architecture Decisions
+
+Several technical decisions make the project stand out:
+
+- **LangExtract** for structured information extraction workflows
+- **Qdrant and Chroma** as pluggable vector-store backends
+- **FastAPI** APIs for upload, parsing, ingestion, search, and QA
+- **React** for an operator-facing interface instead of command-line-only use
+- **DeepSeek + LangChain** to combine extraction and answer generation
+
+The important point is that the platform is extensible.
+New document domains can be added without rethinking the whole architecture.
+
+## Why It Reads Well on a Portfolio
+
+This project is strong because it shows a more business-shaped applied AI system:
+
+- not just a model call
+- not just a vector database
+- not just document parsing
+
+It shows how those pieces fit together into a reusable application workflow.
+
+## Best Public Demo Form
+
+The most convincing public version of this project would be:
+
+- several sample verticals with preloaded documents
+- a side-by-side view of extracted fields and QA answers
+- a visible explanation of which vector backend is active
+- a constrained but real interaction flow
+
+That would let visitors see both the engineering and product value quickly.
+
+<DemoStatus
+  title="Recommended public demo format"
+  description="The best public version of this project is a constrained multi-vertical preview: preloaded documents, extracted structured fields, and a side-by-side grounded QA panel. That lets visitors understand the workflow without needing unrestricted uploads or open-ended production usage."
+/>
+
+## What This Project Signals
+
+- document intelligence system design
+- extraction plus retrieval orchestration
+- applied AI for vertical business workflows
+- API and UI thinking for multi-step AI products

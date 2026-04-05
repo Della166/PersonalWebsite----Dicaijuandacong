@@ -1,0 +1,93 @@
+---
+title: "多模态文档 RAG 平台"
+title_en: "Multimodal Document RAG Platform"
+date: "2026-03-14"
+category: project
+tags: ["React", "FastAPI", "LangChain", "Milvus", "PyMuPDF4LLM", "Docker"]
+lang: both
+cover: "/projects/multimodal-document-rag-platform/cover.svg"
+excerpt: "一个面向复杂 PDF 和图文资料的多模态文档检索与问答平台，强调上传、解析、检索和对话的一体化体验。"
+excerpt_en: "A multimodal document RAG system that turns upload, parsing, retrieval, and grounded chat into one integrated product flow."
+platforms: [website]
+github: ""
+demo: "/demo/multimodal-document-rag-platform"
+published: true
+---
+
+<Callout type="info">
+  This project is positioned as a full-stack product system rather than a “RAG notebook.” The key signal is that the
+  document workflow is packaged into upload, retrieval, and chat experiences that a real user can understand.
+</Callout>
+
+## Overview
+
+Multimodal Document RAG Platform was built around a recurring enterprise workflow:
+teams have PDFs, scanned pages, and mixed-layout documents, but they do not just want extraction.
+They want to upload a document, build a searchable knowledge base, inspect what was retrieved, and ask questions with traceable context.
+
+Instead of collapsing everything into one service, the system separates parsing, chunking, retrieval, and chat into deployable modules.
+That makes the stack easier to reason about, test, and evolve.
+
+## Product Shape
+
+The user experience is organized as a document workflow:
+
+- upload PDF or multimodal document assets
+- parse content into searchable representations
+- build or update the knowledge base
+- inspect retrieval outputs
+- ask grounded questions against indexed content
+
+The React frontend is important here because it turns the backend pipeline into something a user can actually operate.
+
+## System Design
+
+The backend combines several layers:
+
+- PDF and multimodal parsing services
+- text chunking and document preprocessing
+- vector retrieval with Milvus
+- LangChain orchestration for answer generation
+- service startup and environment management for local or bundled deployment
+
+That architecture matters because most RAG demos stop at retrieval quality.
+This project goes one step further and treats deployability and usability as part of the system.
+
+## Why This Project Is Strong
+
+This is one of the best portfolio projects for applied AI roles because it shows:
+
+- practical document intelligence use cases
+- full-stack implementation instead of notebook-only experimentation
+- multi-service backend thinking
+- production-adjacent concerns such as startup scripts, environment config, and debugging
+
+## UX and Operator Value
+
+For hiring managers, the most useful signal is that the project is understandable from the outside.
+A visitor can see where a document enters the system, how it becomes indexed, and how the final grounded answer is produced.
+
+That is much stronger than showing only a model API or only a retrieval benchmark.
+
+## Demo Strategy
+
+If this project is exposed publicly, the safest and most convincing live-demo mode is:
+
+- a small capped document set
+- one or two preloaded sample files
+- a retrieval-inspection screen
+- a controlled chat flow over that indexed content
+
+That lets visitors experience the end-to-end workflow without opening up an unlimited-cost sandbox.
+
+<DemoStatus
+  title="Recommended public demo format"
+  description="Expose a capped sandbox with two or three sample documents, visible retrieval chunks, and a grounded chat interface. This preserves the strongest product signal without turning the portfolio site into an unrestricted document-processing endpoint."
+/>
+
+## What This Project Signals
+
+- full-stack AI application development
+- document-intelligence product design
+- multi-service backend architecture
+- practical RAG systems thinking beyond toy demos

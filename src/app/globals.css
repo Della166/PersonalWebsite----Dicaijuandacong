@@ -1,8 +1,26 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-sans:
+    'Inter',
+    'SF Pro Text',
+    'SF Pro Display',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'PingFang SC',
+    'Hiragino Sans GB',
+    'Microsoft YaHei',
+    'Noto Sans SC',
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+  --font-mono:
+    'JetBrains Mono',
+    'SF Mono',
+    'Cascadia Code',
+    ui-monospace,
+    monospace;
 
   --animate-fade-in: fade-in 0.6s ease-out;
   --animate-slide-up: slide-up 0.6s ease-out;
@@ -18,12 +36,12 @@ html.dark {
 
   --color-green-50: #f0faf4;
   --color-green-100: #d4eddc;
-  --color-green-200: #a8d5b0;
-  --color-green-300: #7fbc8c;
-  --color-green-400: #5aa86e;
-  --color-green-500: #3d8b55;
-  --color-green-600: #2d6b40;
-  --color-green-700: #1f4d2e;
+  --color-green-200: #97c39f;
+  --color-green-300: #70a67c;
+  --color-green-400: #568564;
+  --color-green-500: #436b4f;
+  --color-green-600: #34513d;
+  --color-green-700: #263a2d;
   --color-green-800: #143320;
   --color-green-900: #0a1a10;
 
@@ -34,14 +52,15 @@ html.dark {
   --color-text-primary: #f0efe8;
   --color-text-secondary: #b8c4bc;
   --color-text-muted: #7a8a80;
+  --color-text-soft: #96a79d;
 
-  --color-border-default: rgba(127, 188, 140, 0.15);
-  --color-border-hover: rgba(127, 188, 140, 0.3);
+  --color-border-default: rgba(112, 166, 124, 0.14);
+  --color-border-hover: rgba(112, 166, 124, 0.24);
 
-  --color-glow-green: rgba(127, 188, 140, 0.2);
+  --color-glow-green: rgba(112, 166, 124, 0.13);
   --color-glow-amber: rgba(212, 165, 116, 0.2);
 
-  --color-selection-bg: rgba(127, 188, 140, 0.3);
+  --color-selection-bg: rgba(112, 166, 124, 0.2);
 }
 
 /* ===== LIGHT THEME (暖白鼠尾草绿) ===== */
@@ -53,30 +72,31 @@ html.light {
 
   --color-green-50: #f5f7f0;
   --color-green-100: #e5ebdb;
-  --color-green-200: #c5d4a8;
-  --color-green-300: #8B9A6D;
-  --color-green-400: #7A8B5C;
-  --color-green-500: #6B7D4A;
-  --color-green-600: #5C6B3E;
-  --color-green-700: #4A5632;
-  --color-green-800: #3D4A28;
-  --color-green-900: #2D3620;
+  --color-green-200: #9aaa7d;
+  --color-green-300: #72834f;
+  --color-green-400: #5f6f40;
+  --color-green-500: #506036;
+  --color-green-600: #44522e;
+  --color-green-700: #374225;
+  --color-green-800: #2d351e;
+  --color-green-900: #212816;
 
   --color-amber-300: #B8860B;
   --color-amber-400: #A67808;
   --color-amber-500: #936A06;
 
-  --color-text-primary: #3D4A2D;
-  --color-text-secondary: #5C6B48;
-  --color-text-muted: #8B9A7A;
+  --color-text-primary: #344124;
+  --color-text-secondary: #4d5d38;
+  --color-text-muted: #687652;
+  --color-text-soft: #5d6b47;
 
   --color-border-default: rgba(107, 125, 74, 0.18);
   --color-border-hover: rgba(107, 125, 74, 0.35);
 
-  --color-glow-green: rgba(139, 154, 109, 0.15);
+  --color-glow-green: rgba(114, 131, 79, 0.14);
   --color-glow-amber: rgba(184, 134, 11, 0.12);
 
-  --color-selection-bg: rgba(139, 154, 109, 0.25);
+  --color-selection-bg: rgba(114, 131, 79, 0.22);
 }
 
 /* ===== Keyframes ===== */
@@ -140,6 +160,174 @@ html.light .glass-card:hover {
 
 .glow-amber {
   box-shadow: 0 0 20px var(--color-glow-amber);
+}
+
+/* ===== Hero Ambient Layers ===== */
+.hero-tech-grid {
+  background-image:
+    linear-gradient(to right, transparent, rgba(255, 255, 255, 0.02) 50%, transparent),
+    linear-gradient(rgba(127, 188, 140, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(127, 188, 140, 0.05) 1px, transparent 1px);
+  background-size: 100% 100%, 88px 88px, 88px 88px;
+  background-position: center, center, center;
+  mask-image: radial-gradient(circle at 50% 45%, black 0%, rgba(0, 0, 0, 0.78) 42%, transparent 82%);
+  -webkit-mask-image: radial-gradient(circle at 50% 45%, black 0%, rgba(0, 0, 0, 0.78) 42%, transparent 82%);
+  opacity: 0.55;
+}
+
+.hero-ambient-glow {
+  background:
+    radial-gradient(circle at 50% 45%, rgba(127, 188, 140, 0.16) 0%, rgba(127, 188, 140, 0.08) 18%, transparent 54%),
+    radial-gradient(circle at 78% 24%, rgba(212, 165, 116, 0.08) 0%, transparent 28%),
+    radial-gradient(circle at 18% 72%, rgba(127, 188, 140, 0.06) 0%, transparent 32%);
+}
+
+.hero-vignette {
+  background:
+    radial-gradient(circle at 50% 45%, transparent 0%, transparent 52%, rgba(10, 15, 13, 0.1) 100%);
+}
+
+html.light .hero-tech-grid {
+  background-image:
+    linear-gradient(to right, transparent, rgba(80, 96, 54, 0.015) 50%, transparent),
+    linear-gradient(rgba(80, 96, 54, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(80, 96, 54, 0.045) 1px, transparent 1px);
+  opacity: 0.34;
+}
+
+html.light .hero-ambient-glow {
+  background:
+    radial-gradient(circle at 50% 45%, rgba(114, 131, 79, 0.11) 0%, rgba(114, 131, 79, 0.05) 18%, transparent 52%),
+    radial-gradient(circle at 78% 24%, rgba(184, 134, 11, 0.05) 0%, transparent 24%),
+    radial-gradient(circle at 18% 72%, rgba(114, 131, 79, 0.035) 0%, transparent 28%);
+}
+
+html.light .hero-vignette {
+  background:
+    radial-gradient(circle at 50% 45%, transparent 0%, transparent 54%, rgba(250, 251, 247, 0.72) 100%);
+}
+
+/* ===== Action Buttons ===== */
+.button-primary-solid,
+.button-secondary-outline,
+.project-action-primary,
+.project-action-secondary,
+.project-action-disabled {
+  border-radius: 9999px;
+  font-weight: 600;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.25s ease,
+    transform 0.25s ease;
+}
+
+.button-primary-solid:hover,
+.button-secondary-outline:hover,
+.project-action-primary:hover,
+.project-action-secondary:hover {
+  transform: translateY(-1px);
+}
+
+html.light .button-primary-solid {
+  background: linear-gradient(135deg, #647744 0%, #55653a 100%);
+  color: #fbfbf4;
+  border: 1px solid rgba(68, 82, 46, 0.18);
+  box-shadow: 0 12px 28px rgba(68, 82, 46, 0.12);
+}
+
+html.light .button-primary-solid:hover {
+  color: #ffffff;
+  box-shadow: 0 18px 34px rgba(68, 82, 46, 0.18);
+}
+
+html.dark .button-primary-solid {
+  background: linear-gradient(135deg, #4c8c60 0%, #427652 100%);
+  color: #09110c;
+  border: 1px solid rgba(112, 166, 124, 0.18);
+  box-shadow: 0 14px 28px rgba(67, 107, 79, 0.18);
+}
+
+html.dark .button-primary-solid:hover {
+  color: #09110c;
+  box-shadow: 0 18px 34px rgba(67, 107, 79, 0.22);
+}
+
+html.light .button-secondary-outline {
+  background: rgba(250, 251, 247, 0.76);
+  color: var(--color-green-500);
+  border: 1px solid rgba(107, 125, 74, 0.26);
+}
+
+html.light .button-secondary-outline:hover {
+  color: var(--color-green-700);
+  background: rgba(229, 235, 219, 0.9);
+  box-shadow: 0 8px 18px rgba(68, 82, 46, 0.1);
+}
+
+html.dark .button-secondary-outline {
+  background: rgba(13, 26, 20, 0.58);
+  color: #c9d3ce;
+  border: 1px solid rgba(112, 166, 124, 0.2);
+}
+
+html.dark .button-secondary-outline:hover {
+  color: #edf1ee;
+  background: rgba(18, 34, 26, 0.76);
+  box-shadow: 0 10px 22px rgba(67, 107, 79, 0.16);
+}
+
+html.light .project-action-primary {
+  background: rgba(184, 134, 11, 0.12);
+  color: var(--color-amber-400);
+  border: 1px solid rgba(184, 134, 11, 0.24);
+}
+
+html.light .project-action-primary:hover {
+  color: var(--color-amber-500);
+  background: rgba(184, 134, 11, 0.18);
+}
+
+html.dark .project-action-primary {
+  background: rgba(212, 165, 116, 0.12);
+  color: #d4a574;
+  border: 1px solid rgba(212, 165, 116, 0.24);
+}
+
+html.dark .project-action-primary:hover {
+  color: #e2b78f;
+  background: rgba(212, 165, 116, 0.18);
+}
+
+html.light .project-action-secondary {
+  background: rgba(250, 251, 247, 0.72);
+  color: var(--color-green-500);
+  border: 1px solid rgba(107, 125, 74, 0.2);
+}
+
+html.light .project-action-secondary:hover {
+  color: var(--color-green-700);
+  background: rgba(229, 235, 219, 0.9);
+}
+
+html.dark .project-action-secondary {
+  background: rgba(13, 26, 20, 0.52);
+  color: #c0cbc4;
+  border: 1px solid rgba(112, 166, 124, 0.18);
+}
+
+html.dark .project-action-secondary:hover {
+  color: #e5ebe7;
+  background: rgba(18, 34, 26, 0.72);
+}
+
+html.light .project-action-disabled,
+html.dark .project-action-disabled {
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px dashed var(--color-border-default);
+  opacity: 0.55;
 }
 
 /* ===== Scrollbar ===== */

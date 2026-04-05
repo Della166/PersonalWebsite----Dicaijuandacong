@@ -1,0 +1,48 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="200" y1="60" x2="1360" y2="840" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#18150F"/>
+      <stop offset="0.55" stop-color="#10201A"/>
+      <stop offset="1" stop-color="#0D1714"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="320" y1="680" x2="1240" y2="240" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D4A574"/>
+      <stop offset="1" stop-color="#7FBC8C"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" rx="40" fill="url(#bg)"/>
+  <rect x="160" y="110" width="1280" height="680" rx="34" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.08)"/>
+  <text x="220" y="214" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="48" font-weight="800">Multimodal Document RAG Platform</text>
+  <text x="220" y="262" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="24">Upload, parse, retrieve, and chat over complex PDFs in one full-stack workflow.</text>
+
+  <rect x="220" y="320" width="280" height="360" rx="28" fill="rgba(255,255,255,0.05)"/>
+  <text x="252" y="378" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Document Intake</text>
+  <rect x="252" y="412" width="216" height="52" rx="16" fill="rgba(212,165,116,0.15)"/>
+  <rect x="252" y="482" width="216" height="52" rx="16" fill="rgba(255,255,255,0.06)"/>
+  <rect x="252" y="552" width="216" height="52" rx="16" fill="rgba(255,255,255,0.06)"/>
+  <text x="282" y="446" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="20">PDF / Image upload</text>
+  <text x="282" y="516" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="20">VLM parsing</text>
+  <text x="282" y="586" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="20">Chunking</text>
+
+  <rect x="560" y="300" width="460" height="390" rx="30" fill="rgba(127,188,140,0.12)" stroke="rgba(127,188,140,0.22)"/>
+  <text x="600" y="370" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="800">RAG Services</text>
+  <text x="600" y="418" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="22">FastAPI services split parsing, retrieval, and chat into deployable modules.</text>
+  <rect x="600" y="468" width="170" height="72" rx="20" fill="rgba(0,0,0,0.14)"/>
+  <rect x="792" y="468" width="170" height="72" rx="20" fill="rgba(0,0,0,0.14)"/>
+  <rect x="696" y="566" width="170" height="72" rx="20" fill="rgba(0,0,0,0.14)"/>
+  <text x="636" y="512" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700">Extraction</text>
+  <text x="828" y="512" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700">Milvus Search</text>
+  <text x="732" y="610" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700">Chat</text>
+
+  <rect x="1080" y="320" width="280" height="360" rx="28" fill="rgba(255,255,255,0.05)"/>
+  <text x="1112" y="378" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Frontend UX</text>
+  <rect x="1112" y="412" width="216" height="52" rx="16" fill="rgba(127,188,140,0.15)"/>
+  <rect x="1112" y="482" width="216" height="52" rx="16" fill="rgba(255,255,255,0.06)"/>
+  <rect x="1112" y="552" width="216" height="52" rx="16" fill="rgba(255,255,255,0.06)"/>
+  <text x="1140" y="446" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="20">Knowledge base</text>
+  <text x="1140" y="516" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="20">Retrieval view</text>
+  <text x="1140" y="586" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="20">Grounded chat</text>
+
+  <path d="M500 500H536" stroke="url(#accent)" stroke-width="4" stroke-linecap="round"/>
+  <path d="M1020 500H1056" stroke="url(#accent)" stroke-width="4" stroke-linecap="round"/>
+</svg>

@@ -38,6 +38,7 @@ export interface ContentFrontmatter {
   platforms?: Platform[];
   videos?: VideoEmbed[];
   github?: string;
+  demo?: string;
   paper_url?: string;
   venue?: string;
   published: boolean;
@@ -53,6 +54,7 @@ export interface BlogFrontmatter extends ContentFrontmatter {
 export interface ProjectFrontmatter extends ContentFrontmatter {
   category: 'project';
   github?: string;
+  demo?: string;
 }
 
 /** Frontmatter for papers (with paper_url, venue) */

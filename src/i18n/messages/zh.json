@@ -41,14 +41,22 @@
   },
   "projects": {
     "title": "项目作品",
-    "subtitle": "从 Agent 到应用，从 Web 到小程序",
+    "subtitle": "全栈 AI 平台、文档智能系统与模型训练工作流",
     "filter_all": "全部",
+    "filter_platform": "平台",
+    "filter_document": "文档智能",
     "filter_agent": "Agent",
-    "filter_webapp": "Web 应用",
-    "filter_miniapp": "小程序",
-    "filter_other": "其他",
+    "filter_ml": "模型训练",
+    "case_study": "案例拆解",
+    "featured_case_study": "精选案例",
+    "action_details": "查看",
+    "action_demo": "试玩",
+    "action_code": "代码",
+    "view_case_study": "查看案例",
+    "back_to_projects": "返回项目",
     "view_github": "查看源码",
-    "view_demo": "在线演示"
+    "view_demo": "在线试玩",
+    "try_preview": "试玩预览"
   },
   "research": {
     "title": "研究论文",

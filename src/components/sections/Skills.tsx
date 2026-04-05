@@ -2,58 +2,83 @@
 
 import { useTranslations, useLocale } from 'next-intl';
 import { motion } from 'framer-motion';
+import { Sparkles } from 'lucide-react';
 import SectionTitle from '@/components/ui/SectionTitle';
 import GlassCard from '@/components/ui/GlassCard';
-import { skillCategories } from '@/data/skills';
+import { skillClusters, skillHighlight } from '@/data/skills';
 
 export default function Skills() {
   const t = useTranslations('skills');
   const locale = useLocale();
 
-  const categoryLabels: Record<string, string> = {
-    ai: t('category_ai'),
-    dev: t('category_dev'),
-    creative: t('category_creative'),
-  };
-
   return (
     <section id="skills" className="section-container">
       <SectionTitle title={t('title')} subtitle={t('subtitle')} />
 
-      <div className="grid md:grid-cols-3 gap-6">
-        {skillCategories.map((category, ci) => (
+      <GlassCard className="mb-6" hover={false}>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-amber-300)]/25 bg-[var(--color-amber-300)]/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.22em] text-[var(--color-amber-300)]">
+              <Sparkles className="h-3.5 w-3.5" />
+              {locale === 'zh' ? skillHighlight.label : skillHighlight.label_en}
+            </div>
+            <p className="mt-4 max-w-[68ch] text-base leading-[1.72] tracking-[-0.006em] text-[var(--color-text-secondary)]">
+              {locale === 'zh' ? skillHighlight.summary : skillHighlight.summary_en}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {skillHighlight.leadWith.map((item) => (
+              <span
+                key={item}
+                className="rounded-full border border-[var(--color-green-400)]/18 bg-[var(--color-green-500)]/10 px-3 py-1.5 text-xs font-medium text-[var(--color-green-400)]"
+              >
+                {item}
+              </span>
+            ))}
+          </div>
+        </div>
+      </GlassCard>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        {skillClusters.map((cluster, ci) => (
           <motion.div
-            key={category.key}
+            key={cluster.key}
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: ci * 0.15, duration: 0.5 }}
           >
             <GlassCard className="h-full" hover={false}>
-              <h3 className="text-lg font-semibold text-[var(--color-green-300)] mb-6">
-                {categoryLabels[category.key]}
-              </h3>
-              <div className="space-y-4">
-                {category.skills.map((skill, si) => (
-                  <div key={si}>
-                    <div className="flex justify-between mb-1.5">
-                      <span className="text-sm text-[var(--color-text-primary)]">
-                        {locale === 'zh' ? skill.name : skill.name_en}
-                      </span>
-                      <span className="text-xs text-[var(--color-text-muted)]">
-                        {skill.level}%
-                      </span>
-                    </div>
-                    <div className="h-2 rounded-full bg-[var(--color-bg-primary)] overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        whileInView={{ width: `${skill.level}%` }}
-                        viewport={{ once: true }}
-                        transition={{ delay: ci * 0.1 + si * 0.05, duration: 0.8, ease: 'easeOut' }}
-                        className="h-full rounded-full bg-gradient-to-r from-[var(--color-green-500)] to-[var(--color-green-300)]"
-                      />
-                    </div>
-                  </div>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-[var(--color-green-400)]">
+                    {locale === 'zh' ? cluster.title : cluster.title_en}
+                  </h3>
+                  <p className="mt-3 max-w-[44ch] text-[15px] leading-[1.68] tracking-[-0.006em] text-[var(--color-text-muted)]">
+                    {locale === 'zh' ? cluster.description : cluster.description_en}
+                  </p>
+                </div>
+
+                {cluster.featured && (
+                  <span className="rounded-full border border-[var(--color-amber-300)]/30 bg-[var(--color-amber-300)]/12 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--color-amber-300)]">
+                    {locale === 'zh' ? '差异化优势' : 'Differentiator'}
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-6 flex flex-wrap gap-2">
+                {cluster.items.map((item) => (
+                  <span
+                    key={item}
+                    className={`rounded-full border px-3 py-1.5 text-xs leading-5 ${
+                      cluster.featured
+                        ? 'border-[var(--color-amber-300)]/20 bg-[var(--color-amber-300)]/10 text-[var(--color-amber-300)]'
+                        : 'border-[var(--color-green-400)]/18 bg-[var(--color-green-500)]/10 text-[var(--color-green-400)]'
+                    }`}
+                  >
+                    {item}
+                  </span>
                 ))}
               </div>
             </GlassCard>

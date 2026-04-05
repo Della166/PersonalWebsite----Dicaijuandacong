@@ -1,0 +1,33 @@
+<svg width="1200" height="800" viewBox="0 0 1200 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="140" y1="80" x2="1080" y2="720" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#101A16"/>
+      <stop offset="1" stop-color="#18150F"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="800" rx="36" fill="url(#bg)"/>
+  <rect x="80" y="76" width="1040" height="648" rx="28" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.08)"/>
+  <rect x="114" y="112" width="220" height="576" rx="24" fill="rgba(10,16,14,0.46)"/>
+  <rect x="360" y="112" width="504" height="576" rx="24" fill="rgba(10,16,14,0.38)"/>
+  <rect x="888" y="112" width="198" height="576" rx="24" fill="rgba(10,16,14,0.46)"/>
+  <text x="146" y="170" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Sessions</text>
+  <rect x="146" y="198" width="156" height="48" rx="14" fill="rgba(127,188,140,0.15)"/>
+  <rect x="146" y="262" width="156" height="48" rx="14" fill="rgba(255,255,255,0.06)"/>
+  <rect x="146" y="326" width="156" height="48" rx="14" fill="rgba(255,255,255,0.06)"/>
+  <rect x="146" y="390" width="156" height="48" rx="14" fill="rgba(255,255,255,0.06)"/>
+  <text x="394" y="170" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="800">Unified Chat Workspace</text>
+  <rect x="394" y="210" width="436" height="120" rx="20" fill="rgba(255,255,255,0.05)"/>
+  <rect x="394" y="348" width="340" height="92" rx="18" fill="rgba(127,188,140,0.12)"/>
+  <rect x="490" y="458" width="340" height="92" rx="18" fill="rgba(212,165,116,0.12)"/>
+  <rect x="394" y="584" width="436" height="56" rx="18" fill="rgba(255,255,255,0.06)"/>
+  <text x="420" y="252" fill="#A8D5B0" font-family="JetBrains Mono, monospace" font-size="18">$ provider: deepseek-vision</text>
+  <text x="420" y="285" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="20">Attach an image, ask a question, and stream the answer.</text>
+  <text x="420" y="404" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700">User prompt</text>
+  <text x="516" y="514" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700">Streaming response</text>
+  <text x="920" y="170" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Controls</text>
+  <rect x="920" y="210" width="134" height="42" rx="13" fill="rgba(255,255,255,0.06)"/>
+  <rect x="920" y="268" width="134" height="42" rx="13" fill="rgba(255,255,255,0.06)"/>
+  <rect x="920" y="326" width="134" height="42" rx="13" fill="rgba(255,255,255,0.06)"/>
+  <rect x="920" y="404" width="134" height="94" rx="18" fill="rgba(127,188,140,0.12)"/>
+  <rect x="920" y="520" width="134" height="94" rx="18" fill="rgba(212,165,116,0.12)"/>
+</svg>

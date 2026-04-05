@@ -1,0 +1,36 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="220" y1="80" x2="1400" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#141510"/>
+      <stop offset="0.45" stop-color="#111C17"/>
+      <stop offset="1" stop-color="#0E1715"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" rx="40" fill="url(#bg)"/>
+  <rect x="160" y="110" width="1280" height="680" rx="34" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.08)"/>
+  <text x="230" y="206" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="48" font-weight="800">Enterprise NL2SQL Fine-Tuning System</text>
+  <text x="230" y="252" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="24">From schema metadata to data generation, LoRA tuning, validation, and evaluation.</text>
+
+  <rect x="230" y="324" width="290" height="356" rx="28" fill="rgba(255,255,255,0.05)"/>
+  <text x="266" y="384" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Schema-Aware Data</text>
+  <rect x="266" y="434" width="218" height="48" rx="14" fill="rgba(127,188,140,0.15)"/>
+  <rect x="266" y="498" width="218" height="48" rx="14" fill="rgba(255,255,255,0.06)"/>
+  <rect x="266" y="562" width="218" height="48" rx="14" fill="rgba(255,255,255,0.06)"/>
+  <text x="296" y="465" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="20">DB metadata</text>
+  <text x="296" y="529" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="20">sample generation</text>
+  <text x="296" y="593" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="20">SQL validation</text>
+
+  <rect x="598" y="296" width="410" height="412" rx="30" fill="rgba(212,165,116,0.12)" stroke="rgba(212,165,116,0.22)"/>
+  <text x="640" y="366" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="800">Training and Eval Loop</text>
+  <text x="640" y="414" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="21">LoRA / QLoRA tuning, text-match and execution metrics, and deployment checks.</text>
+  <rect x="640" y="478" width="326" height="68" rx="18" fill="rgba(0,0,0,0.15)"/>
+  <rect x="640" y="568" width="326" height="68" rx="18" fill="rgba(0,0,0,0.15)"/>
+  <text x="680" y="521" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700">LoRA / QLoRA adaptation</text>
+  <text x="680" y="611" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700">execution-aware evaluation</text>
+
+  <rect x="1086" y="324" width="290" height="356" rx="28" fill="rgba(255,255,255,0.05)"/>
+  <text x="1122" y="384" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Operator App</text>
+  <text x="1122" y="430" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="20">FastAPI + WebSocket controls for config, progress, and concurrent tasks.</text>
+  <rect x="1122" y="506" width="218" height="48" rx="14" fill="rgba(127,188,140,0.15)"/>
+  <rect x="1122" y="570" width="218" height="48" rx="14" fill="rgba(255,255,255,0.06)"/>
+</svg>

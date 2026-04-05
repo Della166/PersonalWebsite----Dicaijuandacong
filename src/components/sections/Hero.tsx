@@ -48,7 +48,7 @@ export default function Hero() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.6 }}
-            className="text-lg md:text-xl text-[var(--color-text-secondary)] mb-6 max-w-2xl mx-auto"
+            className="mx-auto mb-6 max-w-[40ch] text-lg leading-[1.68] tracking-[-0.008em] text-[var(--color-text-secondary)] md:text-xl md:leading-[1.65]"
           >
             {t('description')}
           </motion.p>
@@ -80,20 +80,14 @@ export default function Hero() {
           >
             <a
               href="#projects"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-medium
-                         bg-gradient-to-r from-[var(--color-green-500)] to-[var(--color-green-400)]
-                         text-white hover:shadow-[0_0_30px_var(--color-glow-green)]
-                         transition-all duration-300 hover:scale-105"
+              className="button-primary-solid inline-flex items-center gap-2 px-6 py-3 hover:shadow-[0_0_26px_var(--color-glow-green)]"
             >
               {t('cta_projects')}
               <ArrowRight className="w-4 h-4" />
             </a>
             <a
               href="#contact"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-medium
-                         border border-[var(--color-border-hover)] text-[var(--color-green-300)]
-                         hover:bg-[var(--color-bg-card)] hover:shadow-[0_0_20px_var(--color-glow-green)]
-                         transition-all duration-300"
+              className="button-secondary-outline inline-flex items-center gap-2 px-6 py-3 hover:shadow-[0_0_16px_var(--color-glow-green)]"
             >
               {t('cta_contact')}
             </a>

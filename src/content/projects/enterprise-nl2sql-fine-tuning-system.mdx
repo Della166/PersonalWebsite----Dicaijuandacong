@@ -1,0 +1,81 @@
+---
+title: "企业私有化 NL2SQL 微调系统"
+title_en: "Enterprise NL2SQL Fine-Tuning System"
+date: "2026-03-14"
+category: project
+tags: ["LoRA", "QLoRA", "FastAPI", "WebSocket", "SQL", "Evaluation", "vLLM"]
+lang: both
+cover: "/projects/enterprise-nl2sql-fine-tuning-system/cover.svg"
+excerpt: "围绕企业私有数据库场景构建的 NL2SQL 流水线，从 schema-aware 数据构造到训练、校验与评估一体化完成。"
+excerpt_en: "An enterprise NL2SQL system that spans schema-aware data generation, LoRA tuning, validation, and execution-aware evaluation."
+platforms: [website]
+github: ""
+demo: ""
+published: true
+---
+
+<Callout type="info">
+  This project broadens the portfolio beyond RAG and shows that the same engineering mindset can be applied to model adaptation,
+  evaluation, and enterprise data workflows.
+</Callout>
+
+## Overview
+
+Generic text-to-SQL systems tend to break down in enterprise settings because they do not understand private schema design,
+organization-specific terminology, or production validation constraints.
+
+This project addresses that gap by treating NL2SQL as a full pipeline problem:
+
+- generate training samples from database metadata
+- tune models with LoRA-style adaptation
+- validate SQL automatically
+- evaluate not just text similarity, but execution behavior
+
+That makes the project much closer to a deployable enterprise workflow than a one-off fine-tuning experiment.
+
+## Product and System Shape
+
+The system includes both model-related and operator-facing layers:
+
+- a data-generation application with configuration controls
+- schema-aware sample creation across database structures
+- progress tracking with FastAPI and WebSocket updates
+- LoRA and QLoRA training workflows
+- evaluation that includes execution-oriented checks
+
+This matters because it shows that model tuning was treated as an engineering workflow, not only as notebook research.
+
+## Why This Project Stands Out
+
+Among portfolio projects, this one is valuable because it signals:
+
+- enterprise workflow understanding
+- data-centric thinking
+- model adaptation experience beyond prompting
+- evaluation discipline tied to real task quality
+
+For applied AI and AI engineer roles, that helps balance a portfolio that might otherwise look too RAG-heavy.
+
+## Deployment and Demo Strategy
+
+The best way to present this project publicly is not to expose unrestricted training.
+A better demo format is:
+
+- show a sample schema
+- generate example NL2SQL pairs
+- run a small validation workflow
+- display evaluation summaries and a few query examples
+
+That gives visitors something concrete to interact with while keeping the heavier training path private or offline.
+
+<DemoStatus
+  title="Recommended public demo format"
+  description="A public demo should focus on schema preview, sample data generation, and a lightweight validation run instead of full open training. That keeps the experience interactive while avoiding long-running or expensive model-tuning behavior in the portfolio itself."
+/>
+
+## What This Project Signals
+
+- schema-aware AI system design
+- full-stack support around model workflows
+- execution-aware evaluation mindset
+- practical adaptation of LLMs to enterprise data problems
