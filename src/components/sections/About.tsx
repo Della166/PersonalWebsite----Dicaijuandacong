@@ -1,10 +1,12 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { motion } from 'framer-motion';
 import { Code2, Brain, Film, Target, Microscope } from 'lucide-react';
 import SectionTitle from '@/components/ui/SectionTitle';
 import GlassCard from '@/components/ui/GlassCard';
+import CountUp from '@/components/ui/CountUp';
+import { stats } from '@/data/stats';
 
 const identities = [
   { key: 'dev', icon: Code2 },
@@ -14,12 +16,39 @@ const identities = [
 
 export default function About() {
   const t = useTranslations('about');
+  const locale = useLocale();
 
   const researchAreas: string[] = t.raw('research_areas');
 
   return (
     <section id="about" className="section-container">
       <SectionTitle title={t('title')} subtitle={t('subtitle')} />
+
+      {/* 成就数字条 —— 进入视口时 count-up */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+        {stats.map((stat, i) => (
+          <motion.div
+            key={stat.label_en}
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-50px' }}
+            transition={{ delay: i * 0.08, duration: 0.5 }}
+            className="rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-bg-card)]
+                       backdrop-blur-sm px-3 py-6 text-center"
+          >
+            <div
+              className="text-3xl md:text-4xl font-extrabold tabular-nums
+                         bg-gradient-to-r from-[var(--color-green-300)] to-[var(--color-amber-300)]
+                         bg-clip-text text-transparent"
+            >
+              <CountUp to={stat.value} suffix={stat.suffix} />
+            </div>
+            <div className="mt-1.5 text-sm text-[var(--color-text-muted)]">
+              {locale === 'zh' ? stat.label : stat.label_en}
+            </div>
+          </motion.div>
+        ))}
+      </div>
 
       <div className="grid md:grid-cols-2 gap-8 mb-12">
         {/* 求职方向 */}

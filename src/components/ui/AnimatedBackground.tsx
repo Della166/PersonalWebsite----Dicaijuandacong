@@ -1,6 +1,14 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import {
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useScroll,
+  useSpring,
+  useTransform,
+} from 'framer-motion';
 
 interface OrbitalNode {
   baseAngle: number;
@@ -106,6 +114,33 @@ function projectOutsideEllipse(
 
 export default function AnimatedBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const reduced = useReducedMotion();
+
+  // 滚动视差 —— Hero 滚出视口时，背景层以不同速度滞后
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ['start start', 'end start'],
+  });
+  const glowScrollY = useTransform(scrollYProgress, [0, 1], [0, 60]);
+  const gridScrollY = useTransform(scrollYProgress, [0, 1], [0, 96]);
+
+  // 鼠标视差 —— 光晕跟随光标轻微偏移（幅度极小，察觉不到但感觉得到）
+  const pointerX = useMotionValue(0);
+  const pointerY = useMotionValue(0);
+  const glowMouseX = useSpring(pointerX, { stiffness: 38, damping: 22 });
+  const glowMouseY = useSpring(pointerY, { stiffness: 38, damping: 22 });
+  const glowY = useTransform(() => glowScrollY.get() + glowMouseY.get());
+
+  useEffect(() => {
+    if (reduced) return;
+    const handlePointer = (e: MouseEvent) => {
+      pointerX.set((e.clientX / window.innerWidth - 0.5) * 28);
+      pointerY.set((e.clientY / window.innerHeight - 0.5) * 28);
+    };
+    window.addEventListener('mousemove', handlePointer, { passive: true });
+    return () => window.removeEventListener('mousemove', handlePointer);
+  }, [reduced, pointerX, pointerY]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -350,9 +385,16 @@ export default function AnimatedBackground() {
   }, []);
 
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="hero-ambient-glow absolute inset-0" />
-      <div className="hero-tech-grid absolute inset-0" />
+    <div ref={containerRef} className="pointer-events-none absolute inset-0 overflow-hidden">
+      <motion.div
+        className="hero-ambient-glow absolute inset-0"
+        style={reduced ? undefined : { x: glowMouseX, y: glowY }}
+      />
+      <motion.div
+        className="hero-tech-grid absolute inset-0"
+        style={reduced ? undefined : { y: gridScrollY }}
+      />
+      <div className="hero-scanline" aria-hidden="true" />
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
       <div className="hero-vignette absolute inset-0" />
     </div>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Nunito, Noto_Sans_SC } from 'next/font/google';
+import { Nunito } from 'next/font/google';
 import Script from 'next/script';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
@@ -9,23 +9,17 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import ScrollProgress from '@/components/ui/ScrollProgress';
 import BackToTop from '@/components/ui/BackToTop';
+import CustomCursor from '@/components/ui/CustomCursor';
 import MotionProvider from '@/components/providers/MotionProvider';
 import "../globals.css";
 
-// 圆润可爱字体（来自 animal-island-ui 设计规范）
+// 圆润可爱字体（拉丁/数字）。中文走系统字体（PingFang SC / 微软雅黑），
+// 不引 Noto Sans SC —— CJK web 字体体积大，国内从 Google 拉取不稳定。
 const nunito = Nunito({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700', '800', '900'],
   variable: '--font-nunito',
   display: 'swap',
-});
-
-const notoSansSC = Noto_Sans_SC({
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
-  variable: '--font-noto-sans-sc',
-  display: 'swap',
-  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -55,7 +49,7 @@ export default async function LocaleLayout({
   return (
     <html
       lang={locale}
-      className={`light ${nunito.variable} ${notoSansSC.variable}`}
+      className={`light ${nunito.variable}`}
       suppressHydrationWarning
     >
       <body className="antialiased" suppressHydrationWarning>
@@ -65,6 +59,7 @@ export default async function LocaleLayout({
         <NextIntlClientProvider messages={messages}>
           <MotionProvider>
             <div className="grain-overlay" aria-hidden="true" />
+            <CustomCursor />
             <ScrollProgress />
             <Navbar />
             <main className="pt-16">{children}</main>

@@ -62,7 +62,10 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <a href="#" className="text-xl font-bold text-[var(--color-green-300)] hover:text-[var(--color-green-200)] transition-colors">
+          <a
+            href="#"
+            className="link-underline text-xl font-bold text-[var(--color-green-300)] hover:text-[var(--color-green-200)] transition-colors"
+          >
             Portfolio
           </a>
 
@@ -77,7 +80,7 @@ export default function Navbar() {
                   className={`relative px-3 py-2 text-sm rounded-lg transition-all duration-200 ${
                     isActive
                       ? 'text-[var(--color-green-300)]'
-                      : 'text-[var(--color-text-secondary)] hover:text-[var(--color-green-300)] hover:bg-[var(--color-bg-card)]'
+                      : 'link-underline text-[var(--color-text-secondary)] hover:text-[var(--color-green-300)]'
                   }`}
                 >
                   {t(item.key)}

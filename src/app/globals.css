@@ -3,7 +3,6 @@
 @theme {
   --font-sans:
     var(--font-nunito),
-    var(--font-noto-sans-sc),
     -apple-system,
     BlinkMacSystemFont,
     'Segoe UI',
@@ -317,6 +316,69 @@ html.light .hero-vignette {
     radial-gradient(circle at 50% 45%, transparent 0%, transparent 54%, rgba(250, 251, 247, 0.72) 100%);
 }
 
+/* Hero 扫描线 —— 一条极淡光带缓慢下移 */
+.hero-scanline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 140px;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(127, 188, 140, 0.07) 50%,
+    transparent
+  );
+  animation: hero-scan 7s linear infinite;
+}
+
+html.light .hero-scanline {
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(80, 96, 54, 0.05) 50%,
+    transparent
+  );
+}
+
+@keyframes hero-scan {
+  0% {
+    transform: translateY(-140px);
+    opacity: 0;
+  }
+  8%,
+  92% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-scanline {
+    display: none;
+  }
+}
+
+/* ===== Custom cursor glow ===== */
+.cursor-glow {
+  width: 300px;
+  height: 300px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(120, 180, 140, 0.16), transparent 62%);
+  filter: blur(6px);
+  mix-blend-mode: screen;
+}
+
+html.light .cursor-glow {
+  background: radial-gradient(circle, rgba(114, 131, 79, 0.22), transparent 64%);
+  mix-blend-mode: multiply;
+  opacity: 0.55;
+}
+
 /* ===== Action Buttons (3D press — animal-island style) ===== */
 .button-primary-solid,
 .button-secondary-outline,
@@ -542,35 +604,60 @@ html.light a:hover {
   }
 }
 
-/* ===== Code Highlight ===== */
-.hljs {
-  background: var(--color-bg-card) !important;
-  color: var(--color-text-secondary) !important;
-  border-radius: 12px;
-  padding: 1.25rem !important;
+/* ===== Code Highlight (借鉴 animal-island CodeBlock —— 深色面板) ===== */
+/* 代码块容器：固定深色面板，盖掉 prose-pre 的浅色卡片背景 */
+pre:has(> code.hljs) {
+  background: #0e1a14 !important;
+  border: 1px solid rgba(112, 166, 124, 0.16) !important;
+  border-radius: 16px !important;
+  padding: 1.25rem 1.4rem !important;
+  overflow-x: auto;
 }
 
+/* 代码本体：容器已是面板，.hljs 只负责文字 */
+pre > code.hljs {
+  background: transparent !important;
+  padding: 0 !important;
+  color: #c6d2cb !important;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.7;
+  tab-size: 2;
+}
+
+/* highlight.js token 配色（深色面板用） */
+.hljs-comment,
+.hljs-quote               { color: #6f8278 !important; font-style: italic; }
 .hljs-keyword,
-.hljs-selector-tag {
-  color: var(--color-green-300) !important;
-}
-
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-section             { color: #d3a8ef !important; }
 .hljs-string,
-.hljs-attr {
-  color: var(--color-amber-300) !important;
-}
-
-.hljs-comment {
-  color: var(--color-text-muted) !important;
-}
-
-.hljs-number {
-  color: var(--color-green-200) !important;
-}
-
-.hljs-function .hljs-title {
-  color: var(--color-green-100) !important;
-}
+.hljs-attr,
+.hljs-meta .hljs-string   { color: #9fce8d !important; }
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet              { color: #e3ba7d !important; }
+.hljs-title.function_,
+.hljs-function .hljs-title { color: #82b4ea !important; }
+.hljs-title,
+.hljs-title.class_,
+.hljs-class .hljs-title   { color: #78d2c4 !important; }
+.hljs-built_in,
+.hljs-type,
+.hljs-params              { color: #e6c97f !important; }
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class      { color: #e89274 !important; }
+.hljs-attribute,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-property            { color: #c6d2cb !important; }
+.hljs-meta                { color: #6f8278 !important; }
+.hljs-emphasis            { font-style: italic; }
+.hljs-strong              { font-weight: 700; }
+.hljs-link                { text-decoration: underline; }
 
 /* ===== Scroll offset for fixed nav ===== */
 [id] {
@@ -670,6 +757,23 @@ html.dark .grain-overlay {
 html.light .grain-overlay {
   opacity: 0.028;
   mix-blend-mode: multiply;
+}
+
+/* ===== Theme switch —— 圆形扩散转场 (View Transitions API) ===== */
+/* 关闭默认交叉淡入，改由 JS 对 new 层做 clip-path 圆形揭示 */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* new（新主题）压在 old 之上，由圆形 clip-path 从点击点扩散露出 */
+::view-transition-old(root) {
+  z-index: 0;
+}
+
+::view-transition-new(root) {
+  z-index: 1;
 }
 
 /* ===== Responsive ===== */
