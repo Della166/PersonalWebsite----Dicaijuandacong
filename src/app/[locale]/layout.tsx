@@ -9,6 +9,7 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import ScrollProgress from '@/components/ui/ScrollProgress';
 import BackToTop from '@/components/ui/BackToTop';
+import MotionProvider from '@/components/providers/MotionProvider';
 import "../globals.css";
 
 // 圆润可爱字体（来自 animal-island-ui 设计规范）
@@ -52,20 +53,24 @@ export default async function LocaleLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale} className="light" suppressHydrationWarning>
-      <body
-        className={`antialiased ${nunito.variable} ${notoSansSC.variable}`}
-        suppressHydrationWarning
-      >
+    <html
+      lang={locale}
+      className={`light ${nunito.variable} ${notoSansSC.variable}`}
+      suppressHydrationWarning
+    >
+      <body className="antialiased" suppressHydrationWarning>
         <Script id="theme-init" strategy="beforeInteractive">
-          {`(function(){var t=localStorage.getItem('theme')||'light';document.documentElement.className=t})()`}
+          {`(function(){var t=localStorage.getItem('theme')||'light';var d=document.documentElement;d.classList.remove('light','dark');d.classList.add(t)})()`}
         </Script>
         <NextIntlClientProvider messages={messages}>
-          <ScrollProgress />
-          <Navbar />
-          <main className="pt-16">{children}</main>
-          <Footer />
-          <BackToTop />
+          <MotionProvider>
+            <div className="grain-overlay" aria-hidden="true" />
+            <ScrollProgress />
+            <Navbar />
+            <main className="pt-16">{children}</main>
+            <Footer />
+            <BackToTop />
+          </MotionProvider>
         </NextIntlClientProvider>
       </body>
     </html>

@@ -8,19 +8,26 @@ function getEffectiveTheme(): 'dark' | 'light' {
   return saved || 'light';
 }
 
+// 只切换 light/dark，保留 next/font 注入的字体变量 class
+function applyThemeClass(theme: 'dark' | 'light') {
+  const cls = document.documentElement.classList;
+  cls.remove('light', 'dark');
+  cls.add(theme);
+}
+
 export default function ThemeSwitcher() {
   const [theme, setTheme] = useState<'dark' | 'light'>('light');
 
   useEffect(() => {
     const effective = getEffectiveTheme();
     setTheme(effective);
-    document.documentElement.className = effective;
+    applyThemeClass(effective);
   }, []);
 
   const toggle = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
-    document.documentElement.className = next;
+    applyThemeClass(next);
     localStorage.setItem('theme', next);
   };
 

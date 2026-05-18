@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ArrowUp } from 'lucide-react';
 
 /**
@@ -9,6 +9,7 @@ import { ArrowUp } from 'lucide-react';
  */
 export default function BackToTop() {
   const [visible, setVisible] = useState(false);
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     const onScroll = () => setVisible(window.scrollY > window.innerHeight * 0.8);
@@ -23,11 +24,15 @@ export default function BackToTop() {
         <motion.button
           type="button"
           aria-label="Back to top"
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          onClick={() =>
+            window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' })
+          }
           initial={{ opacity: 0, scale: 0.8, y: 12 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.8, y: 12 }}
-          transition={{ duration: 0.25, ease: 'easeOut' }}
+          transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+          whileHover={{ scale: 1.1, y: -3 }}
+          whileTap={{ scale: 0.92 }}
           className="back-to-top fixed bottom-6 right-6 z-50 flex h-11 w-11 items-center justify-center
                      rounded-full border border-[var(--color-border-default)] bg-[var(--color-bg-card)]
                      text-[var(--color-text-secondary)] backdrop-blur-md"
