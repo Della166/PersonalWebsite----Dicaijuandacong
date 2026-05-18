@@ -4,6 +4,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import { motion } from 'framer-motion';
 import { Play, Film, Car } from 'lucide-react';
 import SectionTitle from '@/components/ui/SectionTitle';
+import { staggerContainer, fadeUp } from '@/lib/motion';
 
 interface CreativeWork {
   title: string;
@@ -70,17 +71,17 @@ export default function Creative() {
     <section id="creative" className="section-container">
       <SectionTitle title={t('title')} subtitle={t('subtitle')} />
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, margin: '-60px' }}
+        className="grid md:grid-cols-2 gap-6"
+      >
         {works.map((work, i) => {
           const Icon = typeIcons[work.type];
           return (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1, duration: 0.5 }}
-            >
+            <motion.div key={i} variants={fadeUp}>
               <div className="glass-card overflow-hidden group cursor-pointer">
                 {/* Thumbnail placeholder */}
                 <div className="relative aspect-video bg-gradient-to-br from-[var(--color-green-800)] to-[var(--color-bg-primary)] flex items-center justify-center overflow-hidden">
@@ -108,7 +109,7 @@ export default function Creative() {
             </motion.div>
           );
         })}
-      </div>
+      </motion.div>
     </section>
   );
 }

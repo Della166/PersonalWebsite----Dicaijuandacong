@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Clock, ArrowRight } from 'lucide-react';
 import SectionTitle from '@/components/ui/SectionTitle';
 import GlassCard from '@/components/ui/GlassCard';
+import { staggerContainer, fadeUp } from '@/lib/motion';
 
 interface BlogPost {
   slug: string;
@@ -29,17 +30,17 @@ export default function BlogPreview({ posts }: BlogPreviewProps) {
     <section id="blog" className="section-container">
       <SectionTitle title={t('title')} subtitle={t('subtitle')} />
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {posts.slice(0, 6).map((post, i) => (
-          <motion.div
-            key={post.slug}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: i * 0.1, duration: 0.5 }}
-          >
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, margin: '-60px' }}
+        className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
+      >
+        {posts.slice(0, 6).map((post) => (
+          <motion.div key={post.slug} variants={fadeUp}>
             <a href={`/${locale}/blog/${post.slug}`}>
-              <GlassCard className="h-full flex flex-col">
+              <GlassCard className="h-full flex flex-col" animateIn={false}>
                 <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)] mb-3">
                   <span>{new Date(post.date).toLocaleDateString(locale === 'zh' ? 'zh-CN' : 'en-US')}</span>
                   <span>·</span>
@@ -68,7 +69,7 @@ export default function BlogPreview({ posts }: BlogPreviewProps) {
             </a>
           </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       <div className="text-center">
         <a

@@ -6,6 +6,7 @@ import { Sparkles } from 'lucide-react';
 import SectionTitle from '@/components/ui/SectionTitle';
 import GlassCard from '@/components/ui/GlassCard';
 import { skillClusters, skillHighlight } from '@/data/skills';
+import { staggerContainer, fadeUp } from '@/lib/motion';
 
 export default function Skills() {
   const t = useTranslations('skills');
@@ -40,16 +41,16 @@ export default function Skills() {
         </div>
       </GlassCard>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {skillClusters.map((cluster, ci) => (
-          <motion.div
-            key={cluster.key}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: ci * 0.15, duration: 0.5 }}
-          >
-            <GlassCard className="h-full" hover={false}>
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, margin: '-60px' }}
+        className="grid gap-6 lg:grid-cols-2"
+      >
+        {skillClusters.map((cluster) => (
+          <motion.div key={cluster.key} variants={fadeUp}>
+            <GlassCard className="h-full" hover={false} animateIn={false}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-semibold text-[var(--color-green-400)]">
@@ -84,7 +85,7 @@ export default function Skills() {
             </GlassCard>
           </motion.div>
         ))}
-      </div>
+      </motion.div>
     </section>
   );
 }

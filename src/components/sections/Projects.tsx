@@ -100,7 +100,7 @@ export default function Projects() {
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.3, delay: i * 0.05 }}
               >
-                <GlassCard className="h-full flex flex-col">
+                <GlassCard className="h-full flex flex-col" animateIn={false}>
                   <div className="relative mb-5 overflow-hidden rounded-2xl border border-[var(--color-border-default)] aspect-[16/10]">
                     {project.cover ? (
                       <Image

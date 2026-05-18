@@ -7,6 +7,7 @@ import SectionTitle from '@/components/ui/SectionTitle';
 import GlassCard from '@/components/ui/GlassCard';
 import CountUp from '@/components/ui/CountUp';
 import { stats } from '@/data/stats';
+import { staggerContainer, fadeUp } from '@/lib/motion';
 
 const identities = [
   { key: 'dev', icon: Code2 },
@@ -25,14 +26,17 @@ export default function About() {
       <SectionTitle title={t('title')} subtitle={t('subtitle')} />
 
       {/* 成就数字条 —— 进入视口时 count-up */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-        {stats.map((stat, i) => (
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, margin: '-60px' }}
+        className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12"
+      >
+        {stats.map((stat) => (
           <motion.div
             key={stat.label_en}
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-50px' }}
-            transition={{ delay: i * 0.08, duration: 0.5 }}
+            variants={fadeUp}
             className="rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-bg-card)]
                        backdrop-blur-sm px-3 py-6 text-center"
           >
@@ -48,7 +52,7 @@ export default function About() {
             </div>
           </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       <div className="grid md:grid-cols-2 gap-8 mb-12">
         {/* 求职方向 */}
@@ -95,18 +99,18 @@ export default function About() {
       <h3 className="text-xl font-semibold text-[var(--color-text-primary)] text-center mb-6">
         {t('identity_title')}
       </h3>
-      <div className="grid md:grid-cols-3 gap-6">
-        {identities.map((item, i) => {
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, margin: '-60px' }}
+        className="grid md:grid-cols-3 gap-6"
+      >
+        {identities.map((item) => {
           const Icon = item.icon;
           return (
-            <motion.div
-              key={item.key}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.15, duration: 0.5 }}
-            >
-              <GlassCard className="text-center h-full">
+            <motion.div key={item.key} variants={fadeUp}>
+              <GlassCard className="text-center h-full" animateIn={false}>
                 <div className="inline-flex p-3 rounded-xl bg-[var(--color-green-300)]/10 mb-4">
                   <Icon className="w-8 h-8 text-[var(--color-green-300)]" />
                 </div>
@@ -120,7 +124,7 @@ export default function About() {
             </motion.div>
           );
         })}
-      </div>
+      </motion.div>
     </section>
   );
 }

@@ -5,27 +5,28 @@ import { motion } from 'framer-motion';
 import { Mail, Github, MessageCircle, Send } from 'lucide-react';
 import SectionTitle from '@/components/ui/SectionTitle';
 import GlassCard from '@/components/ui/GlassCard';
+import { staggerContainer, fadeUp } from '@/lib/motion';
 
 const contactLinks = [
   {
     key: 'email',
     icon: Mail,
-    href: 'mailto:your@email.com',
-    value: 'your@email.com',
+    href: 'mailto:cmu2018hhh@gmail.com',
+    value: 'cmu2018hhh@gmail.com',
     color: 'var(--color-amber-300)',
   },
   {
     key: 'github',
     icon: Github,
-    href: 'https://github.com/yourusername',
-    value: '@yourusername',
+    href: 'https://github.com/Della166',
+    value: '@Della166',
     color: 'var(--color-text-primary)',
   },
   {
     key: 'wechat',
     icon: MessageCircle,
     href: '#',
-    value: 'your_wechat_id',
+    value: 'dicaijuandacong',
     color: 'var(--color-green-300)',
   },
 ];
@@ -44,7 +45,7 @@ export default function Contact() {
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <GlassCard hover={false} className="text-center">
+          <GlassCard hover={false} animateIn={false} className="text-center">
             <div className="inline-flex p-4 rounded-full bg-[var(--color-green-300)]/10 mb-6">
               <Send className="w-8 h-8 text-[var(--color-green-300)]" />
             </div>
@@ -53,19 +54,22 @@ export default function Contact() {
               {t('description')}
             </p>
 
-            <div className="grid sm:grid-cols-3 gap-4">
-              {contactLinks.map((link, i) => {
+            <motion.div
+              variants={staggerContainer}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: '-60px' }}
+              className="grid sm:grid-cols-3 gap-4"
+            >
+              {contactLinks.map((link) => {
                 const Icon = link.icon;
                 return (
                   <motion.a
                     key={link.key}
+                    variants={fadeUp}
                     href={link.href}
                     target={link.href.startsWith('http') ? '_blank' : undefined}
                     rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.1, duration: 0.4 }}
                     className="flex flex-col items-center gap-2 p-4 rounded-xl
                                border border-[var(--color-border-default)]
                                hover:border-[var(--color-border-hover)]
@@ -85,7 +89,7 @@ export default function Contact() {
                   </motion.a>
                 );
               })}
-            </div>
+            </motion.div>
           </GlassCard>
         </motion.div>
       </div>

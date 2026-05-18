@@ -8,12 +8,19 @@ interface GlassCardProps {
   children: ReactNode;
   className?: string;
   hover?: boolean;
+  /** 是否自带入场动画。被 stagger 容器包裹时设为 false，避免双重动画 */
+  animateIn?: boolean;
 }
 
 /** 倾斜最大角度（度）—— 克制，绝不超过 8° */
 const MAX_TILT = 6;
 
-export default function GlassCard({ children, className = '', hover = true }: GlassCardProps) {
+export default function GlassCard({
+  children,
+  className = '',
+  hover = true,
+  animateIn = true,
+}: GlassCardProps) {
   const ref = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
 
@@ -46,15 +53,22 @@ export default function GlassCard({ children, className = '', hover = true }: Gl
     rotateY.set(0);
   };
 
+  // 自带入场动画 —— 被 stagger 容器包裹时关闭，避免与包裹层重复
+  const entrance = animateIn
+    ? {
+        initial: { opacity: 0, y: 20 },
+        whileInView: { opacity: 1, y: 0 },
+        viewport: { once: true, margin: '-50px' },
+        transition: { duration: 0.5 },
+      }
+    : {};
+
   return (
     <motion.div
       ref={ref}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-50px' }}
-      transition={{ duration: 0.5 }}
+      {...entrance}
       whileHover={hover ? { y: -4 } : undefined}
       style={
         tiltEnabled

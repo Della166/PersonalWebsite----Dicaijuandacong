@@ -6,6 +6,7 @@ import { FileText, Code2, Calendar } from 'lucide-react';
 import SectionTitle from '@/components/ui/SectionTitle';
 import GlassCard from '@/components/ui/GlassCard';
 import { papers } from '@/data/papers';
+import { staggerContainer, fadeUp } from '@/lib/motion';
 
 export default function Research() {
   const t = useTranslations('research');
@@ -15,16 +16,16 @@ export default function Research() {
     <section id="research" className="section-container">
       <SectionTitle title={t('title')} subtitle={t('subtitle')} />
 
-      <div className="space-y-6 max-w-4xl mx-auto">
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, margin: '-60px' }}
+        className="space-y-6 max-w-4xl mx-auto"
+      >
         {papers.map((paper, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: i * 0.1, duration: 0.5 }}
-          >
-            <GlassCard>
+          <motion.div key={i} variants={fadeUp}>
+            <GlassCard animateIn={false}>
               <div className="flex items-start justify-between gap-4 mb-3">
                 <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
                   {locale === 'zh' ? paper.title : paper.title_en}
@@ -68,7 +69,7 @@ export default function Research() {
             </GlassCard>
           </motion.div>
         ))}
-      </div>
+      </motion.div>
     </section>
   );
 }
