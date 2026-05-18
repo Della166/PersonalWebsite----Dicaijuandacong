@@ -136,4 +136,10 @@ export const projectDemos = {
   },
 } satisfies Record<string, ProjectDemoDefinition>;
 
-export const projectDemoSlugs = Object.keys(projectDemos);
+export type ProjectDemoSlug = keyof typeof projectDemos;
+
+export const projectDemoSlugs = Object.keys(projectDemos) as ProjectDemoSlug[];
+
+export function isProjectDemoSlug(slug: string): slug is ProjectDemoSlug {
+  return slug in projectDemos;
+}

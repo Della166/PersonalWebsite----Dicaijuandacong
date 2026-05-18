@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import AnimatedBackground from '@/components/ui/AnimatedBackground';
+import Magnetic from '@/components/ui/Magnetic';
 
 const identityTags = [
   { zh: '全栈开发者', en: 'Full-Stack Dev', icon: '⚡' },
@@ -36,10 +37,10 @@ export default function Hero() {
             <span>AI Engineer & Content Creator</span>
           </motion.div>
 
-          <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-4">
+          <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold mb-4">
             <span className="text-[var(--color-text-primary)]">{t('greeting')}</span>
             <br />
-            <span className="bg-gradient-to-r from-[var(--color-green-300)] via-[var(--color-green-200)] to-[var(--color-amber-300)] bg-clip-text text-transparent">
+            <span className="hero-name-shimmer bg-gradient-to-r from-[var(--color-green-300)] via-[var(--color-amber-300)] to-[var(--color-green-300)] bg-clip-text text-transparent">
               {t('name')}
             </span>
           </h1>
@@ -78,19 +79,23 @@ export default function Hero() {
             transition={{ delay: 0.7, duration: 0.5 }}
             className="flex flex-wrap justify-center gap-4"
           >
-            <a
-              href="#projects"
-              className="button-primary-solid inline-flex items-center gap-2 px-6 py-3 hover:shadow-[0_0_26px_var(--color-glow-green)]"
-            >
-              {t('cta_projects')}
-              <ArrowRight className="w-4 h-4" />
-            </a>
-            <a
-              href="#contact"
-              className="button-secondary-outline inline-flex items-center gap-2 px-6 py-3 hover:shadow-[0_0_16px_var(--color-glow-green)]"
-            >
-              {t('cta_contact')}
-            </a>
+            <Magnetic>
+              <a
+                href="#projects"
+                className="button-primary-solid inline-flex items-center gap-2 px-6 py-3 hover:shadow-[0_0_26px_var(--color-glow-green)]"
+              >
+                {t('cta_projects')}
+                <ArrowRight className="w-4 h-4" />
+              </a>
+            </Magnetic>
+            <Magnetic>
+              <a
+                href="#contact"
+                className="button-secondary-outline inline-flex items-center gap-2 px-6 py-3 hover:shadow-[0_0_16px_var(--color-glow-green)]"
+              >
+                {t('cta_contact')}
+              </a>
+            </Magnetic>
           </motion.div>
         </motion.div>
       </div>

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, FileText, Github, Sparkles } from 'lucide-react';
 import { projects } from '@/data/projects';
-import { projectDemos, projectDemoSlugs } from '@/data/project-demos';
+import { isProjectDemoSlug, projectDemos, projectDemoSlugs } from '@/data/project-demos';
 
 function pickLocalizedText<T extends { en: string; zh: string }>(value: T, locale: string) {
   return locale === 'zh' ? value.zh : value.en;
@@ -24,7 +24,7 @@ export default async function ProjectDemoPage({
 }) {
   const { locale, slug } = await params;
   const project = projects.find((item) => item.slug === slug);
-  const demo = projectDemos[slug];
+  const demo = isProjectDemoSlug(slug) ? projectDemos[slug] : undefined;
 
   if (!project || !demo) notFound();
 

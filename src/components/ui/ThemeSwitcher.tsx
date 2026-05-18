@@ -3,33 +3,18 @@
 import { useState, useEffect } from 'react';
 import { Sun, Moon } from 'lucide-react';
 
-function getSystemTheme(): 'dark' | 'light' {
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
 function getEffectiveTheme(): 'dark' | 'light' {
   const saved = localStorage.getItem('theme') as 'dark' | 'light' | null;
-  return saved || getSystemTheme();
+  return saved || 'light';
 }
 
 export default function ThemeSwitcher() {
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
 
   useEffect(() => {
     const effective = getEffectiveTheme();
     setTheme(effective);
     document.documentElement.className = effective;
-
-    const mql = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = () => {
-      if (!localStorage.getItem('theme')) {
-        const sys = mql.matches ? 'dark' : 'light';
-        setTheme(sys);
-        document.documentElement.className = sys;
-      }
-    };
-    mql.addEventListener('change', handleChange);
-    return () => mql.removeEventListener('change', handleChange);
   }, []);
 
   const toggle = () => {

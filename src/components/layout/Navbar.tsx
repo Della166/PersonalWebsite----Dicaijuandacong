@@ -21,11 +21,31 @@ export default function Navbar() {
   const t = useTranslations('nav');
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState('');
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const sections = navItems
+      .map((item) => document.getElementById(item.href.slice(1)))
+      .filter((el): el is HTMLElement => el !== null);
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible[0]) setActiveSection(visible[0].target.id);
+      },
+      { rootMargin: '-45% 0px -45% 0px', threshold: [0, 0.25, 0.5, 1] }
+    );
+
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
   }, []);
 
   return (
@@ -48,15 +68,29 @@ export default function Navbar() {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => (
-              <a
-                key={item.key}
-                href={item.href}
-                className="px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-green-300)] rounded-lg hover:bg-[var(--color-bg-card)] transition-all duration-200"
-              >
-                {t(item.key)}
-              </a>
-            ))}
+            {navItems.map((item) => {
+              const isActive = activeSection === item.href.slice(1);
+              return (
+                <a
+                  key={item.key}
+                  href={item.href}
+                  className={`relative px-3 py-2 text-sm rounded-lg transition-all duration-200 ${
+                    isActive
+                      ? 'text-[var(--color-green-300)]'
+                      : 'text-[var(--color-text-secondary)] hover:text-[var(--color-green-300)] hover:bg-[var(--color-bg-card)]'
+                  }`}
+                >
+                  {t(item.key)}
+                  {isActive && (
+                    <motion.span
+                      layoutId="nav-active"
+                      className="absolute inset-x-2 -bottom-0.5 h-0.5 rounded-full bg-gradient-to-r from-[var(--color-green-300)] to-[var(--color-amber-300)]"
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                </a>
+              );
+            })}
           </div>
 
           {/* Right side */}
