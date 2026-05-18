@@ -72,7 +72,7 @@ export default function Hero() {
           <Magnetic>
             <a
               href="#projects"
-              className="button-primary-solid group inline-flex items-center gap-2 px-6 py-3 hover:shadow-[0_0_26px_var(--color-glow-green)]"
+              className="button-primary-solid group inline-flex items-center gap-2 px-6 py-3"
             >
               {t('cta_projects')}
               <ArrowRight className="w-4 h-4 transition-transform duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-1" />
@@ -81,7 +81,7 @@ export default function Hero() {
           <Magnetic>
             <a
               href="#contact"
-              className="button-secondary-outline inline-flex items-center gap-2 px-6 py-3 hover:shadow-[0_0_16px_var(--color-glow-green)]"
+              className="button-secondary-outline inline-flex items-center gap-2 px-6 py-3"
             >
               {t('cta_contact')}
             </a>

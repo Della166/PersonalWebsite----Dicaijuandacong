@@ -317,7 +317,7 @@ html.light .hero-vignette {
     radial-gradient(circle at 50% 45%, transparent 0%, transparent 54%, rgba(250, 251, 247, 0.72) 100%);
 }
 
-/* ===== Action Buttons ===== */
+/* ===== Action Buttons (3D press — animal-island style) ===== */
 .button-primary-solid,
 .button-secondary-outline,
 .project-action-primary,
@@ -333,65 +333,83 @@ html.light .hero-vignette {
     transform var(--dur-short) var(--ease-out-quint);
 }
 
+/* 实心偏移阴影 = 物理"厚度"；颜色由各变体的 --btn-depth 决定 */
+.button-primary-solid,
+.button-secondary-outline,
+.project-action-primary,
+.project-action-secondary {
+  box-shadow: 0 4px 0 0 var(--btn-depth);
+}
+
+/* hover：按钮面抬起、厚度变高 —— 底边保持不动 */
 .button-primary-solid:hover,
 .button-secondary-outline:hover,
 .project-action-primary:hover,
 .project-action-secondary:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 0 var(--btn-depth);
+}
+
+/* active：按钮压扁贴向自己的阴影 */
+.button-primary-solid:active,
+.button-secondary-outline:active,
+.project-action-primary:active,
+.project-action-secondary:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 0 var(--btn-depth);
 }
 
 html.light .button-primary-solid {
   background: linear-gradient(135deg, #647744 0%, #55653a 100%);
   color: #fbfbf4;
   border: 1px solid rgba(68, 82, 46, 0.18);
-  box-shadow: 0 12px 28px rgba(68, 82, 46, 0.12);
+  --btn-depth: #39431f;
 }
 
 html.light .button-primary-solid:hover {
   color: #ffffff;
-  box-shadow: 0 18px 34px rgba(68, 82, 46, 0.18);
 }
 
 html.dark .button-primary-solid {
   background: linear-gradient(135deg, #4c8c60 0%, #427652 100%);
   color: #09110c;
   border: 1px solid rgba(112, 166, 124, 0.18);
-  box-shadow: 0 14px 28px rgba(67, 107, 79, 0.18);
+  --btn-depth: #244730;
 }
 
 html.dark .button-primary-solid:hover {
   color: #09110c;
-  box-shadow: 0 18px 34px rgba(67, 107, 79, 0.22);
 }
 
 html.light .button-secondary-outline {
   background: rgba(250, 251, 247, 0.76);
   color: var(--color-green-500);
   border: 1px solid rgba(107, 125, 74, 0.26);
+  --btn-depth: #c0c8aa;
 }
 
 html.light .button-secondary-outline:hover {
   color: var(--color-green-700);
   background: rgba(229, 235, 219, 0.9);
-  box-shadow: 0 8px 18px rgba(68, 82, 46, 0.1);
 }
 
 html.dark .button-secondary-outline {
   background: rgba(13, 26, 20, 0.58);
   color: #c9d3ce;
   border: 1px solid rgba(112, 166, 124, 0.2);
+  --btn-depth: #060f0b;
 }
 
 html.dark .button-secondary-outline:hover {
   color: #edf1ee;
   background: rgba(18, 34, 26, 0.76);
-  box-shadow: 0 10px 22px rgba(67, 107, 79, 0.16);
 }
 
 html.light .project-action-primary {
   background: rgba(184, 134, 11, 0.12);
   color: var(--color-amber-400);
   border: 1px solid rgba(184, 134, 11, 0.24);
+  --btn-depth: #d8b15a;
 }
 
 html.light .project-action-primary:hover {
@@ -403,6 +421,7 @@ html.dark .project-action-primary {
   background: rgba(212, 165, 116, 0.12);
   color: #d4a574;
   border: 1px solid rgba(212, 165, 116, 0.24);
+  --btn-depth: #6e5230;
 }
 
 html.dark .project-action-primary:hover {
@@ -414,6 +433,7 @@ html.light .project-action-secondary {
   background: rgba(250, 251, 247, 0.72);
   color: var(--color-green-500);
   border: 1px solid rgba(107, 125, 74, 0.2);
+  --btn-depth: #c0c8aa;
 }
 
 html.light .project-action-secondary:hover {
@@ -425,6 +445,7 @@ html.dark .project-action-secondary {
   background: rgba(13, 26, 20, 0.52);
   color: #c0cbc4;
   border: 1px solid rgba(112, 166, 124, 0.18);
+  --btn-depth: #060f0b;
 }
 
 html.dark .project-action-secondary:hover {
@@ -476,6 +497,36 @@ a:hover {
 
 html.light a:hover {
   color: var(--color-green-400);
+}
+
+/* ===== Link underline draw (hover 从左画出，移出向右收回) ===== */
+.link-underline {
+  position: relative;
+}
+
+.link-underline::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 1.5px;
+  border-radius: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform var(--dur-short) var(--ease-out-quint);
+}
+
+.link-underline:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link-underline::after {
+    transition: none;
+  }
 }
 
 /* ===== Section Container ===== */
