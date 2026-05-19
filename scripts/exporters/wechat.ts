@@ -8,13 +8,32 @@ const BG = '#FAFBF7';
 const CARD_BG = '#E8EDDF';
 const MUTED = '#6B7D4A';
 
-export function exportToWechat(mdxPath: string, outputDir: string) {
+export interface WechatBuildResult {
+  /** Raw frontmatter of the source mdx. */
+  data: Record<string, unknown>;
+  /** Article title. */
+  title: string;
+  /** Full standalone HTML document (for preview / copy-paste). */
+  fullHtml: string;
+  /** Body-only HTML — what draft/add expects as article `content`. */
+  richText: string;
+}
+
+/**
+ * Render an mdx file into WeChat-styled HTML.
+ *
+ * Shared by both the file exporter (copy-paste flow) and the
+ * draft-box publisher (API flow), so styling stays in one place.
+ */
+export function buildWechatHtml(mdxPath: string): WechatBuildResult {
   const { data, content } = loadMdxFile(mdxPath);
 
   const title = data.title || 'Untitled';
-  const titleEn = data.titleEn || '';
+  const titleEn = data.title_en || data.titleEn || '';
   const author = data.author || 'Dicaijuandacong';
-  const date = data.date ? new Date(data.date).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+  const date = data.date
+    ? new Date(data.date).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
+    : '';
   const tags = (data.tags || []).map((t: string) => `#${t}`).join('  ');
 
   const htmlBody = mdToWechatHtml(content, {
@@ -90,14 +109,19 @@ export function exportToWechat(mdxPath: string, outputDir: string) {
 </body>
 </html>`;
 
+  return { data, title, fullHtml, richText: extractRichText(fullHtml) };
+}
+
+export function exportToWechat(mdxPath: string, outputDir: string) {
+  const { fullHtml, richText } = buildWechatHtml(mdxPath);
+
   ensureDir(outputDir);
 
   const htmlPath = path.join(outputDir, `${path.basename(mdxPath, '.mdx')}.html`);
   fs.writeFileSync(htmlPath, fullHtml, 'utf-8');
 
   const richTextPath = path.join(outputDir, `${path.basename(mdxPath, '.mdx')}_richtext.html`);
-  const richTextOnly = extractRichText(fullHtml);
-  fs.writeFileSync(richTextPath, richTextOnly, 'utf-8');
+  fs.writeFileSync(richTextPath, richText, 'utf-8');
 
   console.log(`  ✅ WeChat HTML:     ${htmlPath}`);
   console.log(`  ✅ WeChat RichText: ${richTextPath}`);

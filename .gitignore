@@ -39,6 +39,9 @@ yarn-error.log*
 # Export output
 /dist/
 
+# Script caches (WeChat access token, etc.)
+/scripts/.cache/
+
 # vercel
 .vercel
 .vercel-global

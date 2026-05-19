@@ -13,8 +13,8 @@
     "content:new": "tsx scripts/content-new.ts",
     "content:list": "tsx scripts/content-list.ts",
     "content:publish": "tsx scripts/content-publish.ts",
-    "save": "git add -A && git commit -m \"update: auto save\" && git push -u origin master",
-    "content:export": "tsx scripts/content-export.ts"
+    "publish:wechat": "tsx scripts/wechat-publish.ts",
+    "save": "git add -A && git commit -m \"update: auto save\" && git push -u origin master"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1002.0",
