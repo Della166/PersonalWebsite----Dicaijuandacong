@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Nunito } from 'next/font/google';
 import Script from 'next/script';
 import { NextIntlClientProvider } from 'next-intl';
-import { getMessages } from 'next-intl/server';
+import { getMessages, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import Navbar from '@/components/layout/Navbar';
@@ -43,6 +43,9 @@ export default async function LocaleLayout({
   if (!routing.locales.includes(locale as any)) {
     notFound();
   }
+
+  // 启用 next-intl 静态渲染 —— 避免 getMessages 走 headers() 导致动态化
+  setRequestLocale(locale);
 
   const messages = await getMessages();
 

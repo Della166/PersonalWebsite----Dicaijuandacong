@@ -1,8 +1,14 @@
 import { getContentByCategory, getReadingTime } from '@/lib/mdx';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import BlogPreview from '@/components/sections/BlogPreview';
 
-export default async function BlogPage() {
+export default async function BlogPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations('blog');
   const posts = getContentByCategory('blog');
 

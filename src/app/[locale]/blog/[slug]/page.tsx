@@ -7,7 +7,7 @@ import rehypeSlug from 'rehype-slug';
 import rehypeHighlight from 'rehype-highlight';
 import { ArrowLeft, Calendar, Clock } from 'lucide-react';
 import readingTime from 'reading-time';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 
 export async function generateStaticParams() {
   const posts = getContentByCategory('blog');
@@ -20,6 +20,7 @@ export default async function BlogPostPage({
   params: Promise<{ locale: string; slug: string }>;
 }) {
   const { locale, slug } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations('blog');
   const post = getContentBySlug('blog', slug);
 

@@ -9,7 +9,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeSlug from 'rehype-slug';
 import rehypeHighlight from 'rehype-highlight';
 import { ArrowLeft, ExternalLink, Github, Sparkles } from 'lucide-react';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { getProjectDemoHref, isInternalProjectDemo, isPreviewProjectDemo } from '@/lib/project-links';
 
 export async function generateStaticParams() {
@@ -23,6 +23,7 @@ export default async function ProjectPage({
   params: Promise<{ locale: string; slug: string }>;
 }) {
   const { locale, slug } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations('projects');
   const project = getContentBySlug('projects', slug);
 
