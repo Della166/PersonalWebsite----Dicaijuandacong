@@ -5,7 +5,6 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import AnimatedBackground from '@/components/ui/AnimatedBackground';
 import Magnetic from '@/components/ui/Magnetic';
-import ScrambleText from '@/components/ui/ScrambleText';
 import { staggerContainer, fadeUp } from '@/lib/motion';
 
 const identityTags = [
@@ -35,10 +34,7 @@ export default function Hero() {
                      backdrop-blur-md text-sm text-[var(--color-text-secondary)]"
         >
           <Sparkles className="w-4 h-4 text-[var(--color-amber-300)]" />
-          <ScrambleText
-            text="AI Engineer & Content Creator"
-            className="font-mono tracking-tight"
-          />
+          <span>AI Engineer & Content Creator</span>
         </motion.div>
 
         <motion.h1 variants={fadeUp} className="text-5xl sm:text-6xl md:text-7xl font-extrabold mb-4">
