@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import AnimatedBackground from '@/components/ui/AnimatedBackground';
 import Magnetic from '@/components/ui/Magnetic';
 import { staggerContainer, fadeUp } from '@/lib/motion';
@@ -27,16 +27,6 @@ export default function Hero() {
         animate="show"
         className="relative z-10 text-center px-4 max-w-4xl mx-auto"
       >
-        <motion.div
-          variants={fadeUp}
-          className="inline-flex items-center gap-2 px-4 py-2 mb-6 rounded-full
-                     border border-[var(--color-border-default)] bg-[var(--color-bg-card)]
-                     backdrop-blur-md text-sm text-[var(--color-text-secondary)]"
-        >
-          <Sparkles className="w-4 h-4 text-[var(--color-amber-300)]" />
-          <span>AI Engineer & Content Creator</span>
-        </motion.div>
-
         <motion.h1 variants={fadeUp} className="text-5xl sm:text-6xl md:text-7xl font-extrabold mb-4">
           <span className="text-[var(--color-text-primary)]">{t('greeting')}</span>
           <br />
