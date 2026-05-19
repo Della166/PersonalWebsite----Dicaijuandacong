@@ -78,13 +78,46 @@
     "watch": "观看",
     "view_all": "查看全部作品"
   },
+  "faq": {
+    "title": "常见问题",
+    "subtitle": "几个常见问题的快速解答",
+    "items": [
+      {
+        "q": "你目前在找什么样的机会？",
+        "a": "我在寻找 AI Engineer / 机器学习工程师方向的机会，专注视频生成、图像生成与多模态系统。全职岗位或高价值的合作项目都欢迎。"
+      },
+      {
+        "q": "你的技术栈是什么？",
+        "a": "AI 方向：Python、PyTorch、Hugging Face、扩散模型与多模态模型；工程方向：TypeScript、Next.js、React，能从原型到部署完成全栈交付。"
+      },
+      {
+        "q": "接外包或合作吗？",
+        "a": "接 —— 尤其是 AI 短片制作和技术类合作。可以通过下方表单或任意一种联系方式找我。"
+      },
+      {
+        "q": "在哪里能看到你更多的作品？",
+        "a": "可以看上方的「项目作品」和「创作作品」，技术文章在博客里，源码在我的 GitHub。"
+      }
+    ]
+  },
   "contact": {
     "title": "联系我",
     "subtitle": "期待与你交流",
     "email": "邮箱",
     "github": "GitHub",
     "wechat": "微信",
-    "description": "无论是工作机会、技术交流还是创作合作，都欢迎联系我。"
+    "description": "无论是工作机会、技术交流还是创作合作，都欢迎联系我。",
+    "form_name": "你的称呼",
+    "form_email": "邮箱地址",
+    "form_message": "想说的话…",
+    "form_submit": "发送留言",
+    "form_sending": "发送中…",
+    "form_success": "收到！留言已发送，我会尽快回复你。",
+    "form_error": "发送失败，请重试，或直接邮件联系我。",
+    "form_err_name": "请填写你的称呼",
+    "form_err_email": "请填写有效的邮箱地址",
+    "form_err_message": "请填写留言内容",
+    "or_reach": "或直接通过以下方式找我"
   },
   "footer": {
     "copyright": "版权所有",

@@ -6,6 +6,7 @@ import Projects from '@/components/sections/Projects';
 import Research from '@/components/sections/Research';
 import BlogPreview from '@/components/sections/BlogPreview';
 import Creative from '@/components/sections/Creative';
+import FAQ from '@/components/sections/FAQ';
 import Contact from '@/components/sections/Contact';
 
 export default function HomePage() {
@@ -30,6 +31,7 @@ export default function HomePage() {
       <Research />
       <BlogPreview posts={blogPosts} />
       <Creative />
+      <FAQ />
       <Contact />
     </>
   );

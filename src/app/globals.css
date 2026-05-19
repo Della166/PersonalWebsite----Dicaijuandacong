@@ -659,6 +659,88 @@ pre > code.hljs {
 .hljs-strong              { font-weight: 700; }
 .hljs-link                { text-decoration: underline; }
 
+/* ===== Form Fields (胶囊输入框，借鉴 animal-island Input) ===== */
+.form-field {
+  width: 100%;
+  height: 2.875rem;
+  padding: 0 1.25rem;
+  font-size: 0.9rem;
+  color: var(--color-text-primary);
+  background: var(--color-bg-card);
+  border: 1.5px solid var(--color-border-default);
+  border-radius: 9999px;
+  outline: none;
+  transition:
+    border-color var(--dur-short) var(--ease-out-quint),
+    box-shadow var(--dur-short) var(--ease-out-quint),
+    background var(--dur-short) var(--ease-out-quint);
+}
+
+.form-field::placeholder { color: var(--color-text-muted); }
+.form-field:hover { border-color: var(--color-border-hover); }
+
+.form-field:focus {
+  border-color: var(--color-green-300);
+  background: var(--color-bg-card-hover);
+  box-shadow: 0 0 0 3px var(--color-glow-green);
+}
+
+.form-field--textarea {
+  height: auto;
+  min-height: 7rem;
+  padding: 0.8rem 1.25rem;
+  border-radius: 20px;
+  line-height: 1.6;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.form-field--error,
+.form-field--error:hover {
+  border-color: #e06c75;
+}
+.form-field--error:focus {
+  border-color: #e06c75;
+  box-shadow: 0 0 0 3px rgba(224, 108, 117, 0.18);
+}
+
+/* ===== FAQ Accordion toggle (借鉴 animal-island Collapse 的 +/− 图标) ===== */
+.faq-toggle {
+  flex-shrink: 0;
+  position: relative;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  background: var(--color-green-300);
+}
+
+.faq-toggle::before,
+.faq-toggle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  background: #fff;
+  border-radius: 2px;
+}
+
+.faq-toggle::before {            /* 横杠 */
+  width: 0.7rem;
+  height: 2.5px;
+  transform: translate(-50%, -50%);
+}
+
+.faq-toggle::after {             /* 竖杠 —— 展开时收起，+ 变 − */
+  width: 2.5px;
+  height: 0.7rem;
+  transform: translate(-50%, -50%);
+  transition: transform var(--dur-short) var(--ease-out-quint);
+}
+
+.faq-toggle[data-open='true']::after {
+  transform: translate(-50%, -50%) scaleY(0);
+}
+
 /* ===== Scroll offset for fixed nav ===== */
 [id] {
   scroll-margin-top: 5rem;
@@ -774,6 +856,33 @@ html.light .grain-overlay {
 
 ::view-transition-new(root) {
   z-index: 1;
+}
+
+/* ===== Shared-element morph (项目封面 → 详情页头图) ===== */
+::view-transition-group(.morph) {
+  animation-duration: 420ms;
+  animation-timing-function: var(--ease-out-expo);
+}
+
+/* morph 中途加一帧轻微模糊，掩盖像素级插值的瑕疵 */
+::view-transition-image-pair(.morph) {
+  animation-name: vt-morph-blur;
+}
+
+@keyframes vt-morph-blur {
+  30% {
+    filter: blur(3px);
+  }
+}
+
+/* 减少动态效果：所有 view transition 瞬时完成（含主题切换 / 导航 / morph） */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
 }
 
 /* ===== Responsive ===== */

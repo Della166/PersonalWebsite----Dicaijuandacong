@@ -78,13 +78,46 @@
     "watch": "Watch",
     "view_all": "View All Works"
   },
+  "faq": {
+    "title": "FAQ",
+    "subtitle": "Quick answers to a few common questions",
+    "items": [
+      {
+        "q": "What kind of opportunities are you looking for?",
+        "a": "I'm open to AI Engineer and Machine Learning Engineer roles, focused on video generation, image generation, and multimodal systems. Full-time positions or high-impact contract work are both welcome."
+      },
+      {
+        "q": "What does your tech stack look like?",
+        "a": "On the AI side: Python, PyTorch, Hugging Face, diffusion and multimodal models. On the engineering side: TypeScript, Next.js, and React — full-stack delivery from prototype to deployment."
+      },
+      {
+        "q": "Are you available for freelance or collaborations?",
+        "a": "Yes — especially AI short-film production and technical collaborations. Feel free to reach out through the form below or any of the channels listed."
+      },
+      {
+        "q": "Where can I see more of your work?",
+        "a": "Check the Projects and Creative sections above, browse the blog for technical write-ups, or visit my GitHub for source code."
+      }
+    ]
+  },
   "contact": {
     "title": "Contact",
     "subtitle": "Let's connect",
     "email": "Email",
     "github": "GitHub",
     "wechat": "WeChat",
-    "description": "Whether it's job opportunities, technical discussions, or creative collaborations — feel free to reach out."
+    "description": "Whether it's job opportunities, technical discussions, or creative collaborations — feel free to reach out.",
+    "form_name": "Your name",
+    "form_email": "Email address",
+    "form_message": "Your message...",
+    "form_submit": "Send Message",
+    "form_sending": "Sending...",
+    "form_success": "Thanks! Your message has been sent — I'll get back to you soon.",
+    "form_error": "Something went wrong. Please try again, or email me directly.",
+    "form_err_name": "Please enter your name",
+    "form_err_email": "Please enter a valid email",
+    "form_err_message": "Please enter a message",
+    "or_reach": "or reach me directly"
   },
   "footer": {
     "copyright": "All Rights Reserved",
