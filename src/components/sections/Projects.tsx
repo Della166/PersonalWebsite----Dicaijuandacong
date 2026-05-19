@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, ViewTransition } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslations, useLocale } from 'next-intl';
@@ -101,50 +101,62 @@ export default function Projects() {
                 transition={{ duration: 0.3, delay: i * 0.05 }}
               >
                 <GlassCard className="h-full flex flex-col" animateIn={false}>
-                  <div className="relative mb-5 overflow-hidden rounded-2xl border border-[var(--color-border-default)] aspect-[16/10]">
-                    {project.cover ? (
-                      <Image
-                        src={project.cover}
-                        alt={locale === 'zh' ? project.title : project.title_en}
-                        fill
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className={`relative h-full w-full bg-gradient-to-br ${categoryCoverStyles[project.category]}`}>
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.14),transparent_42%),radial-gradient(circle_at_bottom_right,rgba(127,188,140,0.18),transparent_45%)]" />
-                        <div className="relative flex h-full flex-col justify-between p-5">
-                          <div className="flex items-start justify-between gap-3">
-                            <span className="inline-flex items-center rounded-full border border-[var(--color-border-hover)] bg-[var(--color-bg-card)]/70 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--color-text-secondary)] backdrop-blur-sm">
-                              {t(`filter_${project.category}`)}
-                            </span>
-                            <div className="rounded-full border border-[var(--color-border-default)] bg-[var(--color-bg-card)]/70 p-2 backdrop-blur-sm">
-                              <Sparkles className="h-4 w-4 text-[var(--color-green-200)]" />
+                  {(() => {
+                    const coverBlock = (
+                      <div className="relative mb-5 overflow-hidden rounded-2xl border border-[var(--color-border-default)] aspect-[16/10]">
+                        {project.cover ? (
+                          <Image
+                            src={project.cover}
+                            alt={locale === 'zh' ? project.title : project.title_en}
+                            fill
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className={`relative h-full w-full bg-gradient-to-br ${categoryCoverStyles[project.category]}`}>
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.14),transparent_42%),radial-gradient(circle_at_bottom_right,rgba(127,188,140,0.18),transparent_45%)]" />
+                            <div className="relative flex h-full flex-col justify-between p-5">
+                              <div className="flex items-start justify-between gap-3">
+                                <span className="inline-flex items-center rounded-full border border-[var(--color-border-hover)] bg-[var(--color-bg-card)]/70 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--color-text-secondary)] backdrop-blur-sm">
+                                  {t(`filter_${project.category}`)}
+                                </span>
+                                <div className="rounded-full border border-[var(--color-border-default)] bg-[var(--color-bg-card)]/70 p-2 backdrop-blur-sm">
+                                  <Sparkles className="h-4 w-4 text-[var(--color-green-200)]" />
+                                </div>
+                              </div>
+                              <div>
+                                <p className="mb-2 text-xs uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
+                                  {t('case_study')}
+                                </p>
+                                <h3 className="max-w-[16rem] text-xl font-semibold leading-snug text-[var(--color-text-primary)]">
+                                  {locale === 'zh' ? project.title : project.title_en}
+                                </h3>
+                              </div>
                             </div>
                           </div>
-                          <div>
-                            <p className="mb-2 text-xs uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
-                              {t('case_study')}
-                            </p>
-                            <h3 className="max-w-[16rem] text-xl font-semibold leading-snug text-[var(--color-text-primary)]">
-                              {locale === 'zh' ? project.title : project.title_en}
-                            </h3>
-                          </div>
+                        )}
+                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 bg-gradient-to-t from-black/60 via-black/10 to-transparent px-4 py-3">
+                          <span className="inline-flex items-center rounded-full border border-white/15 bg-black/35 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-white/80 backdrop-blur-sm">
+                            {t(`filter_${project.category}`)}
+                          </span>
+                          {project.featured && (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-[var(--color-amber-300)]/30 bg-[var(--color-bg-card)]/80 px-3 py-1 text-[11px] font-medium text-[var(--color-amber-300)] backdrop-blur-sm">
+                              <Sparkles className="h-3.5 w-3.5" />
+                              {t('featured_case_study')}
+                            </span>
+                          )}
                         </div>
                       </div>
-                    )}
-                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 bg-gradient-to-t from-black/60 via-black/10 to-transparent px-4 py-3">
-                      <span className="inline-flex items-center rounded-full border border-white/15 bg-black/35 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-white/80 backdrop-blur-sm">
-                        {t(`filter_${project.category}`)}
-                      </span>
-                      {project.featured && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-[var(--color-amber-300)]/30 bg-[var(--color-bg-card)]/80 px-3 py-1 text-[11px] font-medium text-[var(--color-amber-300)] backdrop-blur-sm">
-                          <Sparkles className="h-3.5 w-3.5" />
-                          {t('featured_case_study')}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                    );
+                    // 有 slug 才包 ViewTransition —— 与详情页同名封面做 morph 转场
+                    return project.slug ? (
+                      <ViewTransition name={`project-cover-${project.slug}`} share="morph">
+                        {coverBlock}
+                      </ViewTransition>
+                    ) : (
+                      coverBlock
+                    );
+                  })()}
 
                   <h3 className="mb-2 text-lg font-bold leading-[1.2] tracking-[-0.02em] text-[var(--color-text-primary)]">
                     {locale === 'zh' ? project.title : project.title_en}

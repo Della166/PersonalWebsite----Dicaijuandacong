@@ -1,3 +1,4 @@
+import { ViewTransition } from 'react';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -46,19 +47,21 @@ export default async function ProjectPage({
         </a>
 
         <header className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)] items-start mb-12">
-          <div className="relative overflow-hidden rounded-[28px] border border-[var(--color-border-default)] bg-[var(--color-bg-card)]">
-            {frontmatter.cover ? (
-              <Image
-                src={frontmatter.cover}
-                alt={title}
-                width={1600}
-                height={900}
-                className="w-full h-auto object-cover"
-              />
-            ) : (
-              <div className="aspect-[16/10] bg-gradient-to-br from-[var(--color-green-300)]/20 via-[var(--color-green-500)]/15 to-[var(--color-amber-300)]/15" />
-            )}
-          </div>
+          <ViewTransition name={`project-cover-${slug}`} share="morph">
+            <div className="relative overflow-hidden rounded-[28px] border border-[var(--color-border-default)] bg-[var(--color-bg-card)]">
+              {frontmatter.cover ? (
+                <Image
+                  src={frontmatter.cover}
+                  alt={title}
+                  width={1600}
+                  height={900}
+                  className="w-full h-auto object-cover"
+                />
+              ) : (
+                <div className="aspect-[16/10] bg-gradient-to-br from-[var(--color-green-300)]/20 via-[var(--color-green-500)]/15 to-[var(--color-amber-300)]/15" />
+              )}
+            </div>
+          </ViewTransition>
 
           <div className="glass-card p-6 md:p-7">
             <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-amber-300)]/25 bg-[var(--color-amber-300)]/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.24em] text-[var(--color-amber-300)]">

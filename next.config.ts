@@ -7,6 +7,10 @@ const isGithubPages = process.env.NEXT_OUTPUT === 'export';
 
 const nextConfig: NextConfig = {
   pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx'],
+  experimental: {
+    // 启用 React <ViewTransition> 集成 —— 路由跳转时自动触发视图转场
+    viewTransition: true,
+  },
   ...(isGithubPages && {
     output: 'export',
     basePath: '',
