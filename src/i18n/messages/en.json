@@ -107,9 +107,12 @@
     "github": "GitHub",
     "wechat": "WeChat",
     "description": "Whether it's job opportunities, technical discussions, or creative collaborations — feel free to reach out.",
+    "form_lbl_name": "Name",
+    "form_lbl_email": "Email",
+    "form_lbl_message": "Message",
     "form_name": "Your name",
-    "form_email": "Email address",
-    "form_message": "Your message...",
+    "form_email": "you@example.com",
+    "form_message": "Tell me what's on your mind...",
     "form_submit": "Send Message",
     "form_sending": "Sending...",
     "form_success": "Thanks! Your message has been sent — I'll get back to you soon.",
@@ -117,7 +120,10 @@
     "form_err_name": "Please enter your name",
     "form_err_email": "Please enter a valid email",
     "form_err_message": "Please enter a message",
-    "or_reach": "or reach me directly"
+    "or_reach": "or reach me directly",
+    "form_privacy": "Sent securely via Web3Forms — I won't share your details.",
+    "form_send_another": "Send another message",
+    "wechat_copied": "Copied!"
   },
   "footer": {
     "copyright": "All Rights Reserved",
