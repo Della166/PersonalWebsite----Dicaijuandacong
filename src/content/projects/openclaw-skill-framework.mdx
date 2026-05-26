@@ -1,13 +1,13 @@
 ---
-title: "OpenClaw Skill 开发框架"
-title_en: "OpenClaw Skill Builder"
+title: "OpenClaw Skill 开发实战"
+title_en: "OpenClaw Skill Development"
 date: "2026-04-18"
 category: project
-tags: ["OpenClaw", "TypeScript", "Bun", "CLI", "Agent Skills", "Vitest", "GitHub Actions"]
+tags: ["OpenClaw", "Agent Skills", "SKILL.md", "Lobster", "Bash", "Workflow"]
 lang: both
 cover: "/projects/openclaw-skill-framework/cover.svg"
-excerpt: "一套围绕 OpenClaw Skill 系统的工程化开发框架:scaffolding CLI、本地测试 harness、版本管理和 CI 校验,让团队批量产出可复用的 Agent 能力。"
-excerpt_en: "An engineering toolkit for the OpenClaw Skill system: scaffolding CLI, local test harness, version management, and CI validation, so teams can ship reusable agent capabilities at scale."
+excerpt: "吃透 OpenClaw 的 Skill 扩展机制（用 SKILL.md 而非代码插件教 Agent 用工具），并从零做出一个完整可用的 Daily Briefing Skill，再用 Lobster 工作流把搜索→总结→审批→推送串成可靠管线。"
+excerpt_en: "A practical study of OpenClaw's Skill system — teaching an agent to use tools via SKILL.md instead of code plugins — plus a complete Daily Briefing skill built from scratch and a Lobster workflow that chains search → summarize → approve → push."
 platforms: [website]
 github: ""
 demo: "/demo/openclaw-skill-framework"
@@ -15,106 +15,124 @@ published: true
 ---
 
 <Callout type="info">
-  Once an agent team starts producing more than a handful of Skills, the bottleneck stops being "can we write
-  a Skill" and becomes "can we keep them consistent, discoverable, and shippable." This project is the
-  toolkit that handles that bottleneck.
+  OpenClaw is an open-source agent harness; a <strong>Skill</strong> is its lightest extension unit — a
+  <code>SKILL.md</code> Markdown file that teaches the agent how to use a tool, instead of a code plugin. This
+  project works through how Skills actually load and route, then builds a complete, runnable Daily Briefing Skill.
 </Callout>
 
 ## Overview
 
-OpenClaw Skill Builder is a small but opinionated developer toolkit for teams building on the OpenClaw harness.
-The runtime already understands Skills — markdown files with frontmatter, supporting scripts, and reference
-material that an agent loads on demand. What is missing is the workflow around producing them at scale:
-a way to scaffold a new Skill in seconds, validate it locally before publishing, manage versions across
-multiple agents, and gate quality through CI.
+In OpenClaw, there are three ways to extend the agent, and choosing the right one matters:
 
-This project fills that gap with a TypeScript CLI plus a CI action.
+| | **Skill** | **Plugin** | **Channel** |
+| --- | --- | --- | --- |
+| Form | `SKILL.md` (Markdown instructions) | TypeScript / Python code | Comms integration |
+| Teaches | how to use a tool | new API surface | a messaging channel (Slack, Telegram…) |
+| Install | `clawhub install` | `openclaw plugins install` | built in |
 
-## Skill Anatomy
+A **Skill** is just a Markdown file (plus optional scripts/references) that the agent loads on demand and reads to
+learn *when* and *how* to do something. No compiler, no plugin API — which is exactly why Skills scale: they can be
+written by the agent itself. This project documents the real mechanics and ships a working example.
 
-Every Skill in the OpenClaw model is a self-contained directory. The toolkit assumes — and enforces — the
-following layout:
+## SKILL.md anatomy
 
-- `SKILL.md` with a frontmatter block (`name`, `description`, `triggers`, optional `version`)
-- `scripts/` for any helper scripts the Skill calls
-- `references/` for supporting markdown that the Skill links into
+A Skill is a self-contained directory whose entry point is `SKILL.md` — YAML frontmatter plus Markdown body:
 
-The frontmatter `description` is what the agent uses for routing, so the toolkit treats it as a first-class
-field: required, length-bounded, and lint-checked for the qualities that make routing reliable
-(includes a verb, includes a trigger keyword, no marketing fluff).
+```yaml
+---
+name: daily-briefing
+description: "Generate a structured daily work briefing from Git activity and manual input.
+  Use when (1) user says 'daily briefing'; (2) user asks to summarize today's work;
+  (3) user shares work items for formatting."
+metadata: { "openclaw": { "emoji": "📋", "requires": { "bins": ["git"] },
+  "install": [{ "type": "brew", "package": "git" }] } }
+---
 
-## Scaffolding CLI
+## Trigger
+- user says "日报" / "daily briefing"
+- user shares work items
 
-The CLI ships one primary command:
+## Process
+1. if no items given, run `{baseDir}/scripts/collect-git-activity.sh` to gather today's commits
+2. classify into ✅ done / ⚠️ blocked / 📅 tomorrow
+3. format with the template below
 
+## Rules
+- use the exact template — no extra sections
+- do NOT add a summary or commentary at the end
 ```
-claw skill new <name> [--with-reference] [--with-script]
+
+Key fields that actually matter:
+
+- **`description`** is the routing signal — capped around 250 tokens, and it must spell out *when* to invoke the
+  skill ("Use when (1)… (2)… (3)…"). This is what the agent matches against, so it is the highest-leverage field.
+- **`metadata.openclaw.requires`** declares dependencies (`bins`, `env`, `config`) so the harness can check the
+  environment before running.
+- **`metadata.openclaw.install`** lists how to install missing binaries (`brew` / `node` / `go` / `uv` / `download`).
+
+## How Skills load
+
+The harness discovers Skills from a layered set of locations (workspace-local first, then user-level, then the
+~50 skills bundled with OpenClaw), with managed skills installed via `clawhub install` landing in
+`~/.openclaw/skills/`. Because the loader watches these directories, dropping a new `SKILL.md` in makes the skill
+available within a couple hundred milliseconds — no restart. Skills are not free, though: they live in the system
+prompt, so each one costs tokens, and keeping descriptions tight is a real budget concern.
+
+## The worked example — Daily Briefing
+
+The concrete deliverable is a complete Daily Briefing skill, built end to end:
+
+- **`SKILL.md`** — trigger, process, a fixed output template (date + ✅/⚠️/📅 sections), and explicit *Rules* that
+  stop the model from adding chatty commentary.
+- **`scripts/collect-git-activity.sh`** — a real Bash script that verifies it is in a git repo, collects today's
+  commits (`git log --since="$TODAY 00:00" --oneline --no-merges`), counts them, and prints a clean activity block
+  the agent folds into the briefing.
+- **`references/`** — a report-format guide the SKILL.md links to instead of inlining everything (keeping the
+  always-loaded part small).
+
+## Orchestrating with Lobster
+
+For multi-step automation, the course introduces **Lobster** — OpenClaw's structured shell/workflow language
+(YAML/JSON), more reliable than free-form agent instructions and more structured than raw Bash. The example
+pipeline chains four steps with a human-approval gate:
+
+```yaml
+name: news-briefing
+steps:
+  - id: search
+    command: "bash scripts/tavily-search.sh 'AI Agent 2026'"
+  - id: summarize
+    command: "bash scripts/deepseek-summarize.sh"
+    stdin: "$search.stdout"
+  - id: preview
+    command: "bash scripts/format-preview.sh"
+    stdin: "$summarize.stdout"
+    approval: "required"            # pause for human approval
+  - id: push
+    command: "bash scripts/feishu-push.sh"
+    stdin: "$summarize.stdout"
+    condition: "$preview.approved"  # only runs if approved
 ```
 
-Behind the scenes it generates the full directory layout, a SKILL.md template with sensible frontmatter,
-a sample reference file, an `.editorconfig`, and a minimal test fixture so the Skill is immediately
-runnable inside the local harness. Defaults match the conventions enforced by the linter, so the very first
-file the developer sees is already passing CI.
+Run with `lobster run --mode tool`; it pauses at the approval step and returns a resume token, then
+`lobster resume --token … --approve yes` continues and pushes the briefing to Feishu.
 
-## Local Test Harness
+## Honest scope
 
-A separate command — `claw skill test <path>` — boots a sandboxed OpenClaw instance, registers the Skill,
-and runs a small battery of checks:
+The source material is **course content** (slides/handouts), not a shipped code repo — so this project is a
+faithful study of the OpenClaw Skill model plus the worked Daily Briefing skill and Lobster pipeline built from it.
+That framing is the point: the value is understanding the mechanism (SKILL.md routing, the loading model, token
+cost, Lobster orchestration) well enough to author skills correctly, not a fictional CLI tool.
 
-- frontmatter parses against the schema
-- declared triggers route the way the developer expects
-- referenced files exist and are readable
-- supporting scripts are executable and exit cleanly on a smoke input
+## What this project signals
 
-The harness writes a single JSON report so it can run in CI as well as in a developer's terminal.
-
-## Version Management
-
-Skills frequently get reused across multiple agents inside the same team. The toolkit treats this as a
-versioning problem and uses semantic version tags on the Skill directory:
-
-- a `version` field in frontmatter, with semver enforcement
-- a `CHANGELOG.md` file that is required when `version` changes
-- a `deprecated` flag for graceful rollouts that surface a warning at agent load time
-
-This keeps the human-readable change story attached to the Skill instead of buried in commit history.
-
-## CI Validation Pipeline
-
-The accompanying GitHub Action wraps the same validation that runs locally, plus a few CI-only checks:
-
-- frontmatter schema and length bounds
-- link integrity across all referenced files
-- duplicate trigger detection across Skills in the same repository
-- changelog freshness when `version` was bumped
-- generated test report uploaded as a CI artifact
-
-Failures point at the exact field, file, and line so the contributor can fix without digging through logs.
-
-## Why This Project Is Strong
-
-This is one of the cleanest "developer-experience" portfolio projects because it shows:
-
-- **systems thinking around agent infrastructure** — not "I built a Skill," but "I built the toolkit other
-  people use to build Skills"
-- **CLI design discipline** — predictable verbs, opinionated defaults, useful error messages
-- **CI as a quality gate** — same validation in two surfaces (local + remote), no bypass
-- **maintainability instincts** — version management and deprecation flow that survives team growth
-
-## Demo Strategy
-
-The live demo replays one full scaffold + validate cycle. Visitors can pick one of three sample Skills
-(email triage, PR reviewer, release notes), watch the scaffold output stream into a virtual file tree,
-inspect the generated SKILL.md, and see the CI validator report run in real time.
+- You understand the **OpenClaw / Agent-Skills model** — SKILL.md vs plugin vs channel, frontmatter routing,
+  the layered loading model, and the system-prompt token budget.
+- You can **author a real skill** end to end: SKILL.md with tight triggers + a supporting Bash script + references.
+- You can reach for **structured orchestration** (Lobster) with human-approval gates when free-form agent steps
+  aren't reliable enough.
 
 <DemoStatus
-  title="Recommended public demo format"
-  description="Stream a scripted CLI run that produces a Skill directory, then surface the generated SKILL.md and a CI validation report side by side. This is more honest than running real OpenClaw inside the browser because the value is the workflow, not the runtime."
+  title="What the live demo replays"
+  description="The demo walks through authoring an OpenClaw Skill: the SKILL.md frontmatter + body, how the harness loads and routes it, and the Daily Briefing example running its collect-git-activity.sh step. It also shows the Lobster news-briefing pipeline pausing at its human-approval gate. No live OpenClaw runtime on the portfolio host."
 />
-
-## What This Project Signals
-
-- developer-experience and tooling design for AI agent ecosystems
-- familiarity with the OpenClaw / Claude Code Skill model
-- CI / lint discipline that scales to more than one author
-- ability to package "good practices" into runnable tooling instead of leaving them in a README
