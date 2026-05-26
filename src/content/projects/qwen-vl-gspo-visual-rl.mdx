@@ -1,0 +1,129 @@
+---
+title: "Qwen3-VL 视觉强化学习训练系统"
+title_en: "Qwen3-VL Visual Reinforcement Learning System"
+date: "2026-04-12"
+category: project
+tags: ["Qwen3-VL", "GSPO", "Reinforcement Learning", "Vision Language Model", "PyTorch", "Trainer"]
+lang: both
+cover: "/projects/qwen-vl-gspo-visual-rl/cover.svg"
+excerpt: "围绕 Qwen3-VL 8B 多模态模型构建的视觉强化学习训练管线，使用 GSPO（Group Sequence Policy Optimization）算法在视觉计数、OCR 和指代任务上做偏好优化。"
+excerpt_en: "An end-to-end visual reinforcement learning pipeline built around Qwen3-VL 8B, using GSPO (Group Sequence Policy Optimization) to align the vision-language model on counting, OCR, and grounding tasks."
+platforms: [website]
+github: ""
+demo: "/demo/qwen-vl-gspo-visual-rl"
+published: true
+---
+
+<Callout type="info">
+  This project showcases how to take a vision-language model from supervised fine-tuning into reinforcement learning territory,
+  using the GSPO algorithm proposed in the Qwen team's 2024 work. The pipeline is designed for portfolio clarity:
+  every stage — sampling, reward, policy update — is observable.
+</Callout>
+
+## Overview
+
+Qwen3-VL Visual RL System is built around one practical question: how do you take a strong vision-language model
+that is already pretrained, and push its behavior on multimodal tasks using reinforcement learning instead of
+just adding more supervised data?
+
+The system uses **Qwen3-VL 8B** as the base policy and applies **GSPO** (Group Sequence Policy Optimization) —
+a sequence-level RL objective that the Qwen team designed to be more stable than token-level GRPO on long generation tasks.
+The training loop covers three vision tasks: counting in cluttered scenes, fine-grained OCR on screenshots, and
+visual grounding ("point to the X in this image").
+
+## Why GSPO over GRPO
+
+The standard GRPO objective optimizes at the token level. For long visual reasoning sequences,
+token-level credit assignment can be noisy: a single mis-sampled token dominates the gradient even when the
+overall reasoning is correct.
+
+GSPO reformulates the objective at the **sequence level**:
+
+- sample a group of K candidate sequences for each visual prompt
+- score each sequence with a task-specific reward
+- normalize advantages **within the group** to remove reward-scale variance across prompts
+- apply the importance-sampling correction at the sequence level instead of per token
+
+In practice this gives smoother training curves and is more forgiving when the policy diverges from the reference
+during early training — which matters because visual tasks tend to have wider initial reward variance.
+
+## System Design
+
+The pipeline is structured as four cleanly separated stages so each is observable and replaceable:
+
+1. **Rollout sampler** — drives Qwen3-VL to generate K candidate completions per prompt using vLLM for batched
+   generation. Each candidate carries the full token-level logprobs needed for the policy update.
+2. **Reward function bank** — task-specific scorers: exact-match for counting, edit distance for OCR,
+   IoU + correctness for grounding. Reward functions are plain Python and easy to swap.
+3. **GSPO trainer** — wraps the policy and reference models, computes per-group advantages, and runs the
+   sequence-level PPO-style update with KL regularization to the reference.
+4. **Evaluation harness** — runs a held-out evaluation set every N steps and writes before/after comparison
+   records so training progress is visible without staring at a loss curve.
+
+## Reward Design
+
+Reward shaping is where most visual RL projects quietly fail. This pipeline keeps the rewards interpretable:
+
+- **Counting** — exact integer match against ground truth, with partial credit on `|error| <= 1` to avoid
+  collapsing the policy when it is close.
+- **OCR** — normalized character edit distance, capped so a single short hallucination cannot dominate.
+- **Grounding** — combined IoU of predicted bounding box plus a binary correctness check on the object
+  label. The combination matters because IoU alone rewards "lucky" boxes on wrong objects.
+
+All three reward functions return a single scalar in [0, 1] so the trainer can mix them without rescaling.
+
+## Training Loop
+
+The actual training loop is intentionally simple, because complexity is in the reward and rollout stages:
+
+- pull a batch of prompts from the curriculum scheduler
+- generate K sequences per prompt with vLLM
+- score each sequence with the appropriate reward function
+- compute group-normalized advantages
+- run one GSPO update step, with KL penalty to the frozen reference model
+- log group reward statistics and write evaluation snapshots periodically
+
+The KL coefficient is the single most sensitive hyperparameter — too high and the policy refuses to move,
+too low and it drifts off-distribution. This pipeline exposes it as a config knob with a sensible default.
+
+## Evaluation Strategy
+
+Beyond standard accuracy metrics, the system records **before/after pairs** on a fixed evaluation set.
+Each pair contains the same image + prompt, with the base model output and the RL-tuned output side by side.
+This is what actually convinces a reader the training did something — and is what the live demo replays.
+
+## Why This Project Is Strong
+
+This project signals real working knowledge in a few directions at once:
+
+- **Modern RL for LLMs** beyond textbook PPO — GSPO and GRPO are 2024-era algorithms, not academic fossils.
+- **Multimodal training infrastructure** — vLLM-batched rollouts plus a Trainer integration is not a single-script
+  notebook, it is a small system.
+- **Reward engineering** — the three reward functions are deliberately interpretable so a reviewer can reason about
+  what the policy is actually optimizing.
+- **Reproducibility discipline** — every run records config, reward curves, KL trajectories, and before/after
+  evaluation pairs so the work is auditable.
+
+## Demo Strategy
+
+The live demo on this site replays a captured training run on three sample visual prompts. Visitors can:
+
+- pick a task type (counting, OCR, grounding)
+- inspect the group of K candidate completions and their individual rewards
+- watch the policy update step turn the group reward into a directional shift
+- compare the base model output with the RL-tuned output on the same prompt
+
+This shape is more honest than a generic "type a question" chat demo because it exposes the actual mechanism:
+sampling, scoring, updating.
+
+<DemoStatus
+  title="Recommended public demo format"
+  description="Replay a captured training trajectory with three preset visual tasks. Show grouped candidate sequences, their per-sequence reward, the resulting policy update direction, and the before/after model output. Avoid running real GPU inference on the portfolio host — the captured trajectory is more reliable and more readable."
+/>
+
+## What This Project Signals
+
+- modern LLM reinforcement learning (GSPO / GRPO family) applied to a real multimodal model
+- vLLM-backed rollout infrastructure for batched RL training
+- interpretable reward engineering across three distinct vision tasks
+- reproducibility instincts that hold up under technical review

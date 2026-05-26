@@ -1,0 +1,55 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="180" y1="80" x2="1400" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#10181A"/>
+      <stop offset="0.55" stop-color="#0E1714"/>
+      <stop offset="1" stop-color="#1A1812"/>
+    </linearGradient>
+    <filter id="blur" x="-200" y="-200" width="2000" height="1300" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="100"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="900" rx="40" fill="url(#bg)"/>
+  <g opacity="0.78" filter="url(#blur)">
+    <circle cx="360" cy="240" r="170" fill="#3D8B55"/>
+    <circle cx="1240" cy="720" r="200" fill="#D4A574" fill-opacity="0.42"/>
+  </g>
+
+  <rect x="160" y="108" width="1280" height="684" rx="34" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.08)"/>
+
+  <text x="230" y="208" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="46" font-weight="800">GRPO Reasoning Trainer</text>
+  <text x="230" y="256" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="22">Group-relative policy optimization for math, code, and chain-of-thought tasks.</text>
+
+  <rect x="232" y="328" width="378" height="358" rx="28" fill="rgba(127,188,140,0.12)" stroke="rgba(127,188,140,0.22)"/>
+  <text x="272" y="392" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="700">Group Sampling</text>
+  <text x="272" y="436" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="18">K candidate completions per prompt, vLLM-batched.</text>
+  <rect x="272" y="488" width="298" height="44" rx="12" fill="rgba(255,255,255,0.06)"/>
+  <text x="292" y="517" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="16">k=1  r=0.62</text>
+  <rect x="272" y="544" width="298" height="44" rx="12" fill="rgba(127,188,140,0.18)"/>
+  <text x="292" y="573" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="16">k=2  r=0.91</text>
+  <rect x="272" y="600" width="298" height="44" rx="12" fill="rgba(255,255,255,0.06)"/>
+  <text x="292" y="629" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="16">k=3  r=0.40</text>
+
+  <rect x="640" y="296" width="320" height="410" rx="30" fill="rgba(212,165,116,0.14)" stroke="rgba(212,165,116,0.24)"/>
+  <text x="678" y="360" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800">GRPO Update</text>
+  <text x="678" y="404" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="18">Group-relative advantage, no critic network needed.</text>
+  <rect x="678" y="460" width="248" height="62" rx="16" fill="rgba(0,0,0,0.18)"/>
+  <text x="700" y="498" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700">A = (r - μ) / σ</text>
+  <rect x="678" y="540" width="248" height="62" rx="16" fill="rgba(0,0,0,0.18)"/>
+  <text x="700" y="578" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700">loss = -E[ρ·A] + βKL</text>
+  <rect x="678" y="620" width="248" height="62" rx="16" fill="rgba(0,0,0,0.18)"/>
+  <text x="700" y="658" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700">policy ← step(loss)</text>
+
+  <rect x="990" y="328" width="378" height="358" rx="28" fill="rgba(255,255,255,0.05)"/>
+  <text x="1030" y="392" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="700">Reward Components</text>
+  <text x="1030" y="436" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="18">Interpretable, observable, debug-friendly.</text>
+  <rect x="1030" y="488" width="298" height="44" rx="12" fill="rgba(127,188,140,0.14)"/>
+  <text x="1050" y="517" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="16">correctness   weight 1.0</text>
+  <rect x="1030" y="544" width="298" height="44" rx="12" fill="rgba(127,188,140,0.14)"/>
+  <text x="1050" y="573" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="16">format        weight 0.2</text>
+  <rect x="1030" y="600" width="298" height="44" rx="12" fill="rgba(212,165,116,0.18)"/>
+  <text x="1050" y="629" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="16">length        weight -0.1</text>
+
+  <text x="232" y="754" fill="#7FBC8C" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="600">Base LLM  →  GRPO Reasoning Training  →  R1-style Reasoning Specialist</text>
+</svg>

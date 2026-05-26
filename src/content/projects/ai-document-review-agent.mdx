@@ -1,0 +1,161 @@
+---
+title: "AI 文档审核 Agent"
+title_en: "AI Document Review Agent"
+date: "2026-04-02"
+category: project
+tags: ["LangChain", "FastAPI", "React", "PostgreSQL", "Celery", "Docker", "Agent", "RAG"]
+lang: both
+cover: "/projects/ai-document-review-agent/cover.svg"
+excerpt: "面向企业文档审核场景的 Agent 系统:上传合同、政策、技术规范,自动给出条款一致性、风险点和修改建议,所有结论都引用原文位置。"
+excerpt_en: "An enterprise document review agent: upload a contract, policy, or spec and receive structured findings on clause consistency, risk, and edit suggestions, every conclusion tied to its source location."
+platforms: [website]
+github: ""
+demo: "/demo/ai-document-review-agent"
+published: true
+---
+
+<Callout type="info">
+  This project is framed as a production-shaped agent system, not a "summarize my PDF" demo. The point is that every
+  finding the agent emits is structured, severity-tagged, and pinned to a concrete location in the source document.
+</Callout>
+
+## Overview
+
+AI Document Review Agent was built around a real enterprise workflow that lives inside legal, security, and HR teams:
+someone receives a vendor contract, an internal policy update, or an engineering specification, and has to read it
+end-to-end looking for missing clauses, inconsistencies, and risk language. That work is repetitive, error-prone, and
+usually the bottleneck on a deal or a policy refresh.
+
+The system replaces the first pass of that workflow. A reviewer uploads the document, the agent walks it through a
+fixed review loop, and the output is a structured report that a human reviewer can act on without re-reading
+everything from scratch. The agent never returns an opinion without an explicit pointer back into the document, so a
+human can always check the source before approving a change.
+
+## Product Shape
+
+The end-to-end flow is intentionally narrow so the product is easy to operate:
+
+- upload a document (PDF, DOCX, or pasted text)
+- the gateway parses, normalizes, and indexes the document
+- the agent runs a multi-step review loop in the background
+- the UI streams progress, then renders a structured findings table
+- the reviewer can export the report as Markdown, PDF, or JSON for downstream tools
+
+Reviewers stay inside the same screen from upload to export, which matters more than any single model trick: the
+product value is removing the context switch between "read the document" and "write up the findings."
+
+## System Design
+
+The backend is split into four layers, each independently deployable behind Docker:
+
+1. **FastAPI gateway** — handles auth (JWT), upload validation, document parsing, and the public REST surface. It
+   never calls the LLM directly; it only enqueues review jobs and serves results.
+2. **Agent orchestrator (LangChain)** — owns the review loop. It controls tool calls, retries, and the per-document
+   token budget. The orchestrator is stateful per review and writes intermediate state back to PostgreSQL.
+3. **Async worker (Celery)** — pulls review jobs off the queue and runs the agent. This is what makes the system
+   survive long documents and bursty traffic without timing out the user-facing request.
+4. **PostgreSQL with vector index** — stores documents, parsed chunks, embeddings, agent state, and the final
+   structured report. Using a single store for both relational and vector data keeps the operational surface small.
+
+The boundary that matters is between the gateway and the orchestrator. Keeping the agent behind a job queue means
+the user-facing API stays fast and predictable even when a review takes minutes.
+
+## Review Capabilities
+
+The agent runs four review passes per document. Each pass produces structured findings with location pointers, never
+free-form prose alone:
+
+- **Clause consistency** — cross-checks references like "see §4.2" to confirm the target exists and says what the
+  citing clause claims it says. Example finding: payment terms in §3 quote net-30 while the SLA appendix assumes
+  net-15.
+- **Missing clauses** — compares the document against a checklist for its document type. Example finding: a vendor
+  contract with no termination-for-convenience clause, or a security policy with no incident-response section.
+- **Risk flags** — surfaces language that creates open-ended liability, unbounded indemnification, vague data-handling
+  obligations, or ambiguous scope. Example finding: IP ownership clause that does not specify which party owns
+  derivative works.
+- **Compliance checks** — verifies the document against a configurable rule pack (e.g. ISO 27001 controls, local
+  labor law clauses, GDPR data-processing requirements). Example finding: a password rotation interval that
+  contradicts the organization's stated ISO 27001 control baseline.
+
+Each finding carries severity (high / medium / low), the exact source location (section, page, paragraph), the
+quoted clause text, and a concrete suggested edit. Findings without a source location are dropped rather than shown.
+
+## Why Agent over Single-Shot LLM Call
+
+A single LLM call with a long prompt sounds simpler, but it collapses in practice for this use case:
+
+- review needs **multiple passes** with different focuses, and the relevant context for each pass is different
+- some findings only emerge from **cross-referencing** two distant sections, which means the model has to plan its
+  reads instead of consuming everything at once
+- long documents exceed any reasonable single-shot context window, so the system has to retrieve and reason on
+  chunks rather than dump the full text
+- a single hallucinated finding poisons the entire report, so the loop needs a **verification step** that goes back
+  to the source before committing a finding to the output
+
+The agent loop captures this naturally: it builds an overview, locates candidate sections, pulls the exact clause
+text, runs the focused check, and only then writes the finding into the report. Each step is observable and can be
+retried in isolation.
+
+## Evidence Discipline
+
+The single rule that makes the output trustworthy is that **every finding must cite a source location**. If the agent
+cannot point to a specific section, page, or paragraph that supports the claim, the finding is filtered out before
+the report is rendered. The orchestrator enforces this at the schema level, not as a prompt hint — a finding without
+a `source_location` field fails validation and never reaches the user.
+
+This is the difference between a useful first-pass review and a confident-sounding hallucination. A reviewer who
+finds one fabricated citation stops trusting the whole report, so the system is tuned to drop borderline findings
+rather than ship them.
+
+## Production Concerns
+
+The system is built to behave well under real operating conditions, not just on a curated sample:
+
+- **Rate limiting** — per-user and per-tenant quotas at the gateway, with backpressure to the Celery queue when
+  upstream model providers throttle.
+- **Token budget per document** — each review has a hard token ceiling computed from document length. The agent
+  prioritizes high-severity checks first so the budget always covers the most important passes.
+- **Agent loop fallback** — if the orchestrator detects the loop is not converging (repeated tool calls, no new
+  findings across iterations), it terminates cleanly and returns partial results flagged as incomplete instead of
+  spinning indefinitely.
+- **Async retry** — failed Celery tasks retry with exponential backoff and dead-letter to an inspection queue,
+  which is how the team learns about repeatable failure modes instead of losing them silently.
+- **Audit log** — every model call, every tool invocation, and every finding is persisted so a reviewer can
+  reproduce how a specific finding was reached, which is mandatory for regulated use cases.
+
+## Why This Project Is Strong
+
+This project signals a few things at once that are hard to fake on a portfolio:
+
+- **Real product framing** — the system maps onto an actual job a human does today, not a generic "chat with my
+  document" demo.
+- **Agent design discipline** — a constrained loop with schema-validated findings, not an unbounded ReAct chain
+  hoping for the best.
+- **Backend systems thinking** — gateway, orchestrator, async worker, and persistent store as separate concerns,
+  each with its own scaling and failure behavior.
+- **Trust engineering** — evidence-or-drop is the kind of constraint that only matters once the system has been
+  used by someone who got burned by a hallucinated answer.
+
+## Demo Strategy
+
+The public demo on this site runs a fixed agent loop against three preloaded sample documents (a vendor contract,
+an IT security policy, and an employment handbook). Visitors can:
+
+- pick a sample document
+- watch the agent progress through parse, overview, clause search, risk check, and report
+- inspect the structured findings table with severity, source location, and suggested fix per row
+
+The demo is a replay rather than a live agent call, which keeps the portfolio site predictable while still showing
+exactly what the production system would produce.
+
+<DemoStatus
+  title="Recommended public demo format"
+  description="Expose a fixed set of sample documents and replay the agent loop against them. Show the multi-step progress timeline and the final structured findings table. Avoid running a real Celery + LangChain pipeline on the portfolio host — the replay is cheaper and more honest about what the system actually does."
+/>
+
+## What This Project Signals
+
+- production-shaped agent design with explicit loop control and evidence discipline
+- full-stack delivery from FastAPI gateway through Celery worker to a React review UI
+- multi-pass document review framed around an actual job a human currently does
+- operational instincts around rate limits, token budgets, retries, and audit logging

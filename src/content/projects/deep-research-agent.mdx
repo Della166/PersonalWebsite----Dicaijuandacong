@@ -1,0 +1,76 @@
+---
+title: "Deep Research Agent"
+title_en: "Deep Research Agent"
+date: "2026-04-26"
+category: project
+tags: ["LangGraph", "Tavily", "arXiv", "FastAPI", "React", "Pydantic", "Agent", "RAG"]
+lang: both
+cover: "/projects/deep-research-agent/cover.svg"
+excerpt: "面向研究者的自动调研 agent:给定研究问题,自动拆解、检索、笔记、交叉引用,产出带引用的综述初稿。"
+excerpt_en: "An automated literature-survey agent for researchers: decompose a question, retrieve sources, write structured notes, cross-reference findings, and emit a cited survey draft."
+platforms: [website]
+github: ""
+demo: "/demo/deep-research-agent"
+published: true
+---
+
+## Overview
+
+Anyone who has tried to write a related-work section knows the same loop: open arXiv, queue thirty PDFs, skim half of them, lose track of which paper said what, and end up writing prose that the citations only partially support. The bottleneck is not retrieval and not writing on their own. The bottleneck is the bookkeeping in between, where a human has to keep dozens of partial claims, sources, and contradictions in working memory long enough to weave them into a coherent argument.
+
+Deep Research Agent is a research assistant that takes the bookkeeping over. Given a single research question, it decomposes the question into searchable sub-questions, retrieves papers and web sources in parallel, extracts structured notes from each source, builds a small cross-reference graph over those notes, and finally emits a survey draft in which every paragraph is anchored to specific notes and every note is anchored to a specific source. The goal is not to replace the researcher's judgment but to leave the researcher with a draft that is already auditable, instead of a folder full of unread PDFs.
+
+## Pipeline Shape
+
+The agent runs a fixed pipeline that I have found to be the smallest one that still produces a useful result: question, decomposition, retrieval, note extraction, cross-reference, synthesis, cited draft. Each stage has a narrow contract with the next stage, which is what makes the system debuggable. When a draft cites something that turns out to be wrong, I can walk backward from the citation to the note, from the note to the source, and from the source to the sub-question that retrieved it, without guessing.
+
+LangGraph holds this pipeline together. Each node is a small function with typed inputs and outputs, and the graph keeps the global state. Critique nodes sit between the major stages, so the agent can decide to re-decompose, re-retrieve, or rewrite a note before moving on, instead of running the whole pipeline once and hoping.
+
+## Decomposition Strategy
+
+The decomposition stage is where most naive research agents fail. They take the user's question and pass it directly into a search engine, which gives them either too few or too many results because the question was framed for a human reader rather than for a retriever. This agent does the opposite. It treats the user's question as an intent and produces a short list of sub-questions that are individually answerable from the literature.
+
+A critique loop runs over the proposed sub-questions before retrieval starts. The critic asks whether the sub-questions cover the user's intent, whether any of them are redundant, and whether each one is concrete enough to drive a useful search. If the critic flags a problem, the planner regenerates only the offending sub-questions instead of the whole list. This is a small detail, but it is the difference between a survey that addresses the actual question and a survey that drifts into adjacent topics.
+
+## Retrieval Layer
+
+Three retrievers run in parallel for each sub-question. arXiv is the primary source for technical papers and is queried with structured filters on category and date. Semantic Scholar provides citation graphs and influence signals, which the agent uses to prefer canonical references over marginally relevant ones. Tavily covers the open web for blog posts, technical reports, and recent announcements that have not yet made it into the indexed literature.
+
+Results from all three retrievers are merged and de-duplicated. De-duplication runs on normalized titles plus a fuzzy author and year match, because the same paper often appears under slightly different titles across arXiv and Semantic Scholar. The merged list is then capped per sub-question, so a single popular topic cannot crowd out the rest of the survey.
+
+## Structured Note Schema
+
+Every retrieved source is rewritten into a structured note before it touches the synthesis stage. Notes are Pydantic models with fixed fields: a single concise claim, the supporting evidence quoted from the source, the source identifier, a confidence score, and an optional list of other notes the current note contradicts. Forcing the agent to produce a single claim per note is the most important constraint in the whole system. It prevents the model from writing summary paragraphs that quietly merge several different ideas into one block, which is the failure mode that leads to citations supporting only part of the text they are attached to.
+
+A validation step rejects notes that fail the schema, that quote evidence not present in the source, or whose confidence score is wildly out of line with the strength of the quoted evidence. Rejected notes are sent back to the extractor with a specific reason, instead of being silently dropped.
+
+## Cross-Reference and Conflict Detection
+
+Once notes exist, the agent builds a small graph over them. Edges connect notes whose claims support each other, notes whose claims contradict each other, and notes that share a method or dataset. The graph is computed with a mixture of embedding similarity for candidate edges and a model-based check for the label, which keeps the per-edge cost manageable on a graph of a few hundred notes.
+
+This graph changes what the synthesis stage can do. Instead of writing a paragraph from a flat list of notes and hoping the model notices the contradictions, the synthesizer is handed groups of supporting and conflicting notes together and is explicitly asked to surface the disagreement. In practice this turns vague hedging into concrete sentences such as "two recent works report the opposite finding under shorter context lengths," which is what a human reviewer actually wants to see.
+
+## Synthesis with Citations
+
+The final stage writes the survey draft. Each paragraph is generated against a specific subset of the note graph, and the prompt requires every factual sentence to carry a citation that points to a note in that subset. A post-generation validator walks the draft, resolves each citation to its underlying source, and rejects any paragraph that contains an unanchored factual claim. Rejection sends only that paragraph back for a rewrite, not the whole draft.
+
+The output is a markdown document with footnote-style citations, an annotated bibliography that lists every source and the notes derived from it, and a small JSON sidecar that records which sub-question produced which note. The sidecar is what makes the draft auditable. A human reviewer can open it, jump to any sentence, and verify the chain from prose to note to source without re-running the agent.
+
+## Why This Project Is Strong
+
+The project is interesting because it exercises the parts of agent engineering that get glossed over in demos. It has to plan, but planning that does not survive critique is useless. It has to retrieve, but a retriever without de-duplication and without source preference produces noise. It has to write, but writing without a structured intermediate representation produces text that cannot be audited. Solving all of those problems at once, end to end, is what separates a real research assistant from a flashy single-prompt wrapper.
+
+It is also strong because the failure modes are visible. When the system gets something wrong, the cause is always a specific node in the graph or a specific note in the store, and the fix is always a change to a contract that another node depends on. That is the property that lets the system improve over time instead of becoming a pile of prompts that nobody dares to touch.
+
+## Demo Strategy
+
+The live demo on this site replays the full pipeline on a fixed set of mock sources. It is deliberately deterministic so that the structure of the workflow is easy to follow, but the shape of every stage matches the production system. Visitors can pick a research question, watch the decomposition, retrieval, extraction, and cross-reference stages run, and inspect the cited draft against the underlying notes and sources.
+
+<DemoStatus
+  title="Recommended public demo format"
+  description="Replay the full research pipeline on three preset research questions. Stream sub-questions, parallel retrieval counts, structured notes, and the cross-reference graph, then show a short cited draft tied back to each note. The deterministic replay is safer than a live agent run — the value is the workflow, not the live model call."
+/>
+
+## What This Project Signals
+
+Deep Research Agent is a useful signal because it shows competence at the layer that matters most for agent systems: the contracts between stages. Anyone can wire an LLM to a search API. The interesting work is in deciding what each stage owes the next stage, how to validate that contract, and how to recover when the contract is violated. This project is a worked example of doing that across a non-trivial pipeline with real-world inputs.

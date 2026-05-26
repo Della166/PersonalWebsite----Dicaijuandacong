@@ -1,0 +1,57 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="170" y1="80" x2="1400" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F1A18"/>
+      <stop offset="0.55" stop-color="#0E1714"/>
+      <stop offset="1" stop-color="#1A1810"/>
+    </linearGradient>
+    <filter id="blur" x="-200" y="-200" width="2000" height="1300" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="100"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="900" rx="40" fill="url(#bg)"/>
+  <g opacity="0.78" filter="url(#blur)">
+    <circle cx="380" cy="230" r="170" fill="#3D8B55"/>
+    <circle cx="1220" cy="720" r="200" fill="#D4A574" fill-opacity="0.42"/>
+  </g>
+
+  <rect x="160" y="108" width="1280" height="684" rx="34" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.08)"/>
+
+  <text x="230" y="208" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="46" font-weight="800">Deep Research Agent</text>
+  <text x="230" y="256" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="22">Decompose, retrieve, cross-reference, and synthesize literature reviews with grounded citations.</text>
+
+  <rect x="232" y="328" width="378" height="358" rx="28" fill="rgba(127,188,140,0.12)" stroke="rgba(127,188,140,0.22)"/>
+  <text x="272" y="392" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="700">Question Decomposition</text>
+  <text x="272" y="436" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="18">Split one broad question into searchable sub-questions.</text>
+  <rect x="272" y="488" width="298" height="44" rx="12" fill="rgba(255,255,255,0.06)"/>
+  <text x="292" y="517" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="15">sub-Q 1  algorithm definition</text>
+  <rect x="272" y="544" width="298" height="44" rx="12" fill="rgba(255,255,255,0.06)"/>
+  <text x="292" y="573" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="15">sub-Q 2  benchmark comparison</text>
+  <rect x="272" y="600" width="298" height="44" rx="12" fill="rgba(255,255,255,0.06)"/>
+  <text x="292" y="629" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="15">sub-Q 3  failure modes</text>
+
+  <rect x="640" y="296" width="320" height="410" rx="30" fill="rgba(212,165,116,0.14)" stroke="rgba(212,165,116,0.24)"/>
+  <text x="678" y="360" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800">Multi-Source Retrieval</text>
+  <text x="678" y="404" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="18">Parallel search across arXiv, Semantic Scholar, web.</text>
+  <rect x="678" y="460" width="248" height="50" rx="14" fill="rgba(0,0,0,0.20)"/>
+  <text x="700" y="492" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="16">arXiv      12 results</text>
+  <rect x="678" y="520" width="248" height="50" rx="14" fill="rgba(0,0,0,0.20)"/>
+  <text x="700" y="552" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="16">Sem. Sch.   8 results</text>
+  <rect x="678" y="580" width="248" height="50" rx="14" fill="rgba(0,0,0,0.20)"/>
+  <text x="700" y="612" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="16">web        14 results</text>
+  <rect x="678" y="640" width="248" height="50" rx="14" fill="rgba(0,0,0,0.20)"/>
+  <text x="700" y="672" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="16">→ dedup   28 unique</text>
+
+  <rect x="990" y="328" width="378" height="358" rx="28" fill="rgba(255,255,255,0.05)"/>
+  <text x="1030" y="392" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="700">Cross-Referenced Synthesis</text>
+  <text x="1030" y="436" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="18">Graph of supports / contradicts, then cite-bound draft.</text>
+  <rect x="1030" y="488" width="298" height="44" rx="12" fill="rgba(127,188,140,0.14)"/>
+  <text x="1050" y="517" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="15">n1 → supports → n3</text>
+  <rect x="1030" y="544" width="298" height="44" rx="12" fill="rgba(212,165,116,0.18)"/>
+  <text x="1050" y="573" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="15">n2 ✕ contradicts ✕ n4</text>
+  <rect x="1030" y="600" width="298" height="44" rx="12" fill="rgba(127,188,140,0.14)"/>
+  <text x="1050" y="629" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="15">draft: 6 paras / 18 cites</text>
+
+  <text x="232" y="754" fill="#7FBC8C" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="600">Research Question  →  Sub-questions  →  Sources  →  Notes  →  Cited Survey Draft</text>
+</svg>

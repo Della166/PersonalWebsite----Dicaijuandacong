@@ -1,0 +1,120 @@
+---
+title: "OpenClaw Skill 开发框架"
+title_en: "OpenClaw Skill Builder"
+date: "2026-04-18"
+category: project
+tags: ["OpenClaw", "TypeScript", "Bun", "CLI", "Agent Skills", "Vitest", "GitHub Actions"]
+lang: both
+cover: "/projects/openclaw-skill-framework/cover.svg"
+excerpt: "一套围绕 OpenClaw Skill 系统的工程化开发框架:scaffolding CLI、本地测试 harness、版本管理和 CI 校验,让团队批量产出可复用的 Agent 能力。"
+excerpt_en: "An engineering toolkit for the OpenClaw Skill system: scaffolding CLI, local test harness, version management, and CI validation, so teams can ship reusable agent capabilities at scale."
+platforms: [website]
+github: ""
+demo: "/demo/openclaw-skill-framework"
+published: true
+---
+
+<Callout type="info">
+  Once an agent team starts producing more than a handful of Skills, the bottleneck stops being "can we write
+  a Skill" and becomes "can we keep them consistent, discoverable, and shippable." This project is the
+  toolkit that handles that bottleneck.
+</Callout>
+
+## Overview
+
+OpenClaw Skill Builder is a small but opinionated developer toolkit for teams building on the OpenClaw harness.
+The runtime already understands Skills — markdown files with frontmatter, supporting scripts, and reference
+material that an agent loads on demand. What is missing is the workflow around producing them at scale:
+a way to scaffold a new Skill in seconds, validate it locally before publishing, manage versions across
+multiple agents, and gate quality through CI.
+
+This project fills that gap with a TypeScript CLI plus a CI action.
+
+## Skill Anatomy
+
+Every Skill in the OpenClaw model is a self-contained directory. The toolkit assumes — and enforces — the
+following layout:
+
+- `SKILL.md` with a frontmatter block (`name`, `description`, `triggers`, optional `version`)
+- `scripts/` for any helper scripts the Skill calls
+- `references/` for supporting markdown that the Skill links into
+
+The frontmatter `description` is what the agent uses for routing, so the toolkit treats it as a first-class
+field: required, length-bounded, and lint-checked for the qualities that make routing reliable
+(includes a verb, includes a trigger keyword, no marketing fluff).
+
+## Scaffolding CLI
+
+The CLI ships one primary command:
+
+```
+claw skill new <name> [--with-reference] [--with-script]
+```
+
+Behind the scenes it generates the full directory layout, a SKILL.md template with sensible frontmatter,
+a sample reference file, an `.editorconfig`, and a minimal test fixture so the Skill is immediately
+runnable inside the local harness. Defaults match the conventions enforced by the linter, so the very first
+file the developer sees is already passing CI.
+
+## Local Test Harness
+
+A separate command — `claw skill test <path>` — boots a sandboxed OpenClaw instance, registers the Skill,
+and runs a small battery of checks:
+
+- frontmatter parses against the schema
+- declared triggers route the way the developer expects
+- referenced files exist and are readable
+- supporting scripts are executable and exit cleanly on a smoke input
+
+The harness writes a single JSON report so it can run in CI as well as in a developer's terminal.
+
+## Version Management
+
+Skills frequently get reused across multiple agents inside the same team. The toolkit treats this as a
+versioning problem and uses semantic version tags on the Skill directory:
+
+- a `version` field in frontmatter, with semver enforcement
+- a `CHANGELOG.md` file that is required when `version` changes
+- a `deprecated` flag for graceful rollouts that surface a warning at agent load time
+
+This keeps the human-readable change story attached to the Skill instead of buried in commit history.
+
+## CI Validation Pipeline
+
+The accompanying GitHub Action wraps the same validation that runs locally, plus a few CI-only checks:
+
+- frontmatter schema and length bounds
+- link integrity across all referenced files
+- duplicate trigger detection across Skills in the same repository
+- changelog freshness when `version` was bumped
+- generated test report uploaded as a CI artifact
+
+Failures point at the exact field, file, and line so the contributor can fix without digging through logs.
+
+## Why This Project Is Strong
+
+This is one of the cleanest "developer-experience" portfolio projects because it shows:
+
+- **systems thinking around agent infrastructure** — not "I built a Skill," but "I built the toolkit other
+  people use to build Skills"
+- **CLI design discipline** — predictable verbs, opinionated defaults, useful error messages
+- **CI as a quality gate** — same validation in two surfaces (local + remote), no bypass
+- **maintainability instincts** — version management and deprecation flow that survives team growth
+
+## Demo Strategy
+
+The live demo replays one full scaffold + validate cycle. Visitors can pick one of three sample Skills
+(email triage, PR reviewer, release notes), watch the scaffold output stream into a virtual file tree,
+inspect the generated SKILL.md, and see the CI validator report run in real time.
+
+<DemoStatus
+  title="Recommended public demo format"
+  description="Stream a scripted CLI run that produces a Skill directory, then surface the generated SKILL.md and a CI validation report side by side. This is more honest than running real OpenClaw inside the browser because the value is the workflow, not the runtime."
+/>
+
+## What This Project Signals
+
+- developer-experience and tooling design for AI agent ecosystems
+- familiarity with the OpenClaw / Claude Code Skill model
+- CI / lint discipline that scales to more than one author
+- ability to package "good practices" into runnable tooling instead of leaving them in a README

@@ -1,0 +1,59 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="160" y1="80" x2="1420" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F1A16"/>
+      <stop offset="0.5" stop-color="#0E1714"/>
+      <stop offset="1" stop-color="#1B1810"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="270" y1="690" x2="1260" y2="250" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7FBC8C"/>
+      <stop offset="1" stop-color="#D4A574"/>
+    </linearGradient>
+    <filter id="blur" x="-180" y="-180" width="1960" height="1260" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="100"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="900" rx="40" fill="url(#bg)"/>
+  <g opacity="0.78" filter="url(#blur)">
+    <circle cx="380" cy="220" r="170" fill="#3D8B55"/>
+    <circle cx="1230" cy="740" r="200" fill="#D4A574" fill-opacity="0.42"/>
+  </g>
+
+  <rect x="160" y="108" width="1280" height="684" rx="34" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.08)"/>
+
+  <text x="230" y="208" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="46" font-weight="800">Qwen3-VL Visual Reinforcement Learning</text>
+  <text x="230" y="256" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="22">GSPO sequence-level policy optimization for counting, OCR, and visual grounding.</text>
+
+  <rect x="232" y="328" width="378" height="358" rx="28" fill="rgba(127,188,140,0.12)" stroke="rgba(127,188,140,0.22)"/>
+  <text x="272" y="392" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="700">Rollout Sampler</text>
+  <text x="272" y="436" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="18">vLLM-batched generation of K candidate sequences per multimodal prompt.</text>
+  <rect x="272" y="488" width="298" height="44" rx="12" fill="rgba(255,255,255,0.06)"/>
+  <text x="292" y="517" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="16">candidate #1  reward 0.82</text>
+  <rect x="272" y="544" width="298" height="44" rx="12" fill="rgba(127,188,140,0.18)"/>
+  <text x="292" y="573" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="16">candidate #2  reward 0.91</text>
+  <rect x="272" y="600" width="298" height="44" rx="12" fill="rgba(255,255,255,0.06)"/>
+  <text x="292" y="629" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="16">candidate #3  reward 0.34</text>
+
+  <rect x="640" y="296" width="320" height="410" rx="30" fill="rgba(212,165,116,0.14)" stroke="rgba(212,165,116,0.24)"/>
+  <text x="678" y="360" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800">GSPO Trainer</text>
+  <text x="678" y="404" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="18">Sequence-level objective with group-normalized advantages and reference KL.</text>
+  <rect x="678" y="460" width="248" height="62" rx="16" fill="rgba(0,0,0,0.18)"/>
+  <text x="700" y="498" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700">advantage = r − μ_group</text>
+  <rect x="678" y="540" width="248" height="62" rx="16" fill="rgba(0,0,0,0.18)"/>
+  <text x="700" y="578" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700">loss = −E[ρ · A] + βKL</text>
+  <rect x="678" y="620" width="248" height="62" rx="16" fill="rgba(0,0,0,0.18)"/>
+  <text x="700" y="658" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700">policy ← step(loss)</text>
+
+  <rect x="990" y="328" width="378" height="358" rx="28" fill="rgba(255,255,255,0.05)"/>
+  <text x="1030" y="392" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="700">Reward Bank</text>
+  <text x="1030" y="436" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="18">Per-task scorers: counting EM, OCR edit-distance, IoU grounding.</text>
+  <rect x="1030" y="488" width="298" height="44" rx="12" fill="rgba(127,188,140,0.14)"/>
+  <text x="1050" y="517" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="16">counting:    exact-match + |Δ|≤1</text>
+  <rect x="1030" y="544" width="298" height="44" rx="12" fill="rgba(127,188,140,0.14)"/>
+  <text x="1050" y="573" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="16">ocr:         norm edit distance</text>
+  <rect x="1030" y="600" width="298" height="44" rx="12" fill="rgba(212,165,116,0.18)"/>
+  <text x="1050" y="629" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="16">grounding:   IoU · label correct</text>
+
+  <text x="232" y="754" fill="#7FBC8C" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="600">Base Qwen3-VL 8B  →  GSPO RL Fine-Tuning  →  Multimodal Task Specialist</text>
+</svg>

@@ -1,0 +1,138 @@
+---
+title: "GRPO 推理强化训练器"
+title_en: "GRPO Reasoning Trainer"
+date: "2026-04-08"
+category: project
+tags: ["PyTorch", "GRPO", "DeepSeek-R1", "TRL", "Reasoning", "Reward Model"]
+lang: both
+cover: "/projects/grpo-reasoning-trainer/cover.svg"
+excerpt: "复刻 DeepSeek-R1 论文里 GRPO（Group Relative Policy Optimization）算法的训练管线，用于在数学推理、代码生成和思维链任务上对开源 LLM 做无 critic 的强化训练。"
+excerpt_en: "An implementation of the GRPO (Group Relative Policy Optimization) algorithm from the DeepSeek-R1 paper, used to RL-tune open-source LLMs on math reasoning, code generation, and chain-of-thought tasks without a separate critic network."
+platforms: [website]
+github: ""
+demo: "/demo/grpo-reasoning-trainer"
+published: true
+---
+
+<Callout type="info">
+  GRPO is the algorithm that powered DeepSeek-R1's reasoning leap. This trainer reimplements it as a clean,
+  observable pipeline so every step — sampling, reward, group-relative advantage, policy update — can be
+  inspected, swapped, and benchmarked on different open-source base models.
+</Callout>
+
+## Overview
+
+GRPO Reasoning Trainer is a focused implementation of the **Group Relative Policy Optimization** algorithm
+introduced by DeepSeek for the R1 reasoning model. Where PPO requires a separately trained value network and
+DPO requires preference-pair data, GRPO sidesteps both: it samples a group of K completions per prompt,
+computes a reward for each one, normalizes the rewards inside the group, and uses that as the advantage signal.
+
+The trainer wraps this idea into a production-shaped pipeline: dataset loaders, reward function bank, batched
+rollouts, KL-regularized policy updates, evaluation harness, and checkpointing — all configurable through one
+Hydra config tree.
+
+## Why GRPO
+
+The honest case for GRPO over PPO and DPO comes down to three things:
+
+- **No critic network.** PPO needs a value model that has to be trained alongside the policy and stays close
+  enough to it to give meaningful advantages. That doubles model memory and adds an extra failure mode.
+  GRPO uses the group mean as an implicit baseline.
+- **No preference pairs needed.** DPO requires curated chosen / rejected pairs. GRPO only needs a reward
+  function. For verifiable tasks (math, code, format compliance) the reward is essentially free.
+- **Reasoning-friendly.** Because the advantage is sequence-level relative to a group, the algorithm naturally
+  rewards reasoning sequences that lead to correct answers over those that do not, without micromanaging
+  each token.
+
+## Group-Relative Advantage
+
+Given a prompt, the trainer samples K completions (typically K = 4 to 16). Each completion gets a scalar
+reward. The advantage for completion i is:
+
+```
+A_i = (r_i - mean(r)) / (std(r) + eps)
+```
+
+Group-relative centering removes per-prompt reward-scale variance, which is the noise that usually destabilizes
+RL training on heterogeneous task mixes. Standardizing inside the group also keeps the gradient magnitude
+bounded without an explicit reward normalizer.
+
+## Reward Design
+
+The reward bank treats three signals as first-class concerns:
+
+- **Correctness** — exact match on the final answer for math, unit-test pass rate for code. This is the
+  primary signal and dominates the total reward.
+- **Format compliance** — the model is asked to emit a `<think>...</think><answer>...</answer>` structure.
+  Format compliance is a small reward bonus, not a hard requirement, so the policy can recover if it drifts.
+- **Length penalty** — a soft, calibrated penalty against rambling completions, applied only above a threshold
+  so the policy is not punished for reasoning at all.
+
+Combining these gives an interpretable reward that a reviewer can reason about: "the model is being rewarded
+for getting the math right, slightly nudged toward emitting structured reasoning, and gently discouraged from
+walls of text."
+
+## Training Loop
+
+The loop is intentionally boring — the complexity lives in rollout and reward, not in control flow:
+
+1. Pull a batch of prompts from the curriculum scheduler.
+2. Sample K completions per prompt with the policy model (vLLM-backed for throughput).
+3. Score every completion with the reward bank.
+4. Compute group-relative advantages.
+5. Run a single GRPO update step with KL regularization to a frozen reference policy.
+6. Log group reward statistics, KL trajectory, and reward component breakdown.
+7. Every N steps, run the evaluation harness on a held-out set and snapshot before / after answers.
+
+The KL coefficient is the single most sensitive knob. The default is conservative; the config exposes it for
+sweeps.
+
+## Evaluation Strategy
+
+Standard accuracy metrics are not enough for a reasoning trainer because they hide the qualitative shift in
+how the model thinks. The evaluation harness records:
+
+- pass rate on the held-out evaluation set, broken down by task category
+- mean completion length and format-compliance rate
+- per-step KL to the reference policy
+- before / after pairs on a fixed set of prompts so a reviewer can see the actual change in behavior
+
+Those before / after pairs are what the live demo replays.
+
+## Why This Project Is Strong
+
+This project carries real signal in a few directions:
+
+- **Modern reasoning RL** — GRPO is the algorithm behind DeepSeek-R1 and the GSPO line of work. Implementing
+  it from scratch demonstrates understanding of the actual frontier, not just textbook PPO.
+- **Reward engineering instincts** — splitting correctness, format, and length into separately observable
+  components is the kind of design that makes an RL run debuggable.
+- **Trainer-shaped pipeline** — not a notebook. A Hydra-configured trainer with checkpointing, evaluation
+  hooks, and a swappable reward bank is closer to what production teams actually run.
+- **Reproducibility discipline** — every run records config, reward curves, KL trajectories, and evaluation
+  snapshots so results can be defended under review.
+
+## Demo Strategy
+
+The live demo replays a captured training step on three sample prompts (math, code, chain-of-thought).
+Visitors can:
+
+- pick a task type
+- inspect the K candidate completions and each one's reward breakdown
+- see the group-relative advantage computed in front of them
+- compare the base model answer with the answer after the policy update
+
+This is more informative than a chat demo because the actual mechanism — group sampling, reward, advantage,
+update — is visible.
+
+<DemoStatus
+  title="Recommended public demo format"
+  description="Replay a captured training step on three preset prompts. Show K candidate completions with their per-component rewards, the group-relative advantage computation, and the before / after model output. Avoid running real GPU inference on the portfolio host — captured trajectories are more reliable and faster to inspect."
+/>
+
+## What This Project Signals
+
+- modern reasoning-model RL (GRPO and the broader DeepSeek-R1 family) implemented from scratch
+- reward engineering split into interpretable, observable components
+- trainer-shaped pipeline with config, checkpoint, and evaluation discipline
+- ability to communicate RL training internals to a technical reviewer without hand-waving

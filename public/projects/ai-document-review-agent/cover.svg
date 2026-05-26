@@ -1,0 +1,57 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="170" y1="80" x2="1400" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F1A16"/>
+      <stop offset="0.55" stop-color="#0E1714"/>
+      <stop offset="1" stop-color="#1A1810"/>
+    </linearGradient>
+    <filter id="blur" x="-200" y="-200" width="2000" height="1300" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="100"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="900" rx="40" fill="url(#bg)"/>
+  <g opacity="0.78" filter="url(#blur)">
+    <circle cx="380" cy="230" r="170" fill="#3D8B55"/>
+    <circle cx="1220" cy="720" r="200" fill="#D4A574" fill-opacity="0.42"/>
+  </g>
+
+  <rect x="160" y="108" width="1280" height="684" rx="34" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.08)"/>
+
+  <text x="230" y="208" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="46" font-weight="800">AI Document Review Agent</text>
+  <text x="230" y="256" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="22">Multi-step agent loop for clause consistency, risk flagging, and grounded edit suggestions.</text>
+
+  <rect x="232" y="328" width="378" height="358" rx="28" fill="rgba(127,188,140,0.12)" stroke="rgba(127,188,140,0.22)"/>
+  <text x="272" y="392" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="700">Document Intake</text>
+  <text x="272" y="436" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="18">Contracts, policies, specs — parsed into clause-level chunks.</text>
+  <rect x="272" y="488" width="298" height="44" rx="12" fill="rgba(255,255,255,0.06)"/>
+  <text x="292" y="517" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="15">Vendor MSA v3.pdf  ·  46 pp</text>
+  <rect x="272" y="544" width="298" height="44" rx="12" fill="rgba(255,255,255,0.06)"/>
+  <text x="292" y="573" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="15">Security Policy.docx  ·  22 pp</text>
+  <rect x="272" y="600" width="298" height="44" rx="12" fill="rgba(255,255,255,0.06)"/>
+  <text x="292" y="629" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="15">Handbook 2026.pdf  ·  78 pp</text>
+
+  <rect x="640" y="296" width="320" height="410" rx="30" fill="rgba(212,165,116,0.14)" stroke="rgba(212,165,116,0.24)"/>
+  <text x="678" y="360" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800">Agent Orchestrator</text>
+  <text x="678" y="404" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="18">LangChain loop with FastAPI gateway + Celery workers.</text>
+  <rect x="678" y="460" width="248" height="50" rx="14" fill="rgba(0,0,0,0.20)"/>
+  <text x="700" y="492" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="16">1. overview</text>
+  <rect x="678" y="520" width="248" height="50" rx="14" fill="rgba(0,0,0,0.20)"/>
+  <text x="700" y="552" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="16">2. clause search</text>
+  <rect x="678" y="580" width="248" height="50" rx="14" fill="rgba(0,0,0,0.20)"/>
+  <text x="700" y="612" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="16">3. risk check</text>
+  <rect x="678" y="640" width="248" height="50" rx="14" fill="rgba(0,0,0,0.20)"/>
+  <text x="700" y="672" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="16">4. cite + suggest</text>
+
+  <rect x="990" y="328" width="378" height="358" rx="28" fill="rgba(255,255,255,0.05)"/>
+  <text x="1030" y="392" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="700">Structured Findings</text>
+  <text x="1030" y="436" fill="#B8C4BC" font-family="Inter, Arial, sans-serif" font-size="18">Every finding tied to its source clause.</text>
+  <rect x="1030" y="488" width="298" height="44" rx="12" fill="rgba(212,165,116,0.18)"/>
+  <text x="1050" y="517" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="15">high  §4.2  payment conflict</text>
+  <rect x="1030" y="544" width="298" height="44" rx="12" fill="rgba(127,188,140,0.16)"/>
+  <text x="1050" y="573" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="15">med   §7.1  missing SLA</text>
+  <rect x="1030" y="600" width="298" height="44" rx="12" fill="rgba(127,188,140,0.16)"/>
+  <text x="1050" y="629" fill="#F0EFE8" font-family="Inter, Arial, sans-serif" font-size="15">low   §11   IP attribution</text>
+
+  <text x="232" y="754" fill="#7FBC8C" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="600">Upload  →  Agent Review Loop  →  Structured Report  →  Reviewer Export</text>
+</svg>
