@@ -117,6 +117,6 @@ induce reasoning-chain behavior, which is exactly the recipe DeepSeek-R1 scaled 
   and isn't claimed.
 
 <DemoStatus
-  title="What the live demo replays"
-  description="The demo walks through one GRPO group step on a GSM8K prompt: sample K candidate completions, score each with the five reward functions, normalize advantages within the group, and compare the base 0.5B output (bare answer) against the post-GRPO output (structured reasoning + answer). No live GPU inference on the portfolio host."
+  title="The live demo actually runs"
+  description="Not a replay: the demo is a live reward calculator. Edit a model completion and the gold answer, and all five reward functions (correctness / int / strict_format / soft_format / xmlcount) — ported verbatim from the notebook — recompute in your browser. It's the exact scoring GRPOTrainer applies before the group-relative advantage. Bilingual (EN/中文)."
 />

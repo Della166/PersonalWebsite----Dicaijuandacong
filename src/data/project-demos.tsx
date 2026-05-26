@@ -146,23 +146,23 @@ export const projectDemos = {
       zh: 'GSPO 训练步骤复演',
     },
     summary: {
-      en: 'A guided preview that walks through one GSPO group step on a real MathVista sample: rollout K=4 completions, score them with the format + correctness rewards, group-relative advantage, and the sequence-level update.',
-      zh: '一个引导式预览，用真实 MathVista 样本走一次 GSPO 训练步：采样 K=4 个回答、用 format + correctness 两个奖励打分、组内 advantage、再做序列级更新。',
+      en: 'A live reward calculator, not a replay. Edit a VLM completion and the gold answer; the two real reward functions — formatting (λ=0.3, with the addCriterion penalty) and correctness (λ=1.0, exact 2.0 / numeric 1.5) — recompute in your browser.',
+      zh: '一个真实的奖励计算器，不是预演。编辑 VLM completion 和 gold 答案，两个真实奖励函数——formatting（λ=0.3，含 addCriterion 惩罚）和 correctness（λ=1.0，精确 2.0 / 数值 1.5）——在你浏览器里实时重算。',
     },
     localNote: {
-      en: 'The preview uses real samples from the project\'s held-out eval records (baseline/after_records.json) and the actual two-reward scoring. No live GPU inference on the portfolio host — the model is Qwen3-VL 8B in 4-bit, which belongs on a GPU, not a web server.',
-      zh: '预览用的是项目真实的留出评估记录（baseline/after_records.json）里的样本，以及真实的双奖励打分。作品集服务器上不跑 GPU 推理——模型是 4bit 的 Qwen3-VL 8B，该放 GPU 上而不是 web 服务器。',
+      en: 'The two reward functions are pure string logic, ported verbatim, so they run client-side. The real before/after eval (accuracy 5%→6%, format 77%→84%) comes from the project\'s own records.',
+      zh: '两个奖励函数是纯字符串逻辑、逐字移植，所以在客户端跑。真实的前后评估（准确率 5%→6%、格式 77%→84%）来自项目自己的 records。',
     },
     whatToTry: {
       en: [
-        'Switch between three real MathVista samples: a wrong→correct case, a format-recovery case, and a stayed-wrong case.',
-        'Run the step and inspect each of the K=4 candidates with its format (λ=0.3) and correctness (λ=1.0) reward.',
-        'Watch the group-relative advantage, then see the before/after answer and the real 100-sample eval metrics.',
+        'Load a preset, then edit the completion — both rewards update live.',
+        'Try the "numeric match" preset: 991.0 earns correctness 1.5 even though strict eval marks it wrong.',
+        'Paste addCriterion spam and watch the formatting reward take the −2 penalty.',
       ],
       zh: [
-        '在三个真实 MathVista 样本间切换：前错后对、格式修复、以及训练后仍错的样本。',
-        '运行训练步，查看 K=4 个候选各自的 format（λ=0.3）和 correctness（λ=1.0）奖励。',
-        '观察组内 advantage，再看前后答案对照和真实的 100 样本评估指标。',
+        '加载一个预设，然后编辑 completion——两个奖励实时更新。',
+        '试「数值匹配」预设：991.0 拿到 correctness 1.5，尽管严格评估判它错。',
+        '粘贴 addCriterion 乱码，看 formatting 奖励吃到 −2 惩罚。',
       ],
     },
     whatItProves: {
@@ -199,23 +199,23 @@ export const projectDemos = {
       zh: 'GRPO 训练步骤复演',
     },
     summary: {
-      en: 'A guided preview of one GRPO group step on a GSM8K problem: sample K completions from Qwen2.5-0.5B, score with the five reward functions, compute the group-relative advantage (no critic), update the policy.',
-      zh: '一个引导式预览，用一道 GSM8K 题走一次 GRPO 组步：从 Qwen2.5-0.5B 采样 K 条、用 5 个奖励函数打分、算组内 advantage（无 critic）、更新 policy。',
+      en: 'A live reward calculator, not a replay. Edit a model completion and the gold answer; all five reward functions (correctness / int / strict_format / soft_format / xmlcount) — ported verbatim from the notebook — recompute in your browser.',
+      zh: '一个真实的奖励计算器，不是预演。编辑模型 completion 和 gold 答案，5 个奖励函数（correctness / int / strict_format / soft_format / xmlcount，从 notebook 逐字移植）在你浏览器里实时重算。',
     },
     localNote: {
-      en: 'The preview uses GSM8K-style problems and the notebook\'s actual five reward functions. Real GRPO needs a GPU and the 0.5B base model (~17GB, hours on a 3090) — the replay shows the same mechanism without the cost.',
-      zh: '预览用 GSM8K 风格题目和 notebook 里真实的 5 个奖励函数。真实 GRPO 需要 GPU + 0.5B 基座（约 17GB，3090 上数小时），复演保留同样机制但无运行成本。',
+      en: 'The five reward functions are pure string logic, so they run client-side exactly as GRPOTrainer scores them. Real GRPO training still needs a GPU + the 0.5B base model — the scoring you see here is the real thing.',
+      zh: '5 个奖励函数是纯字符串逻辑，所以在客户端跑的就是 GRPOTrainer 打分的真实逻辑。真实 GRPO 训练仍需 GPU + 0.5B 基座，但你看到的打分是真的。',
     },
     whatToTry: {
       en: [
-        'Switch between the GSM8K problems and watch how the five reward functions score each completion.',
+        'Load a preset, then edit the completion — every reward updates live as you type.',
+        'Delete the </answer> tag and watch the format rewards collapse; fix the number and watch correctness jump to +2.0.',
         'Note correctness (+2.0) dominates while the four format rewards shape the <reasoning>/<answer> structure.',
-        'See the group mean act as the implicit baseline, then the before/after: bare answer → structured reasoning.',
       ],
       zh: [
-        '切换 GSM8K 题目，看 5 个奖励函数怎么给每条候选打分。',
+        '加载一个预设，然后编辑 completion——每个奖励随你输入实时更新。',
+        '删掉 </answer> 标签看格式奖励崩掉；改对数字看 correctness 跳到 +2.0。',
         '注意 correctness（+2.0）主导，4 个格式奖励负责塑形 <reasoning>/<answer> 结构。',
-        '看组内均值充当隐式 baseline，再看前后对比：从直接给答案 → 结构化推理。',
       ],
     },
     whatItProves: {
@@ -301,27 +301,27 @@ export const projectDemos = {
   'openclaw-skill-framework': {
     component: OpenClawSkillPreview,
     eyebrow: {
-      en: 'Author & run a Skill',
-      zh: '编写并运行 Skill',
+      en: 'SKILL.md validator',
+      zh: 'SKILL.md 校验器',
     },
     summary: {
-      en: 'A walkthrough of authoring an OpenClaw Skill: the Daily Briefing SKILL.md from frontmatter to hot-load to routing to running, then the Lobster news-briefing pipeline pausing at its human-approval gate.',
-      zh: '走一遍 OpenClaw Skill 的编写：Daily Briefing 的 SKILL.md 从 frontmatter → 热加载 → 路由 → 运行，再看 Lobster news-briefing 管线停在人工审批门。',
+      en: 'A live SKILL.md validator, not a replay. Paste or edit a SKILL.md; it parses the frontmatter in your browser and checks it against the Agent-Skills spec — name casing, the description token budget (≤250), metadata shape, trigger phrasing — and estimates the description\'s token cost.',
+      zh: '一个真实的 SKILL.md 校验器，不是预演。粘贴或编辑 SKILL.md，它在你浏览器里解析 frontmatter 并按 Agent-Skills 规范校验——name 命名、description token 预算（≤250）、metadata 结构、触发措辞——并估算 description 的 token 成本。',
     },
     localNote: {
-      en: 'The preview replays the SKILL.md authoring/loading model and a worked Daily Briefing example, plus an interactive Lobster approval gate. Source is course material on the OpenClaw Skill system, not a shipped runtime.',
-      zh: '预览复演 SKILL.md 的编写/加载模型和一个完整的 Daily Briefing 实例，外加可交互的 Lobster 审批门。素材来自 OpenClaw Skill 系统的课件，非线上运行时。',
+      en: 'The validator runs entirely client-side (parsing + checks + token estimate). The spec it enforces is drawn from the OpenClaw Agent-Skills course material.',
+      zh: '校验器完全在客户端运行（解析 + 校验 + token 估算）。它执行的规范来自 OpenClaw Agent-Skills 课件。',
     },
     whatToTry: {
       en: [
-        'Run the skill and follow SKILL.md from author → hot-load (~250ms) → route on "日报" → run.',
-        'Read the real SKILL.md: the description is the routing signal; metadata.requires declares deps.',
-        'Try the Lobster approval gate — approve or reject, and watch the conditional push step run or skip.',
+        'Edit the sample SKILL.md and watch the checks update live as you type.',
+        'Delete the `name` field or break its casing — see it flip to a warning/error.',
+        'Paste a very long description and watch the ~token estimate cross the 250 budget.',
       ],
       zh: [
-        '运行 skill，跟着 SKILL.md 走：编写 → 热加载（~250ms）→ 命中「日报」路由 → 运行。',
-        '读真实 SKILL.md：description 是路由信号，metadata.requires 声明依赖。',
-        '试 Lobster 审批门——approve/reject，看条件 push 步骤运行还是跳过。',
+        '编辑示例 SKILL.md，看校验项随输入实时更新。',
+        '删掉 `name` 字段或破坏其命名——看它变成 warning/error。',
+        '粘贴一段很长的 description，看 token 估算越过 250 预算。',
       ],
     },
     whatItProves: {

@@ -114,6 +114,6 @@ compliance jump (77% → 84%)** is the honest signal: GSPO reliably pushed the p
 - **Evaluation discipline** — fixed held-out set, per-sample records, before/after diffing instead of a single number.
 
 <DemoStatus
-  title="What the live demo replays"
-  description="The demo walks through one GSPO group step on a real MathVista sample: sample K=4 candidate completions, score each with the formatting + correctness rewards, normalize advantages within the group, and compare the base vs RL-tuned output. It also surfaces the real before/after eval metrics (accuracy 5%→6%, format 77%→84%) drawn from the project's own records — no live GPU inference on the portfolio host."
+  title="The live demo actually runs"
+  description="Not a replay: the demo is a live reward calculator. Edit a VLM completion and the gold answer, and the two real reward functions (formatting with the addCriterion penalty, λ=0.3; correctness exact-2.0/numeric-1.5, λ=1.0) — ported verbatim from the notebook — recompute in your browser. The real before/after eval (accuracy 5%→6%, format 77%→84%) comes from the project's own records. Bilingual (EN/中文)."
 />
