@@ -23,6 +23,39 @@ function rateLimited(ip: string): boolean {
   return recent.length > MAX_PER_WINDOW;
 }
 
+// Per-instance daily backstop: a hard ceiling on total calls served by a single
+// warm instance per UTC day. Not a true global cap (serverless instances reset),
+// but it bounds runaway spend from any one instance. Override with DEEPSEEK_DAILY_CAP.
+const DAILY_CAP = Number(process.env.DEEPSEEK_DAILY_CAP) || 300;
+let dayKey = '';
+let dayCount = 0;
+
+function dailyCapReached(): boolean {
+  const today = new Date().toISOString().slice(0, 10);
+  if (today !== dayKey) {
+    dayKey = today;
+    dayCount = 0;
+  }
+  dayCount += 1;
+  return dayCount > DAILY_CAP;
+}
+
+// Only accept requests that originate from the site itself. Browser POSTs send
+// an Origin header; this blocks casual cross-origin / scripted abuse. Non-browser
+// clients can spoof headers, so this is one layer, not the whole defense.
+const ALLOWED_HOSTS = ['fulingchen.me', 'localhost', '127.0.0.1'];
+
+function originAllowed(req: NextRequest): boolean {
+  const origin = req.headers.get('origin') || req.headers.get('referer') || '';
+  if (!origin) return false;
+  try {
+    const host = new URL(origin).hostname;
+    return ALLOWED_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
+  } catch {
+    return false;
+  }
+}
+
 const SYSTEM_PROMPT = `你是一位专业的中文文档审核专家。请只识别文本中真正的问题，返回结构化 JSON。
 
 允许的问题类型（type 字段必须是其一）：
@@ -55,6 +88,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  if (!originAllowed(req)) {
+    return NextResponse.json(
+      { error: 'forbidden', message: 'Requests must originate from the site.' },
+      { status: 403 },
+    );
+  }
+
   const ip =
     req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     req.headers.get('x-real-ip') ||
@@ -62,6 +102,13 @@ export async function POST(req: NextRequest) {
   if (rateLimited(ip)) {
     return NextResponse.json(
       { error: 'rate_limited', message: 'Too many requests — please wait a minute and try again.' },
+      { status: 429 },
+    );
+  }
+
+  if (dailyCapReached()) {
+    return NextResponse.json(
+      { error: 'daily_cap', message: 'The demo has hit its daily review limit. Please try again tomorrow.' },
       { status: 429 },
     );
   }
