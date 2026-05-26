@@ -1,149 +1,131 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import {
-  AlertTriangle,
-  Check,
-  FileText,
-  LoaderCircle,
-  Play,
-  SpellCheck,
-  Sparkles,
-  X,
-} from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { AlertTriangle, Bot, LoaderCircle, RotateCcw, SpellCheck, Sparkles, Wand2 } from 'lucide-react';
 
-type StageKey = 'idle' | 'parse' | 'chunk' | 'review' | 'complete';
-type IssueType = 'Grammar & Spelling' | 'Definitive Language';
-type Status = 'open' | 'accepted' | 'dismissed';
+// Phase-2 innovation: a real, in-browser Definitive-Language detector.
+// This is the deterministic, rule-based half of the project's review logic
+// (Definitive Language / 绝对化表述), ported to run live on pasted text.
+// Grammar & Spelling detection stays on the LLM backend (DeepSeek) — not faked here.
 
-interface Issue {
-  type: IssueType;
-  risk: '高' | '低';
+interface Rule {
+  term: string;
+  soft: string;
+}
+
+const RULES: Rule[] = [
+  { term: '百分之百', soft: '尽可能' }, // longer terms first so they win on overlap
+  { term: '无条件', soft: '在约定条件下' },
+  { term: '必须', soft: '应 / 宜' },
+  { term: '保证', soft: '尽力 / 力争' },
+  { term: '一定', soft: '通常 / 原则上' },
+  { term: '完全', soft: '基本上 / 尽可能' },
+  { term: '绝对', soft: '（建议删去）/ 尽量' },
+  { term: '绝不', soft: '尽量不 / 原则上不' },
+  { term: '决不', soft: '尽量不' },
+  { term: '永远', soft: '长期' },
+  { term: '永久', soft: '长期' },
+  { term: '务必', soft: '请' },
+  { term: '所有', soft: '相关 / 多数' },
+  { term: '全部', soft: '大部分 / 相关' },
+  { term: '任何', soft: '相关 / 多数' },
+  { term: '一律', soft: '原则上' },
+];
+
+interface Match {
+  start: number;
+  end: number;
+  term: string;
+  soft: string;
+}
+
+// Real detection: scan for every rule term, drop overlaps (longer/earlier wins).
+function detect(text: string): Match[] {
+  const raw: Match[] = [];
+  for (const rule of RULES) {
+    let from = 0;
+    while (true) {
+      const idx = text.indexOf(rule.term, from);
+      if (idx === -1) break;
+      raw.push({ start: idx, end: idx + rule.term.length, term: rule.term, soft: rule.soft });
+      from = idx + rule.term.length;
+    }
+  }
+  raw.sort((a, b) => (a.start - b.start) || (b.end - b.start - (a.end - a.start)));
+  const kept: Match[] = [];
+  let lastEnd = -1;
+  for (const m of raw) {
+    if (m.start >= lastEnd) {
+      kept.push(m);
+      lastEnd = m.end;
+    }
+  }
+  return kept;
+}
+
+const SAMPLE =
+  '甲方保证一定为乙方提供最优质的服务，并承诺在任何情况下都完全满足乙方的所有要求。' +
+  '本协议一经签署绝对不可变更，乙方必须无条件接受上述全部条款。';
+
+interface Segment {
+  text: string;
+  match?: Match;
+}
+
+function segment(text: string, matches: Match[]): Segment[] {
+  const segs: Segment[] = [];
+  let cursor = 0;
+  for (const m of matches) {
+    if (m.start > cursor) segs.push({ text: text.slice(cursor, m.start) });
+    segs.push({ text: text.slice(m.start, m.end), match: m });
+    cursor = m.end;
+  }
+  if (cursor < text.length) segs.push({ text: text.slice(cursor) });
+  return segs;
+}
+
+interface AiIssue {
+  type: string;
   text: string;
   explanation: string;
-  suggestedFix: string;
-  page: number;
-  bbox: string;
+  suggested_fix: string;
+  risk: string;
 }
 
-// Issues modeled on the real pipeline output for the bundled Chinese labor-contract sample.
-const issues: Issue[] = [
-  {
-    type: 'Definitive Language',
-    risk: '高',
-    text: '公司保证一定为乙方重新安排合适岗位',
-    explanation: '在正式承诺语境中使用「保证…一定」属于绝对化表述，可能形成超出预期的法律义务。',
-    suggestedFix: '公司将尽力为乙方协调合适岗位',
-    page: 1,
-    bbox: '[112, 348, 506, 372]',
-  },
-  {
-    type: 'Grammar & Spelling',
-    risk: '低',
-    text: '甲乙双方经友好协商达成一至意见',
-    explanation: '错别字：「一至」应为「一致」。',
-    suggestedFix: '甲乙双方经友好协商达成一致意见',
-    page: 1,
-    bbox: '[96, 210, 478, 234]',
-  },
-  {
-    type: 'Definitive Language',
-    risk: '高',
-    text: '本协议一经签署绝对不可作任何变更',
-    explanation: '「绝对不可」为过度确定表述，排除了双方协商变更的正常可能。',
-    suggestedFix: '本协议签署后，如需变更应经双方书面协商一致',
-    page: 2,
-    bbox: '[110, 156, 520, 180]',
-  },
-  {
-    type: 'Grammar & Spelling',
-    risk: '低',
-    text: '乙方应当于离职之日七日内办理完工作交接',
-    explanation: '语序/搭配：「办理完工作交接」宜作「办理完毕工作交接手续」。',
-    suggestedFix: '乙方应于离职之日起七日内办理完毕工作交接手续',
-    page: 2,
-    bbox: '[96, 300, 498, 324]',
-  },
-];
-
-const stageOrder: StageKey[] = ['idle', 'parse', 'chunk', 'review', 'complete'];
-
-const stageLabels: { key: Exclude<StageKey, 'idle' | 'complete'>; label: string; description: string }[] = [
-  { key: 'parse', label: 'MinerU parse', description: 'Upload PDF to MinerU v4 → paragraphs + per-paragraph bounding boxes.' },
-  { key: 'chunk', label: 'Chunk', description: 'Batch paragraphs (32 per chunk) to fit the model context.' },
-  { key: 'review', label: 'Review (LangChain + DeepSeek)', description: 'Per chunk: prompt + PydanticOutputParser → structured issues, streamed over SSE.' },
-];
-
-const riskStyles: Record<Issue['risk'], string> = {
-  高: 'bg-[var(--color-amber-300)]/15 text-[var(--color-amber-300)] border-[var(--color-amber-300)]/30',
-  低: 'bg-[var(--color-green-300)]/12 text-[var(--color-green-300)] border-[var(--color-green-300)]/25',
-};
-
-function wait(ms: number) {
-  return new Promise<void>((resolve) => window.setTimeout(resolve, ms));
-}
+type AiStatus = 'idle' | 'loading' | 'done' | 'error';
 
 export default function DocReviewAgentPreview() {
-  const [running, setRunning] = useState(false);
-  const [stage, setStage] = useState<StageKey>('idle');
-  const [visibleCount, setVisibleCount] = useState(0);
-  const [statuses, setStatuses] = useState<Record<number, Status>>({});
-  const [timeline, setTimeline] = useState<string[]>([]);
+  const [text, setText] = useState(SAMPLE);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [aiStatus, setAiStatus] = useState<AiStatus>('idle');
+  const [aiIssues, setAiIssues] = useState<AiIssue[]>([]);
+  const [aiError, setAiError] = useState<string>('');
 
-  const reset = () => {
-    setStage('idle');
-    setVisibleCount(0);
-    setStatuses({});
-    setTimeline([]);
-    setRunning(false);
-  };
+  const matches = useMemo(() => detect(text), [text]);
+  const segments = useMemo(() => segment(text, matches), [text, matches]);
 
-  const setStatus = (index: number, status: Status) => {
-    setStatuses((prev) => ({ ...prev, [index]: status }));
-  };
-
-  useEffect(() => {
-    if (!running) return;
-    let cancelled = false;
-
-    const run = async () => {
-      setStage('parse');
-      setVisibleCount(0);
-      setStatuses({});
-      setTimeline(['Uploaded 解除、终止劳动合同协议书.pdf', 'MinerU v4 parsing → 38 paragraphs + bounding boxes.']);
-
-      await wait(620);
-      if (cancelled) return;
-      setStage('chunk');
-      setTimeline((prev) => [...prev, 'Batched paragraphs into chunks of 32.']);
-
-      await wait(460);
-      if (cancelled) return;
-      setStage('review');
-      setTimeline((prev) => [...prev, 'Streaming issues over SSE as each chunk is reviewed…']);
-
-      for (let i = 0; i < issues.length; i += 1) {
-        await wait(620);
-        if (cancelled) return;
-        setVisibleCount(i + 1);
+  const runAiReview = async () => {
+    setAiStatus('loading');
+    setAiError('');
+    setAiIssues([]);
+    try {
+      const resp = await fetch('/api/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        setAiError(data?.message || `Request failed (${resp.status}).`);
+        setAiStatus('error');
+        return;
       }
-
-      await wait(280);
-      if (cancelled) return;
-      setStage('complete');
-      setTimeline((prev) => [...prev, `Done — ${issues.length} issues found. Accept or dismiss each (HITL-gated).`]);
-      setRunning(false);
-    };
-
-    void run();
-    return () => {
-      cancelled = true;
-    };
-  }, [running]);
-
-  const counts = {
-    high: issues.filter((i) => i.risk === '高').length,
-    low: issues.filter((i) => i.risk === '低').length,
+      setAiIssues(Array.isArray(data.issues) ? data.issues : []);
+      setAiStatus('done');
+    } catch {
+      setAiError('Network error — could not reach the review backend.');
+      setAiStatus('error');
+    }
   };
 
   return (
@@ -153,186 +135,211 @@ export default function DocReviewAgentPreview() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-amber-300)]/20 bg-[var(--color-amber-300)]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-amber-300)]">
               <Sparkles className="h-3.5 w-3.5" />
-              Interactive Preview
+              Live · runs in your browser
             </div>
             <h3 className="mt-3 text-2xl font-semibold text-[var(--color-text-primary)]">
-              Review a contract, issue by issue
+              Definitive-language detector — try it live
             </h3>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-text-secondary)]">
-              Replays a real review run on the bundled labor-contract sample: MinerU parses the PDF, then issues
-              stream in over SSE — each tagged Grammar &amp; Spelling or Definitive Language with its risk, fix,
-              and bounding box. Accept or dismiss each through the human-in-the-loop gate.
+              Type or paste Chinese text. This runs the project&apos;s real <strong>Definitive Language
+              (绝对化表述)</strong> rule logic in your browser — no server, no canned data — and flags
+              over-committal wording with a softer rewrite. Grammar &amp; spelling detection stays on the LLM
+              backend and isn&apos;t faked here.
             </p>
           </div>
 
           <button
             type="button"
-            onClick={() => (stage === 'complete' ? reset() : setRunning(true))}
-            disabled={running}
-            className="inline-flex items-center gap-2 rounded-full border border-[var(--color-green-300)]/30 bg-[var(--color-green-300)]/14 px-4 py-2.5 text-sm font-medium text-[var(--color-green-300)] transition-colors hover:border-[var(--color-green-300)]/55 hover:bg-[var(--color-green-300)]/18 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={() => {
+              setText(SAMPLE);
+              setActiveIndex(null);
+            }}
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--color-green-300)]/30 bg-[var(--color-green-300)]/14 px-4 py-2.5 text-sm font-medium text-[var(--color-green-300)] transition-colors hover:border-[var(--color-green-300)]/55 hover:bg-[var(--color-green-300)]/18"
           >
-            {running ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-            {running ? 'Reviewing' : stage === 'complete' ? 'Reset' : 'Run review'}
+            <RotateCcw className="h-4 w-4" /> Reset sample
           </button>
         </div>
       </div>
 
-      <div className="grid gap-6 p-6 lg:grid-cols-[0.85fr_1.15fr]">
-        <div className="space-y-5">
-          <div className="rounded-[24px] border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/45 p-4">
-            <div className="flex items-center gap-3">
-              <FileText className="h-5 w-5 text-[var(--color-amber-300)]" />
-              <div>
-                <p className="text-sm font-semibold text-[var(--color-text-primary)]">解除、终止劳动合同协议书.pdf</p>
-                <p className="text-[11px] text-[var(--color-text-muted)]">Bundled sample · 2 pages</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-3">
-            {stageLabels.map((item) => {
-              const currentIndex = stageOrder.indexOf(stage);
-              const itemIndex = stageOrder.indexOf(item.key);
-              const isActive = stage === item.key;
-              const isComplete = currentIndex > itemIndex;
-              return (
-                <div
-                  key={item.key}
-                  className={`rounded-[22px] border p-3 transition-colors ${
-                    isActive
-                      ? 'border-[var(--color-green-300)]/35 bg-[var(--color-green-300)]/10'
-                      : isComplete
-                        ? 'border-[var(--color-amber-300)]/30 bg-[var(--color-amber-300)]/10'
-                        : 'border-[var(--color-border-default)] bg-[var(--color-bg-card)]/40'
-                  }`}
-                >
-                  <p className="text-sm font-semibold text-[var(--color-text-primary)]">{item.label}</p>
-                  <p className="mt-1.5 text-xs leading-5 text-[var(--color-text-muted)]">{item.description}</p>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-[20px] border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/45 p-4">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-[var(--color-amber-300)]" />
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-muted)]">高 / Definitive</p>
-              </div>
-              <p className="mt-2 text-2xl font-semibold text-[var(--color-text-primary)]">{counts.high}</p>
-            </div>
-            <div className="rounded-[20px] border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/45 p-4">
-              <div className="flex items-center gap-2">
-                <SpellCheck className="h-4 w-4 text-[var(--color-green-300)]" />
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-muted)]">低 / Grammar</p>
-              </div>
-              <p className="mt-2 text-2xl font-semibold text-[var(--color-text-primary)]">{counts.low}</p>
-            </div>
-          </div>
-
-          <div className="rounded-[22px] border border-[var(--color-border-default)] bg-black/10 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
-              Activity log
+      <div className="grid gap-6 p-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="space-y-4">
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+              Your text
             </p>
-            <div className="mt-4 space-y-3">
-              {timeline.length > 0 ? (
-                timeline.map((item, index) => (
-                  <p key={`${item}-${index}`} className="text-sm leading-6 text-[var(--color-text-secondary)]">
-                    {item}
-                  </p>
-                ))
-              ) : (
-                <p className="text-sm leading-6 text-[var(--color-text-muted)]">
-                  Run the review to stream issues from MinerU + LangChain + DeepSeek.
-                </p>
+            <textarea
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+                setActiveIndex(null);
+              }}
+              rows={5}
+              spellCheck={false}
+              className="w-full resize-y rounded-[20px] border border-[var(--color-border-default)] bg-black/20 p-4 font-mono text-sm leading-7 text-[var(--color-text-primary)] outline-none focus:border-[var(--color-green-300)]/40"
+            />
+          </div>
+
+          <div className="rounded-[20px] border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/45 p-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+              Highlighted
+            </p>
+            <p className="text-sm leading-8 text-[var(--color-text-secondary)]">
+              {segments.map((seg, i) =>
+                seg.match ? (
+                  <mark
+                    key={i}
+                    onMouseEnter={() => setActiveIndex(matches.indexOf(seg.match!))}
+                    className="cursor-help rounded-md bg-[var(--color-amber-300)]/25 px-0.5 font-semibold text-[var(--color-amber-300)] underline decoration-dotted underline-offset-4"
+                  >
+                    {seg.text}
+                  </mark>
+                ) : (
+                  <span key={i}>{seg.text}</span>
+                ),
               )}
-            </div>
+            </p>
           </div>
         </div>
 
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-              Issues (SSE stream)
+              Detected · 绝对化表述
             </p>
-            <div className="rounded-full border border-[var(--color-border-default)] px-3 py-1 text-xs text-[var(--color-text-muted)]">
-              {visibleCount}/{issues.length}
-            </div>
+            <span
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                matches.length > 0
+                  ? 'border-[var(--color-amber-300)]/30 bg-[var(--color-amber-300)]/12 text-[var(--color-amber-300)]'
+                  : 'border-[var(--color-green-300)]/25 bg-[var(--color-green-300)]/10 text-[var(--color-green-300)]'
+              }`}
+            >
+              {matches.length} issue{matches.length === 1 ? '' : 's'} · risk 高
+            </span>
           </div>
 
-          {visibleCount === 0 && (
-            <div className="rounded-[22px] border border-dashed border-[var(--color-border-default)] px-4 py-10 text-center text-sm leading-6 text-[var(--color-text-muted)]">
-              Issues will stream in here as each chunk is reviewed.
+          {matches.length === 0 ? (
+            <div className="rounded-[20px] border border-dashed border-[var(--color-border-default)] px-4 py-10 text-center text-sm leading-6 text-[var(--color-text-muted)]">
+              No definitive-language issues found. Try words like 必须 / 保证 / 一定 / 完全 / 绝对.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {matches.map((m, i) => (
+                <div
+                  key={`${m.start}-${m.term}`}
+                  onMouseEnter={() => setActiveIndex(i)}
+                  onMouseLeave={() => setActiveIndex(null)}
+                  className={`rounded-[20px] border p-4 transition-colors ${
+                    activeIndex === i
+                      ? 'border-[var(--color-amber-300)]/45 bg-[var(--color-amber-300)]/10'
+                      : 'border-[var(--color-border-default)] bg-black/10'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-[var(--color-amber-300)]" />
+                    <span className="font-mono text-sm font-semibold text-[var(--color-text-primary)]">
+                      {m.term}
+                    </span>
+                    <span className="ml-auto text-[11px] text-[var(--color-text-muted)]">char {m.start}</span>
+                  </div>
+                  <p className="mt-2 text-xs leading-5 text-[var(--color-text-muted)]">
+                    在正式承诺/保证语境中使用「{m.term}」属于绝对化表述，可能形成超出预期的义务。
+                  </p>
+                  <div className="mt-2.5 flex items-start gap-2 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/45 p-3">
+                    <Wand2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--color-green-300)]" />
+                    <p className="text-sm leading-6 text-[var(--color-green-300)]">
+                      建议软化为：{m.soft}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
-          {issues.slice(0, visibleCount).map((issue, index) => {
-            const status = statuses[index] ?? 'open';
-            return (
-              <div
-                key={`${issue.text}-${index}`}
-                className={`rounded-[22px] border p-4 transition-colors ${
-                  status === 'accepted'
-                    ? 'border-[var(--color-green-300)]/40 bg-[var(--color-green-300)]/8'
-                    : status === 'dismissed'
-                      ? 'border-[var(--color-border-default)] bg-black/20 opacity-60'
-                      : 'border-[var(--color-border-default)] bg-black/10'
-                }`}
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full border border-[var(--color-border-default)] px-2.5 py-0.5 text-[11px] text-[var(--color-text-secondary)]">
-                    {issue.type}
-                  </span>
-                  <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${riskStyles[issue.risk]}`}>
-                    风险 {issue.risk}
-                  </span>
-                  <span className="ml-auto text-[11px] text-[var(--color-text-muted)]">
-                    p.{issue.page} · bbox {issue.bbox}
-                  </span>
-                </div>
+          <p className="text-[11px] leading-5 text-[var(--color-text-muted)]">
+            The 绝对化表述 layer above runs entirely client-side, instantly. For grammar, spelling and deeper
+            review, run the real DeepSeek pass below — the same LLM the production system uses.
+          </p>
+        </div>
+      </div>
 
-                <p className="mt-3 text-sm leading-6 text-[var(--color-text-primary)]">“{issue.text}”</p>
-                <p className="mt-2 text-xs leading-5 text-[var(--color-text-muted)]">{issue.explanation}</p>
-                <div className="mt-3 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/45 p-3">
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-muted)]">suggested fix</p>
-                  <p className="mt-1.5 text-sm leading-6 text-[var(--color-green-300)]">{issue.suggestedFix}</p>
-                </div>
+      {/* DeepSeek-backed deep review — real API call */}
+      <div className="border-t border-[var(--color-border-default)] px-6 py-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Bot className="h-4 w-4 text-[var(--color-green-300)]" />
+            <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+              Deep review with DeepSeek (live API)
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={runAiReview}
+            disabled={aiStatus === 'loading' || !text.trim()}
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--color-green-300)]/30 bg-[var(--color-green-300)]/14 px-4 py-2.5 text-sm font-medium text-[var(--color-green-300)] transition-colors hover:border-[var(--color-green-300)]/55 hover:bg-[var(--color-green-300)]/18 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {aiStatus === 'loading' ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
+            {aiStatus === 'loading' ? 'Reviewing…' : 'Run DeepSeek review'}
+          </button>
+        </div>
 
-                <div className="mt-3 flex items-center gap-2">
-                  {status === 'open' ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setStatus(index, 'accepted')}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-green-300)]/30 bg-[var(--color-green-300)]/12 px-3 py-1.5 text-xs font-medium text-[var(--color-green-300)] transition-colors hover:bg-[var(--color-green-300)]/18"
-                      >
-                        <Check className="h-3.5 w-3.5" /> Accept
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setStatus(index, 'dismissed')}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border-default)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-border-hover)]"
-                      >
-                        <X className="h-3.5 w-3.5" /> Dismiss
-                      </button>
-                      <span className="ml-auto text-[10px] uppercase tracking-[0.16em] text-[var(--color-text-muted)]">
-                        HITL-gated
-                      </span>
-                    </>
-                  ) : (
+        {aiStatus === 'error' && (
+          <div className="mt-4 rounded-2xl border border-[var(--color-amber-300)]/30 bg-[var(--color-amber-300)]/10 p-4 text-sm leading-6 text-[var(--color-amber-300)]">
+            {aiError}
+          </div>
+        )}
+
+        {aiStatus === 'done' && aiIssues.length === 0 && (
+          <div className="mt-4 rounded-2xl border border-[var(--color-green-300)]/25 bg-[var(--color-green-300)]/8 p-4 text-sm leading-6 text-[var(--color-green-300)]">
+            DeepSeek found no grammar/spelling or definitive-language issues in this text.
+          </div>
+        )}
+
+        {aiStatus === 'done' && aiIssues.length > 0 && (
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {aiIssues.map((issue, i) => {
+              const definitive = issue.type === 'Definitive Language';
+              return (
+                <div
+                  key={`${issue.text}-${i}`}
+                  className="rounded-[20px] border border-[var(--color-border-default)] bg-black/10 p-4"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    {definitive ? (
+                      <AlertTriangle className="h-4 w-4 text-[var(--color-amber-300)]" />
+                    ) : (
+                      <SpellCheck className="h-4 w-4 text-[var(--color-green-300)]" />
+                    )}
+                    <span className="text-[11px] text-[var(--color-text-secondary)]">{issue.type}</span>
                     <span
-                      className={`text-xs font-semibold ${
-                        status === 'accepted' ? 'text-[var(--color-green-300)]' : 'text-[var(--color-text-muted)]'
+                      className={`ml-auto rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                        issue.risk === '高'
+                          ? 'border-[var(--color-amber-300)]/30 bg-[var(--color-amber-300)]/12 text-[var(--color-amber-300)]'
+                          : 'border-[var(--color-green-300)]/25 bg-[var(--color-green-300)]/10 text-[var(--color-green-300)]'
                       }`}
                     >
-                      {status === 'accepted' ? '✓ Accepted (persisted to SQLite)' : '✕ Dismissed'}
+                      风险 {issue.risk}
                     </span>
+                  </div>
+                  <p className="mt-2.5 text-sm leading-6 text-[var(--color-text-primary)]">“{issue.text}”</p>
+                  {issue.explanation && (
+                    <p className="mt-1.5 text-xs leading-5 text-[var(--color-text-muted)]">{issue.explanation}</p>
+                  )}
+                  {issue.suggested_fix && (
+                    <div className="mt-2.5 flex items-start gap-2 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/45 p-3">
+                      <Wand2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--color-green-300)]" />
+                      <p className="text-sm leading-6 text-[var(--color-green-300)]">{issue.suggested_fix}</p>
+                    </div>
                   )}
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
+
+        <p className="mt-4 text-[11px] leading-5 text-[var(--color-text-muted)]">
+          Calls a server-side route that runs DeepSeek with a JSON-structured review prompt — the API key stays on
+          the server, input is length-capped, and requests are rate-limited. This is the real LLM pass, not a replay.
+        </p>
       </div>
     </div>
   );
