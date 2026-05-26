@@ -252,23 +252,23 @@ export const projectDemos = {
       zh: '文档审核试玩沙盒',
     },
     summary: {
-      en: 'A replay of a real review run on the bundled labor-contract sample: MinerU parses the PDF, then issues stream in over SSE — each tagged Grammar & Spelling or Definitive Language with risk, fix, and bounding box — and you accept or dismiss each through the HITL gate.',
-      zh: '复演一次真实审核：MinerU 解析样本劳动合同，问题通过 SSE 流式出现——每条标注「语法拼写」或「绝对化表述」，带风险、修正建议、bbox——你再经 HITL 门 accept/dismiss。',
+      en: 'A real, working tool — not a replay. Paste Chinese text: the Definitive Language (绝对化表述) detector runs client-side instantly, and the "Deep review with DeepSeek" button calls a live server-side route for grammar/spelling + deeper review.',
+      zh: '一个真能用的工具，不是预演。粘中文：绝对化表述检测器在浏览器即时跑，「DeepSeek 深度审核」按钮真调服务端 route 做语法/拼写+深度审核。',
     },
     localNote: {
-      en: 'The preview replays issues modeled on the real pipeline output; no live MinerU/DeepSeek calls and no private documents leave the sandbox. The running system needs a MinerU API key + a DeepSeek API key.',
-      zh: '预览复演的是基于真实流水线输出建模的问题；不调真实 MinerU/DeepSeek，私有文档不外泄。真实系统运行需要 MinerU API key + DeepSeek API key。',
+      en: 'The 绝对化表述 layer runs entirely client-side (no key, instant). The deep-review button hits a server-side route running DeepSeek live — the API key stays on the server, input is length-capped, and requests are rate-limited per IP.',
+      zh: '绝对化表述层完全在客户端跑（无 key、即时）。深度审核按钮打到服务端 route 真跑 DeepSeek——API key 只在服务端，输入有长度上限，按 IP 限流。',
     },
     whatToTry: {
       en: [
-        'Run the review and watch issues stream in over SSE as each chunk is processed.',
-        'Note the two issue types — Grammar & Spelling (低) and Definitive Language (高) — and each issue\'s bounding box.',
-        'Accept or dismiss each issue: the mutation goes through a LangChain human-in-the-loop gate and persists.',
+        'Type/paste Chinese text and watch the 绝对化表述 detector flag terms live, with a softer rewrite.',
+        'Click "Run DeepSeek review" to call the real LLM for grammar/spelling + definitive-language issues.',
+        'Edit the text and re-run — both layers respond to whatever you actually type.',
       ],
       zh: [
-        '运行审核，看问题随每个 chunk 处理通过 SSE 流式出现。',
-        '注意两类问题——语法拼写（低）和绝对化表述（高）——以及每条的 bounding box。',
-        'accept/dismiss 每条问题：变更经 LangChain 人工在环门确认并持久化。',
+        '输入/粘贴中文，看绝对化表述检测器实时标出词并给软化建议。',
+        '点「Run DeepSeek review」真调大模型，查语法拼写 + 绝对化问题。',
+        '改文本再跑——两层都对你真实输入的内容做反应。',
       ],
     },
     whatItProves: {
