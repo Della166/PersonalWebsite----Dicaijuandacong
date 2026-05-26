@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useLocale } from 'next-intl';
 import {
   FileText,
   GitBranch,
@@ -91,6 +92,7 @@ function wait(ms: number) {
 }
 
 export default function DeepResearchPreview() {
+  const zh = useLocale() === 'zh';
   const [running, setRunning] = useState(false);
   const [stage, setStage] = useState<StageKey>('idle');
   const [visibleSubtopics, setVisibleSubtopics] = useState(0);
@@ -161,14 +163,15 @@ export default function DeepResearchPreview() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-amber-300)]/20 bg-[var(--color-amber-300)]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-amber-300)]">
               <Sparkles className="h-3.5 w-3.5" />
-              Interactive Preview
+              {zh ? '交互预览' : 'Interactive Preview'}
             </div>
             <h3 className="mt-3 text-2xl font-semibold text-[var(--color-text-primary)]">
-              Run the Deep Research workflow
+              {zh ? '运行 Deep Research 工作流' : 'Run the Deep Research workflow'}
             </h3>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-text-secondary)]">
-              Replays the Dify graph on a sample topic: intent gate → decomposition → an iterative ReAct agent that
-              searches and extracts evidence per subtopic → source dedup → a footnote-cited report.
+              {zh
+                ? '在示例主题上复演 Dify graph：意图门 → 拆解 → ReAct Agent 逐子问题搜索抽取证据 → 来源去重 → 带脚注引用的报告。'
+                : 'Replays the Dify graph on a sample topic: intent gate → decomposition → an iterative ReAct agent that searches and extracts evidence per subtopic → source dedup → a footnote-cited report.'}
             </p>
           </div>
 
@@ -179,7 +182,7 @@ export default function DeepResearchPreview() {
             className="inline-flex items-center gap-2 rounded-full border border-[var(--color-green-300)]/30 bg-[var(--color-green-300)]/14 px-4 py-2.5 text-sm font-medium text-[var(--color-green-300)] transition-colors hover:border-[var(--color-green-300)]/55 hover:bg-[var(--color-green-300)]/18 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {running ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-            {running ? 'Researching' : stage === 'complete' ? 'Reset' : 'Run workflow'}
+            {running ? (zh ? '调研中' : 'Researching') : stage === 'complete' ? (zh ? '重置' : 'Reset') : zh ? '运行工作流' : 'Run workflow'}
           </button>
         </div>
       </div>
@@ -189,12 +192,12 @@ export default function DeepResearchPreview() {
           <div className="rounded-[24px] border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/45 p-4">
             <div className="flex items-center gap-2">
               <Search className="h-4 w-4 text-[var(--color-amber-300)]" />
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">Research topic</p>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">{zh ? '调研主题' : 'Research topic'}</p>
             </div>
             <p className="mt-2 text-sm leading-6 text-[var(--color-text-primary)]">{topic}</p>
             {stageOrder.indexOf(stage) >= stageOrder.indexOf('decompose') && (
               <div className="mt-3 border-t border-[var(--color-border-default)] pt-3">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-muted)]">key dimensions</p>
+                <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-muted)]">{zh ? '关键维度' : 'key dimensions'}</p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {keyDimensions.map((d) => (
                     <span key={d} className="rounded-full border border-[var(--color-border-default)] px-2.5 py-0.5 text-[11px] text-[var(--color-text-secondary)]">
@@ -232,7 +235,7 @@ export default function DeepResearchPreview() {
 
           <div className="rounded-[22px] border border-[var(--color-border-default)] bg-black/10 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
-              Activity log
+              {zh ? '执行日志' : 'Activity log'}
             </p>
             <div className="mt-4 space-y-3">
               {timeline.length > 0 ? (
@@ -243,7 +246,7 @@ export default function DeepResearchPreview() {
                 ))
               ) : (
                 <p className="text-sm leading-6 text-[var(--color-text-muted)]">
-                  Run the workflow to watch the Dify graph execute stage by stage.
+                  {zh ? '运行工作流，看 Dify graph 逐阶段执行。' : 'Run the workflow to watch the Dify graph execute stage by stage.'}
                 </p>
               )}
             </div>
@@ -253,7 +256,7 @@ export default function DeepResearchPreview() {
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-              Subtopics &amp; evidence
+              {zh ? '子问题与证据' : 'Subtopics & evidence'}
             </p>
             <div className="rounded-full border border-[var(--color-border-default)] px-3 py-1 text-xs text-[var(--color-text-muted)]">
               {visibleSubtopics}/{subtopics.length}
@@ -262,7 +265,7 @@ export default function DeepResearchPreview() {
 
           {visibleSubtopics === 0 && (
             <div className="rounded-[22px] border border-dashed border-[var(--color-border-default)] px-4 py-10 text-center text-sm leading-6 text-[var(--color-text-muted)]">
-              Subtopics and their extracted evidence appear here as the ReAct agent runs.
+              {zh ? '子问题及其抽取的证据会随 ReAct agent 运行出现在这里。' : 'Subtopics and their extracted evidence appear here as the ReAct agent runs.'}
             </div>
           )}
 
@@ -302,14 +305,14 @@ export default function DeepResearchPreview() {
             <div className="rounded-[22px] border border-[var(--color-green-300)]/30 bg-[var(--color-green-300)]/8 p-4">
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-[var(--color-green-300)]" />
-                <p className="text-sm font-semibold text-[var(--color-text-primary)]">Markdown report (Qwen3-max)</p>
+                <p className="text-sm font-semibold text-[var(--color-text-primary)]">{zh ? 'Markdown 报告（Qwen3-max）' : 'Markdown report (Qwen3-max)'}</p>
               </div>
               <p className="mt-2 text-xs leading-5 text-[var(--color-text-secondary)]">
                 {mainIntent}。主流路线分三类：RLHF（奖励模型 + PPO）[^1][^2]、无奖励模型的 DPO[^3]、以及可验证奖励的
                 GRPO/RLVR[^4][^2]。
               </p>
               <div className="mt-3 border-t border-[var(--color-border-default)] pt-3">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-muted)]">sources</p>
+                <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-muted)]">{zh ? '来源' : 'sources'}</p>
                 <div className="mt-2 space-y-1">
                   {mergedSources.map((s) => (
                     <p key={s.sid} className="text-[11px] leading-5 text-[var(--color-text-muted)]">

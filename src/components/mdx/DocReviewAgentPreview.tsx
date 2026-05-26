@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useLocale } from 'next-intl';
 import { AlertTriangle, Bot, LoaderCircle, RotateCcw, SpellCheck, Sparkles, Wand2 } from 'lucide-react';
 
 // Phase-2 innovation: a real, in-browser Definitive-Language detector.
@@ -95,6 +96,7 @@ interface AiIssue {
 type AiStatus = 'idle' | 'loading' | 'done' | 'error';
 
 export default function DocReviewAgentPreview() {
+  const zh = useLocale() === 'zh';
   const [text, setText] = useState(SAMPLE);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [aiStatus, setAiStatus] = useState<AiStatus>('idle');
@@ -135,16 +137,25 @@ export default function DocReviewAgentPreview() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-amber-300)]/20 bg-[var(--color-amber-300)]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-amber-300)]">
               <Sparkles className="h-3.5 w-3.5" />
-              Live · runs in your browser
+              {zh ? '实时 · 在你浏览器里运行' : 'Live · runs in your browser'}
             </div>
             <h3 className="mt-3 text-2xl font-semibold text-[var(--color-text-primary)]">
-              Definitive-language detector — try it live
+              {zh ? '绝对化表述检测器 — 实时试用' : 'Definitive-language detector — try it live'}
             </h3>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-text-secondary)]">
-              Type or paste Chinese text. This runs the project&apos;s real <strong>Definitive Language
-              (绝对化表述)</strong> rule logic in your browser — no server, no canned data — and flags
-              over-committal wording with a softer rewrite. Grammar &amp; spelling detection stays on the LLM
-              backend and isn&apos;t faked here.
+              {zh ? (
+                <>
+                  输入或粘贴中文文本。这会在你的浏览器里真跑项目的 <strong>绝对化表述（Definitive Language）</strong>
+                  规则逻辑——无服务器、无写死数据——标出过度确定的措辞并给软化建议。语法与拼写检测在 LLM 后端进行，这里不做假。
+                </>
+              ) : (
+                <>
+                  Type or paste Chinese text. This runs the project&apos;s real <strong>Definitive Language
+                  (绝对化表述)</strong> rule logic in your browser — no server, no canned data — and flags
+                  over-committal wording with a softer rewrite. Grammar &amp; spelling detection stays on the LLM
+                  backend and isn&apos;t faked here.
+                </>
+              )}
             </p>
           </div>
 
@@ -156,7 +167,7 @@ export default function DocReviewAgentPreview() {
             }}
             className="inline-flex items-center gap-2 rounded-full border border-[var(--color-green-300)]/30 bg-[var(--color-green-300)]/14 px-4 py-2.5 text-sm font-medium text-[var(--color-green-300)] transition-colors hover:border-[var(--color-green-300)]/55 hover:bg-[var(--color-green-300)]/18"
           >
-            <RotateCcw className="h-4 w-4" /> Reset sample
+            <RotateCcw className="h-4 w-4" /> {zh ? '重置示例' : 'Reset sample'}
           </button>
         </div>
       </div>
@@ -165,7 +176,7 @@ export default function DocReviewAgentPreview() {
         <div className="space-y-4">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-              Your text
+              {zh ? '你的文本' : 'Your text'}
             </p>
             <textarea
               value={text}
@@ -181,7 +192,7 @@ export default function DocReviewAgentPreview() {
 
           <div className="rounded-[20px] border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/45 p-4">
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-              Highlighted
+              {zh ? '高亮结果' : 'Highlighted'}
             </p>
             <p className="text-sm leading-8 text-[var(--color-text-secondary)]">
               {segments.map((seg, i) =>
@@ -204,7 +215,7 @@ export default function DocReviewAgentPreview() {
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-              Detected · 绝对化表述
+              {zh ? '检出 · 绝对化表述' : 'Detected · 绝对化表述'}
             </p>
             <span
               className={`rounded-full border px-3 py-1 text-xs font-semibold ${
@@ -213,13 +224,15 @@ export default function DocReviewAgentPreview() {
                   : 'border-[var(--color-green-300)]/25 bg-[var(--color-green-300)]/10 text-[var(--color-green-300)]'
               }`}
             >
-              {matches.length} issue{matches.length === 1 ? '' : 's'} · risk 高
+              {zh ? `${matches.length} 处 · 风险高` : `${matches.length} issue${matches.length === 1 ? '' : 's'} · risk 高`}
             </span>
           </div>
 
           {matches.length === 0 ? (
             <div className="rounded-[20px] border border-dashed border-[var(--color-border-default)] px-4 py-10 text-center text-sm leading-6 text-[var(--color-text-muted)]">
-              No definitive-language issues found. Try words like 必须 / 保证 / 一定 / 完全 / 绝对.
+              {zh
+                ? '未发现绝对化表述。试试「必须 / 保证 / 一定 / 完全 / 绝对」这类词。'
+                : 'No definitive-language issues found. Try words like 必须 / 保证 / 一定 / 完全 / 绝对.'}
             </div>
           ) : (
             <div className="space-y-3">
@@ -239,15 +252,19 @@ export default function DocReviewAgentPreview() {
                     <span className="font-mono text-sm font-semibold text-[var(--color-text-primary)]">
                       {m.term}
                     </span>
-                    <span className="ml-auto text-[11px] text-[var(--color-text-muted)]">char {m.start}</span>
+                    <span className="ml-auto text-[11px] text-[var(--color-text-muted)]">
+                      {zh ? `第 ${m.start} 字` : `char ${m.start}`}
+                    </span>
                   </div>
                   <p className="mt-2 text-xs leading-5 text-[var(--color-text-muted)]">
-                    在正式承诺/保证语境中使用「{m.term}」属于绝对化表述，可能形成超出预期的义务。
+                    {zh
+                      ? `在正式承诺/保证语境中使用「${m.term}」属于绝对化表述，可能形成超出预期的义务。`
+                      : `Using "${m.term}" in a formal promise context is over-committal language and may create obligations beyond what was intended.`}
                   </p>
                   <div className="mt-2.5 flex items-start gap-2 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/45 p-3">
                     <Wand2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--color-green-300)]" />
                     <p className="text-sm leading-6 text-[var(--color-green-300)]">
-                      建议软化为：{m.soft}
+                      {zh ? `建议软化为：${m.soft}` : `Soften to: ${m.soft}`}
                     </p>
                   </div>
                 </div>
@@ -256,8 +273,9 @@ export default function DocReviewAgentPreview() {
           )}
 
           <p className="text-[11px] leading-5 text-[var(--color-text-muted)]">
-            The 绝对化表述 layer above runs entirely client-side, instantly. For grammar, spelling and deeper
-            review, run the real DeepSeek pass below — the same LLM the production system uses.
+            {zh
+              ? '上方绝对化表述层完全在客户端即时运行。语法、拼写和更深入的审核，点下方真实 DeepSeek 通道——与生产系统同一个 LLM。'
+              : 'The 绝对化表述 layer above runs entirely client-side, instantly. For grammar, spelling and deeper review, run the real DeepSeek pass below — the same LLM the production system uses.'}
           </p>
         </div>
       </div>
@@ -268,7 +286,7 @@ export default function DocReviewAgentPreview() {
           <div className="flex items-center gap-2">
             <Bot className="h-4 w-4 text-[var(--color-green-300)]" />
             <p className="text-sm font-semibold text-[var(--color-text-primary)]">
-              Deep review with DeepSeek (live API)
+              {zh ? 'DeepSeek 深度审核（真实 API）' : 'Deep review with DeepSeek (live API)'}
             </p>
           </div>
           <button
@@ -278,7 +296,7 @@ export default function DocReviewAgentPreview() {
             className="inline-flex items-center gap-2 rounded-full border border-[var(--color-green-300)]/30 bg-[var(--color-green-300)]/14 px-4 py-2.5 text-sm font-medium text-[var(--color-green-300)] transition-colors hover:border-[var(--color-green-300)]/55 hover:bg-[var(--color-green-300)]/18 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {aiStatus === 'loading' ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
-            {aiStatus === 'loading' ? 'Reviewing…' : 'Run DeepSeek review'}
+            {aiStatus === 'loading' ? (zh ? '审核中…' : 'Reviewing…') : zh ? '运行 DeepSeek 审核' : 'Run DeepSeek review'}
           </button>
         </div>
 
@@ -290,7 +308,7 @@ export default function DocReviewAgentPreview() {
 
         {aiStatus === 'done' && aiIssues.length === 0 && (
           <div className="mt-4 rounded-2xl border border-[var(--color-green-300)]/25 bg-[var(--color-green-300)]/8 p-4 text-sm leading-6 text-[var(--color-green-300)]">
-            DeepSeek found no grammar/spelling or definitive-language issues in this text.
+            {zh ? 'DeepSeek 未在此文本中发现语法/拼写或绝对化表述问题。' : 'DeepSeek found no grammar/spelling or definitive-language issues in this text.'}
           </div>
         )}
 
@@ -337,8 +355,9 @@ export default function DocReviewAgentPreview() {
         )}
 
         <p className="mt-4 text-[11px] leading-5 text-[var(--color-text-muted)]">
-          Calls a server-side route that runs DeepSeek with a JSON-structured review prompt — the API key stays on
-          the server, input is length-capped, and requests are rate-limited. This is the real LLM pass, not a replay.
+          {zh
+            ? '调用一个服务端 route，用 JSON 结构化提示真跑 DeepSeek——API key 只在服务端，输入有长度上限，请求按 IP 限流。这是真实 LLM 通道，不是预演。'
+            : 'Calls a server-side route that runs DeepSeek with a JSON-structured review prompt — the API key stays on the server, input is length-capped, and requests are rate-limited. This is the real LLM pass, not a replay.'}
         </p>
       </div>
     </div>

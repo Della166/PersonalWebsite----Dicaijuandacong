@@ -1,28 +1,26 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import {
-  Check,
-  FileCode2,
-  LoaderCircle,
-  Play,
-  Sparkles,
-  Terminal,
-  Workflow,
-  X,
-} from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useLocale } from 'next-intl';
+import { CheckCircle2, RotateCcw, Sparkles, TriangleAlert, XCircle } from 'lucide-react';
 
-type StageKey = 'idle' | 'author' | 'load' | 'route' | 'run' | 'complete';
-type Approval = 'pending' | 'approved' | 'rejected';
+// Phase-2 innovation: a real, in-browser SKILL.md validator.
+// Parses the frontmatter and checks it against the OpenClaw Agent-Skills spec
+// (name casing, description presence + token budget, metadata.openclaw shape,
+// recommended trigger phrasing). Pure client-side — no API, no runtime.
 
-const skillMd = `---
+type Status = 'pass' | 'warn' | 'fail';
+
+interface Check {
+  label: string;
+  status: Status;
+  detail: string;
+}
+
+const SAMPLE = `---
 name: daily-briefing
-description: "Generate a structured daily work briefing from
-  Git activity and manual input. Use when (1) user says
-  'daily briefing'; (2) summarize today's work; (3) user
-  shares work items for formatting."
-metadata: { "openclaw": { "emoji": "📋",
-  "requires": { "bins": ["git"] } } }
+description: "Generate a structured daily work briefing from Git activity and manual input. Use when (1) user says 'daily briefing'; (2) user asks to summarize today's work; (3) user shares work items for formatting."
+metadata: { "openclaw": { "emoji": "📋", "requires": { "bins": ["git"] } } }
 ---
 
 ## Trigger
@@ -37,82 +35,159 @@ metadata: { "openclaw": { "emoji": "📋",
 - exact template, no extra sections
 - do NOT add commentary at the end`;
 
-const stageOrder: StageKey[] = ['idle', 'author', 'load', 'route', 'run', 'complete'];
-
-const stageLabels: { key: Exclude<StageKey, 'idle' | 'complete'>; label: string; description: string }[] = [
-  { key: 'author', label: 'Author SKILL.md', description: 'YAML frontmatter (name, description, metadata.requires) + Markdown body.' },
-  { key: 'load', label: 'Hot-load', description: 'Drop into skills/ — the harness watcher registers it in ~250ms, no restart.' },
-  { key: 'route', label: 'Route', description: 'User says "日报" → description matches → agent invokes daily-briefing.' },
-  { key: 'run', label: 'Run', description: 'collect-git-activity.sh gathers today\'s commits → formatted briefing.' },
-];
-
-const briefingOutput = `📋 Daily Briefing 2026-05-26
-- ✅ faithfully replicated 5 portfolio projects from course materials
-- ✅ deployed fulingchen.me via Vercel
-- ⚠️ GitHub Pages config was a stale dead-end (now removed)
-- 📅 phase 2: innovate on top of the faithful replicas`;
-
-const lobsterSteps = [
-  { id: 'search', cmd: "bash scripts/tavily-search.sh 'AI Agent 2026'", gated: false },
-  { id: 'summarize', cmd: 'bash scripts/deepseek-summarize.sh', gated: false },
-  { id: 'preview', cmd: 'bash scripts/format-preview.sh', gated: true },
-  { id: 'push', cmd: 'bash scripts/feishu-push.sh', gated: false },
-];
-
-function wait(ms: number) {
-  return new Promise<void>((resolve) => window.setTimeout(resolve, ms));
+// rough token estimate: CJK chars ~1 token each, other chars ~1 per 4.
+function estimateTokens(s: string): number {
+  let cjk = 0;
+  let other = 0;
+  for (const ch of s) {
+    if (/[一-鿿　-〿＀-￯]/.test(ch)) cjk += 1;
+    else other += 1;
+  }
+  return Math.round(cjk + other / 4);
 }
 
-export default function OpenClawSkillPreview() {
-  const [running, setRunning] = useState(false);
-  const [stage, setStage] = useState<StageKey>('idle');
-  const [timeline, setTimeline] = useState<string[]>([]);
-  const [approval, setApproval] = useState<Approval>('pending');
+interface Parsed {
+  hasFrontmatter: boolean;
+  name?: string;
+  description?: string;
+  metadataRaw?: string;
+  metadataObj?: unknown;
+  metadataError?: boolean;
+  body: string;
+}
 
-  const reset = () => {
-    setStage('idle');
-    setTimeline([]);
-    setApproval('pending');
-    setRunning(false);
+function parse(md: string): Parsed {
+  const m = md.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+  if (!m) return { hasFrontmatter: false, body: md };
+  const fm = m[1];
+  const body = m[2] ?? '';
+
+  const nameMatch = fm.match(/^name:\s*(.+)$/m);
+  const name = nameMatch ? nameMatch[1].trim().replace(/^["']|["']$/g, '') : undefined;
+
+  // description: quoted (possibly spanning) or to next top-level key
+  let description: string | undefined;
+  const descQuoted = fm.match(/^description:\s*"([\s\S]*?)"\s*$/m) || fm.match(/^description:\s*'([\s\S]*?)'\s*$/m);
+  if (descQuoted) {
+    description = descQuoted[1].trim();
+  } else {
+    const descLine = fm.match(/^description:\s*(.+)$/m);
+    if (descLine) description = descLine[1].trim().replace(/^["']|["']$/g, '');
+  }
+
+  const metaMatch = fm.match(/^metadata:\s*(\{[\s\S]*\})\s*$/m);
+  let metadataObj: unknown;
+  let metadataError = false;
+  if (metaMatch) {
+    try {
+      metadataObj = JSON.parse(metaMatch[1]);
+    } catch {
+      metadataError = true;
+    }
+  }
+
+  return {
+    hasFrontmatter: true,
+    name,
+    description,
+    metadataRaw: metaMatch?.[1],
+    metadataObj,
+    metadataError,
+    body,
   };
+}
 
-  useEffect(() => {
-    if (!running) return;
-    let cancelled = false;
+function validate(md: string): { checks: Check[]; descTokens: number } {
+  const p = parse(md);
+  const checks: Check[] = [];
 
-    const run = async () => {
-      setStage('author');
-      setApproval('pending');
-      setTimeline(['Wrote SKILL.md: frontmatter + Trigger/Process/Rules body.']);
+  if (!p.hasFrontmatter) {
+    checks.push({ label: 'Frontmatter', status: 'fail', detail: 'No YAML frontmatter block (--- … ---) found.' });
+    return { checks, descTokens: 0 };
+  }
+  checks.push({ label: 'Frontmatter', status: 'pass', detail: 'YAML frontmatter block found.' });
 
-      await wait(560);
-      if (cancelled) return;
-      setStage('load');
-      setTimeline((prev) => [...prev, 'Dropped into skills/daily-briefing/ → watcher registered it (~250ms).']);
+  // name
+  if (!p.name) {
+    checks.push({ label: 'name', status: 'fail', detail: 'Missing required `name` field.' });
+  } else if (!/^[a-z0-9]+([-_][a-z0-9]+)*$/.test(p.name)) {
+    checks.push({ label: 'name', status: 'warn', detail: `"${p.name}" should be kebab-case or snake_case (lowercase).` });
+  } else {
+    checks.push({ label: 'name', status: 'pass', detail: `"${p.name}" — valid kebab/snake case.` });
+  }
 
-      await wait(520);
-      if (cancelled) return;
-      setStage('route');
-      setTimeline((prev) => [...prev, 'User: "帮我生成今天的日报" → description matched → invoking daily-briefing.']);
+  // description presence
+  const descTokens = p.description ? estimateTokens(p.description) : 0;
+  if (!p.description) {
+    checks.push({ label: 'description', status: 'fail', detail: 'Missing required `description` — this is the routing signal.' });
+  } else if (descTokens > 250) {
+    checks.push({ label: 'description length', status: 'warn', detail: `~${descTokens} tokens — over the ~250-token budget; tighten it.` });
+  } else {
+    checks.push({ label: 'description length', status: 'pass', detail: `~${descTokens} tokens (≤250 budget).` });
+  }
 
-      await wait(560);
-      if (cancelled) return;
-      setStage('run');
-      setTimeline((prev) => [...prev, 'Ran collect-git-activity.sh → classified commits → formatted briefing.']);
+  // description "Use when" triggers
+  if (p.description) {
+    const hasTriggers = /use when|当|use this when|trigger/i.test(p.description);
+    checks.push({
+      label: 'description triggers',
+      status: hasTriggers ? 'pass' : 'warn',
+      detail: hasTriggers
+        ? 'Spells out when to invoke (good for routing).'
+        : 'Consider adding "Use when (1)… (2)…" so the agent routes reliably.',
+    });
+  }
 
-      await wait(560);
-      if (cancelled) return;
-      setStage('complete');
-      setRunning(false);
-    };
+  // metadata
+  if (p.metadataError) {
+    checks.push({ label: 'metadata', status: 'fail', detail: '`metadata` is present but is not valid JSON.' });
+  } else if (!p.metadataObj) {
+    checks.push({ label: 'metadata', status: 'warn', detail: 'No `metadata.openclaw` — optional, but recommended (emoji, requires).' });
+  } else {
+    const oc = (p.metadataObj as Record<string, unknown>)?.openclaw as Record<string, unknown> | undefined;
+    if (!oc) {
+      checks.push({ label: 'metadata', status: 'warn', detail: 'metadata has no `openclaw` key.' });
+    } else {
+      checks.push({ label: 'metadata.openclaw', status: 'pass', detail: 'present.' });
+      const requires = oc.requires as Record<string, unknown> | undefined;
+      if (requires && requires.bins !== undefined && !Array.isArray(requires.bins)) {
+        checks.push({ label: 'requires.bins', status: 'warn', detail: '`requires.bins` should be an array, e.g. ["git"].' });
+      } else if (requires?.bins) {
+        checks.push({ label: 'requires.bins', status: 'pass', detail: `declares deps: ${(requires.bins as string[]).join(', ')}.` });
+      }
+    }
+  }
 
-    void run();
-    return () => {
-      cancelled = true;
-    };
-  }, [running]);
+  // body sections
+  const hasBody = p.body.trim().length > 0;
+  checks.push({
+    label: 'body',
+    status: hasBody ? 'pass' : 'warn',
+    detail: hasBody ? 'Markdown body present (instructions for the agent).' : 'Empty body — add Trigger/Process/Rules sections.',
+  });
 
-  const stageReached = (k: StageKey) => stageOrder.indexOf(stage) >= stageOrder.indexOf(k);
+  return { checks, descTokens };
+}
+
+const statusIcon = {
+  pass: CheckCircle2,
+  warn: TriangleAlert,
+  fail: XCircle,
+};
+const statusColor = {
+  pass: 'text-[var(--color-green-300)] border-[var(--color-green-300)]/25 bg-[var(--color-green-300)]/8',
+  warn: 'text-[var(--color-amber-300)] border-[var(--color-amber-300)]/25 bg-[var(--color-amber-300)]/8',
+  fail: 'text-[var(--color-amber-300)] border-[var(--color-amber-300)]/30 bg-[var(--color-amber-300)]/12',
+};
+
+export default function OpenClawSkillPreview() {
+  const zh = useLocale() === 'zh';
+  const [md, setMd] = useState(SAMPLE);
+  const { checks, descTokens } = useMemo(() => validate(md), [md]);
+
+  const fails = checks.filter((c) => c.status === 'fail').length;
+  const warns = checks.filter((c) => c.status === 'warn').length;
+  const verdict = fails > 0 ? 'fail' : warns > 0 ? 'warn' : 'pass';
 
   return (
     <div className="not-prose my-8 overflow-hidden rounded-[28px] border border-[var(--color-border-default)] bg-[var(--color-bg-card)] shadow-[0_12px_50px_var(--color-glow-green)]">
@@ -121,177 +196,100 @@ export default function OpenClawSkillPreview() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-amber-300)]/20 bg-[var(--color-amber-300)]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-amber-300)]">
               <Sparkles className="h-3.5 w-3.5" />
-              Interactive Preview
+              {zh ? '实时 · 在你浏览器里运行' : 'Live · runs in your browser'}
             </div>
             <h3 className="mt-3 text-2xl font-semibold text-[var(--color-text-primary)]">
-              Author &amp; run an OpenClaw Skill
+              {zh ? 'SKILL.md 校验器 — 实时试用' : 'SKILL.md validator — try it live'}
             </h3>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-text-secondary)]">
-              Walk a SKILL.md from authoring to hot-load to routing to running — the Daily Briefing example — then
-              see the Lobster news-briefing pipeline pause at its human-approval gate.
+              {zh
+                ? '粘贴或编辑一个 SKILL.md。这会解析 frontmatter 并按 OpenClaw Agent-Skills 规范校验——name 命名、description token 预算（≤250）、metadata 结构、触发措辞——并估算 description 的 token 成本。全部在客户端。'
+                : "Paste or edit a SKILL.md. This parses the frontmatter and checks it against the OpenClaw Agent-Skills spec — name casing, the description token budget (≤250), metadata shape, trigger phrasing — and estimates the description's token cost. All client-side."}
             </p>
           </div>
 
           <button
             type="button"
-            onClick={() => (stage === 'complete' ? reset() : setRunning(true))}
-            disabled={running}
-            className="inline-flex items-center gap-2 rounded-full border border-[var(--color-green-300)]/30 bg-[var(--color-green-300)]/14 px-4 py-2.5 text-sm font-medium text-[var(--color-green-300)] transition-colors hover:border-[var(--color-green-300)]/55 hover:bg-[var(--color-green-300)]/18 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={() => setMd(SAMPLE)}
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--color-green-300)]/30 bg-[var(--color-green-300)]/14 px-4 py-2.5 text-sm font-medium text-[var(--color-green-300)] transition-colors hover:border-[var(--color-green-300)]/55 hover:bg-[var(--color-green-300)]/18"
           >
-            {running ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-            {running ? 'Running' : stage === 'complete' ? 'Reset' : 'Run skill'}
+            <RotateCcw className="h-4 w-4" /> {zh ? '重置示例' : 'Reset sample'}
           </button>
         </div>
       </div>
 
       <div className="grid gap-6 p-6 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="space-y-5">
-          <div className="rounded-[24px] border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/45 p-4">
-            <div className="flex items-center gap-2">
-              <FileCode2 className="h-4 w-4 text-[var(--color-amber-300)]" />
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">skills/daily-briefing/SKILL.md</p>
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+            SKILL.md
+          </p>
+          <textarea
+            value={md}
+            onChange={(e) => setMd(e.target.value)}
+            rows={18}
+            spellCheck={false}
+            className="w-full resize-y rounded-[20px] border border-[var(--color-border-default)] bg-black/20 p-4 font-mono text-xs leading-6 text-[var(--color-text-primary)] outline-none focus:border-[var(--color-green-300)]/40"
+          />
+        </div>
+
+        <div className="space-y-4">
+          <div
+            className={`rounded-[24px] border p-5 ${
+              verdict === 'pass'
+                ? 'border-[var(--color-green-300)]/30 bg-[var(--color-green-300)]/8'
+                : 'border-[var(--color-amber-300)]/30 bg-[var(--color-amber-300)]/10'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+                {zh ? '结论' : 'Verdict'}
+              </p>
+              <span className="rounded-full border border-[var(--color-border-default)] px-3 py-1 text-[11px] text-[var(--color-text-muted)]">
+                desc ≈ {descTokens} tok
+              </span>
             </div>
-            <pre className="mt-3 max-h-[320px] overflow-auto whitespace-pre-wrap rounded-2xl border border-[var(--color-border-default)] bg-black/25 p-3 font-mono text-[11px] leading-5 text-[var(--color-text-secondary)]">
-              {skillMd}
-            </pre>
+            <p
+              className={`mt-2 text-2xl font-semibold ${
+                verdict === 'pass' ? 'text-[var(--color-green-300)]' : 'text-[var(--color-amber-300)]'
+              }`}
+            >
+              {verdict === 'pass'
+                ? zh ? '通过 ✓' : 'Valid ✓'
+                : verdict === 'warn'
+                  ? zh ? `${warns} 处提示` : `${warns} warning${warns === 1 ? '' : 's'}`
+                  : zh ? `${fails} 处错误` : `${fails} error${fails === 1 ? '' : 's'}`}
+            </p>
           </div>
 
-          <div className="grid gap-3">
-            {stageLabels.map((item) => {
-              const currentIndex = stageOrder.indexOf(stage);
-              const itemIndex = stageOrder.indexOf(item.key);
-              const isActive = stage === item.key;
-              const isComplete = currentIndex > itemIndex;
+          <div className="space-y-2.5">
+            {checks.map((c, i) => {
+              const Icon = statusIcon[c.status];
               return (
-                <div
-                  key={item.key}
-                  className={`rounded-[22px] border p-3 transition-colors ${
-                    isActive
-                      ? 'border-[var(--color-green-300)]/35 bg-[var(--color-green-300)]/10'
-                      : isComplete
-                        ? 'border-[var(--color-amber-300)]/30 bg-[var(--color-amber-300)]/10'
-                        : 'border-[var(--color-border-default)] bg-[var(--color-bg-card)]/40'
-                  }`}
-                >
-                  <p className="text-sm font-semibold text-[var(--color-text-primary)]">{item.label}</p>
-                  <p className="mt-1.5 text-xs leading-5 text-[var(--color-text-muted)]">{item.description}</p>
+                <div key={`${c.label}-${i}`} className={`rounded-[18px] border p-3.5 ${statusColor[c.status]}`}>
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-4 w-4" />
+                    <span className="text-sm font-semibold text-[var(--color-text-primary)]">{c.label}</span>
+                  </div>
+                  <p className="mt-1 text-[11px] leading-5 text-[var(--color-text-muted)]">{c.detail}</p>
                 </div>
               );
             })}
           </div>
-        </div>
 
-        <div className="space-y-5">
-          <div className="rounded-[24px] border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/45 p-4">
-            <div className="flex items-center gap-2">
-              <Terminal className="h-4 w-4 text-[var(--color-green-300)]" />
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">briefing output</p>
-            </div>
-            {stageReached('run') ? (
-              <pre className="mt-3 whitespace-pre-wrap rounded-2xl border border-[var(--color-green-300)]/25 bg-[var(--color-green-300)]/8 p-3 font-mono text-[11px] leading-5 text-[var(--color-text-primary)]">
-                {briefingOutput}
-              </pre>
+          <p className="text-[11px] leading-5 text-[var(--color-text-muted)]">
+            {zh ? (
+              <>
+                <code>description</code> 是最关键的字段——Agent 靠它判断要不要调用这个 skill，而且它常驻系统提示，所以 token
+                成本是真实的预算考量。编辑上面的示例，看校验项实时更新。
+              </>
             ) : (
-              <p className="mt-3 rounded-2xl border border-dashed border-[var(--color-border-default)] px-3 py-6 text-sm leading-6 text-[var(--color-text-muted)]">
-                Run the skill to produce the formatted briefing.
-              </p>
+              <>
+                The <code>description</code> is the highest-leverage field — it&apos;s what the agent matches against to
+                decide whether to invoke the skill, and it lives in the system prompt, so its token cost is a real budget
+                concern. Edit the sample above and watch the checks update.
+              </>
             )}
-          </div>
-
-          <div className="rounded-[24px] border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/45 p-4">
-            <div className="flex items-center gap-2">
-              <Workflow className="h-4 w-4 text-[var(--color-amber-300)]" />
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
-                Lobster: news-briefing pipeline
-              </p>
-            </div>
-            <div className="mt-3 space-y-2">
-              {lobsterSteps.map((s, i) => {
-                const blockedByApproval = s.id === 'push' && approval !== 'approved';
-                return (
-                  <div
-                    key={s.id}
-                    className={`rounded-2xl border p-2.5 ${
-                      s.gated
-                        ? 'border-[var(--color-amber-300)]/30 bg-[var(--color-amber-300)]/8'
-                        : blockedByApproval
-                          ? 'border-[var(--color-border-default)] bg-black/20 opacity-60'
-                          : 'border-[var(--color-border-default)] bg-black/10'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-semibold text-[var(--color-text-muted)]">{i + 1}.</span>
-                      <span className="font-mono text-[11px] text-[var(--color-text-secondary)]">{s.id}</span>
-                      {s.gated && (
-                        <span className="ml-auto rounded-full border border-[var(--color-amber-300)]/30 px-2 py-0.5 text-[10px] font-semibold text-[var(--color-amber-300)]">
-                          approval: required
-                        </span>
-                      )}
-                      {s.id === 'push' && (
-                        <span className="ml-auto text-[10px] text-[var(--color-text-muted)]">
-                          condition: $preview.approved
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-1 font-mono text-[10px] leading-4 text-[var(--color-text-muted)]">{s.cmd}</p>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="mt-3 rounded-2xl border border-[var(--color-border-default)] bg-black/10 p-3">
-              {approval === 'pending' ? (
-                <>
-                  <p className="text-xs leading-5 text-[var(--color-text-secondary)]">
-                    Pipeline paused at <span className="font-mono">preview</span> — needs human approval before push.
-                  </p>
-                  <div className="mt-2.5 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setApproval('approved')}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-green-300)]/30 bg-[var(--color-green-300)]/12 px-3 py-1.5 text-xs font-medium text-[var(--color-green-300)] transition-colors hover:bg-[var(--color-green-300)]/18"
-                    >
-                      <Check className="h-3.5 w-3.5" /> approve yes
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setApproval('rejected')}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border-default)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-border-hover)]"
-                    >
-                      <X className="h-3.5 w-3.5" /> approve no
-                    </button>
-                  </div>
-                </>
-              ) : approval === 'approved' ? (
-                <p className="text-xs font-semibold text-[var(--color-green-300)]">
-                  ✓ approved → push step ran → briefing sent to Feishu.
-                </p>
-              ) : (
-                <p className="text-xs font-semibold text-[var(--color-text-muted)]">
-                  ✕ rejected → push skipped (condition $preview.approved is false).
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-[22px] border border-[var(--color-border-default)] bg-black/10 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
-              Activity log
-            </p>
-            <div className="mt-4 space-y-3">
-              {timeline.length > 0 ? (
-                timeline.map((item, index) => (
-                  <p key={`${item}-${index}`} className="text-sm leading-6 text-[var(--color-text-secondary)]">
-                    {item}
-                  </p>
-                ))
-              ) : (
-                <p className="text-sm leading-6 text-[var(--color-text-muted)]">
-                  Run the skill to walk author → load → route → run, then try the Lobster approval gate.
-                </p>
-              )}
-            </div>
-          </div>
+          </p>
         </div>
       </div>
     </div>
