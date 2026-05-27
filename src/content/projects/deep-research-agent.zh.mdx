@@ -1,0 +1,188 @@
+---
+title: "企业级自动化调研系统（DeepResearch · Dify）"
+title_en: "Enterprise Deep Research Agent (Dify)"
+date: "2026-04-26"
+category: project
+tags: ["Dify", "DeepSeek", "Qwen", "Tavily", "ReAct", "Agent", "Workflow"]
+lang: both
+cover: "/projects/deep-research-agent/cover.svg"
+excerpt: "一套基于 Dify 低代码 workflow 搭建的 Deep Research 自动调研系统：输入一个调研主题，系统先判断意图、拆成 2-3 个子问题，再用 ReAct Agent 迭代检索（Tavily）、抽取带出处的证据，最后由大模型写成带脚注引用的 Markdown 调研报告。"
+excerpt_en: "A Deep Research system built as a Dify low-code workflow: it classifies intent, decomposes a topic into 2–3 sub-questions, runs a ReAct agent that iteratively searches (Tavily) and extracts evidence with citations, then has an LLM write a Markdown report with footnote references."
+platforms: [website]
+github: ""
+demo: "/demo/deep-research-agent"
+published: true
+---
+
+<Callout type="info">
+  这不是手写 Python agent，是<strong>用 Dify 的 advanced-chat workflow 拼出来的</strong>。看点在 graph 设计——三路意图门、主题拆解、ReAct 迭代检索、稳定 sid 去重、带脚注的 Markdown 报告。整个 workflow 序列化在 <code>Agent_深度搜索_加强版.yml</code> 里。
+</Callout>
+
+## 什么叫「Deep Research」
+
+不是「搜索 + 总结」就完事。Deep Research 要做 4 件事：
+
+1. **拆解**：把一个模糊问题拆成几个可检索的子问题
+2. **多源取证**：在多个网页 / 文档里取证据，不依赖单一来源
+3. **可追溯**：每个断言都能指回原文
+4. **结构化报告**：用户能直接拿去用，不是一堆 bullet point
+
+## 完整 workflow 图
+
+```
+START
+ └─ Intent classify (DeepSeek) → {NeedMoreInfo | Decompose | Execute}
+     ├─ NeedMoreInfo → 让用户补充缺失信息，累积上下文，回流
+     ├─ Decompose    → 提议 2-3 个子问题大纲，让用户确认
+     └─ Execute ↓
+         ├─ Topic decompose (DeepSeek) → main_intent, key_dimensions,
+         │                                subtopics[{title, description, suggested_query}]
+         ├─ Iterate over subtopics (parallel):
+         │    └─ Research Agent (ReAct, DeepSeek)
+         │         ├─ tavily_search  (focused query)
+         │         ├─ tavily_extract (≤2 URLs → markdown)
+         │         └─ emit JSON: {queries, new_sources, new_findings,
+         │                        coverage, should_continue, stop_reason}
+         │    └─ Accumulate (code): URL→sid 去重，merge findings，append history
+         ├─ Markdown format (code): sources → 编号引用列表
+         └─ Report writer (Qwen3-max) → 带 [^sid] 脚注的 Markdown 报告
+```
+
+## 三路意图门的价值
+
+直接让 Agent 跑前先停一秒：用户问的到底是不是个完整问题？
+
+```
+用户输入：「分析一下新能源汽车行业」
+
+❌ 烂方案：立刻拆解 → 浪费搜索预算 → 给一份泛泛报告
+✅ 好方案：意图门返回 NeedMoreInfo → 反问「关注哪个细分？哪个地区？时间窗？」
+```
+
+`NeedMoreInfo` 让 Agent 主动反问，把搜索预算用在已确认的问题上。这一步省下来的成本，比后面用最快模型快个 30% 实际得多。
+
+## 拆解节点的「检索友好」原则
+
+```
+主题 decompose 输出：
+{
+  "main_intent": "了解 2024 年新能源汽车在欧洲市场的渗透率变化",
+  "key_dimensions": ["销量数据", "政策影响", "供应链", "消费者态度"],
+  "subtopics": [
+    {
+      "title": "欧洲主要国家新能源车销量",
+      "description": "...",
+      "suggested_query": "EV sales Europe 2024 by country market share"
+    },
+    ...
+  ]
+}
+```
+
+`suggested_query` 是写给**搜索引擎看**的，不是给人看的——所以用英文、关键词式、量化指标，**禁掉「背景」「发展」这种空泛词**。
+
+## ReAct Research Agent 的强约束输出
+
+```json
+{
+  "queries": ["EV sales Europe Q3 2024 Germany France UK"],
+  "new_sources": [
+    {"sid": "src_001", "url": "https://...", "title": "...", "snippet": "..."}
+  ],
+  "new_findings": [
+    {
+      "claim": "2024 Q3 欧洲新能源汽车销量同比下降 5.2%",
+      "quote": "European EV sales fell 5.2% YoY in Q3 2024...",
+      "confidence": 0.9,
+      "sid": "src_001"
+    }
+  ],
+  "coverage": {
+    "销量数据": "covered",
+    "政策影响": "partial",
+    "供应链": "uncovered",
+    "消费者态度": "uncovered"
+  },
+  "should_continue": true,
+  "stop_reason": null
+}
+```
+
+**每个 claim 必须有 quote 兜底**，不准空口断言。`coverage` map 让 Agent 知道哪些维度还没覆盖到，`should_continue / stop_reason` 让它自己决定何时停止。
+
+## 稳定 sid 去重的小技巧
+
+不同 subtopic 经常引用同一个网页——Markdown 报告里如果引用号每次都新生成，最后参考文献会重复一大堆。所以 code 节点在每次累积 findings 前先跑：
+
+```python
+def accumulate(state, new_sources, new_findings):
+    # 标准化 URL
+    for src in new_sources:
+        normalized = normalize_url(src["url"])  # 去 utm_*, 统一协议等
+        existing_sid = state["url_to_sid"].get(normalized)
+        if existing_sid:
+            src["sid"] = existing_sid  # 复用旧 sid
+        else:
+            new_sid = f"src_{len(state['sources']):03d}"
+            state["url_to_sid"][normalized] = new_sid
+            state["sources"][new_sid] = src
+            src["sid"] = new_sid
+
+    # findings 去重 (sid, claim, quote)
+    seen = set()
+    for f in new_findings:
+        key = (f["sid"], f["claim"], f["quote"])
+        if key not in seen:
+            seen.add(key)
+            state["findings"].append(f)
+    return state
+```
+
+## 报告写手的固定结构
+
+Qwen3-max 拿到 `findings + history + sources_markdown`，必须按这个结构写：
+
+```
+# {main_intent}
+
+## 概述
+一段总览 + [^sid] 脚注引用 ...
+
+## 关键维度分析
+### {dimension_1}
+分析文字，每个事实带 [^sid] ...
+
+### {dimension_2}
+...
+
+## 关键发现
+- 发现 1 [^sid]
+- 发现 2 [^sid]
+- 证据不足的点：用「（证据不足）」明确标注，不要硬写
+
+## 参考来源
+{自动生成的编号列表}
+```
+
+「证据不足」是关键——不许编。
+
+## 多模型路由
+
+- **DeepSeek**：意图判断 / 拆解 / Research Agent（reasoning-heavy）
+- **Qwen3-max**：最终报告写作（中文流畅度更好）
+- **Tavily Search + Extract**：网页检索 + 内容抽取
+
+## 诚实边界
+
+这是 Dify workflow，跑在 Dify 平台上，需要 DeepSeek + Qwen + Tavily 3 个 API key。没有「打包好的开箱即用」二进制，价值在**编排设计**而不是「我写了个新框架」。
+
+## 价值点
+
+- 复杂 Dify workflow 设计：分支意图控制、并行迭代、code 节点状态累积、多模型路由
+- 证据纪律：claim + quote + confidence、URL → sid 去重、脚注引用、显式标注「证据不足」
+- 知道**何时低代码是对的工具**——也能诚实说出「价值在编排，不在代码」
+
+<DemoStatus
+  title="Demo 真实材料对应"
+  description="互动 Demo 复演的是 Dify graph 在一个样例主题上的运行轨迹：三路意图门 → 拆解 → 每个 subtopic 的 search→extract→evidence 循环 → URL→sid 去重 → 最终带脚注 Markdown 报告。不调真实 Dify/Tavily/LLM，节省成本但保留 graph 行为。"
+/>

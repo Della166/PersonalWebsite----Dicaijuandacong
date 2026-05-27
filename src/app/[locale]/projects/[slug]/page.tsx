@@ -25,7 +25,7 @@ export default async function ProjectPage({
   const { locale, slug } = await params;
   setRequestLocale(locale);
   const t = await getTranslations('projects');
-  const project = getContentBySlug('projects', slug);
+  const project = getContentBySlug('projects', slug, locale);
 
   if (!project) notFound();
 
@@ -155,6 +155,35 @@ export default async function ProjectPage({
             }}
           />
         </div>
+
+        {frontmatter.demo && isInternalProjectDemo(frontmatter.demo) && (
+          <div className="mt-12 rounded-[28px] border border-[var(--color-green-300)]/30 bg-[linear-gradient(135deg,rgba(127,188,140,0.10),rgba(212,165,116,0.08))] p-6 md:p-8">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="max-w-xl">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-green-300)]">
+                  {locale === 'zh' ? '继续探索' : 'Continue exploring'}
+                </p>
+                <h3 className="mt-2 text-xl font-bold text-[var(--color-text-primary)] md:text-2xl">
+                  {locale === 'zh'
+                    ? '从「案例叙事」跳到「可点击 Demo」'
+                    : 'Jump from this case study into the interactive demo'}
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
+                  {locale === 'zh'
+                    ? '案例页讲故事和架构，Demo 页可点可切，里面是从真实源码里抠出来的代码片段、参数表、流水线步骤。'
+                    : 'This page is the narrative. The demo is the live one — click-through panels with real code, parameter tables, and pipeline steps lifted from the source.'}
+                </p>
+              </div>
+              <Link
+                href={getProjectDemoHref({ demo: frontmatter.demo, locale, slug })}
+                className="inline-flex flex-shrink-0 items-center gap-2 rounded-full border border-[var(--color-green-300)]/40 bg-[var(--color-green-300)]/18 px-6 py-3 text-base font-semibold text-[var(--color-green-300)] transition-all hover:scale-[1.02] hover:border-[var(--color-green-300)]/70 hover:bg-[var(--color-green-300)]/25"
+              >
+                <Sparkles className="w-5 h-5" />
+                {locale === 'zh' ? '打开互动 Demo →' : 'Open interactive Demo →'}
+              </Link>
+            </div>
+          </div>
+        )}
       </article>
     </div>
   );

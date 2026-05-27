@@ -36,12 +36,24 @@ export function getAllContent(): ContentItem[] {
   return categories.flatMap((cat) => getContentByCategory(cat));
 }
 
-export function getContentBySlug(category: string, slug: string): ContentItem | null {
+export function getContentBySlug(
+  category: string,
+  slug: string,
+  locale?: string,
+): ContentItem | null {
   const dir = path.join(contentDir, category);
   const extensions = ['.mdx', '.md'];
 
-  for (const ext of extensions) {
-    const filePath = path.join(dir, `${slug}${ext}`);
+  // Try locale-suffixed file first (e.g. <slug>.zh.mdx / <slug>.en.mdx),
+  // then fall back to plain <slug>.mdx / <slug>.md.
+  const candidates: string[] = [];
+  if (locale) {
+    for (const ext of extensions) candidates.push(`${slug}.${locale}${ext}`);
+  }
+  for (const ext of extensions) candidates.push(`${slug}${ext}`);
+
+  for (const candidate of candidates) {
+    const filePath = path.join(dir, candidate);
     if (fs.existsSync(filePath)) {
       const fileContent = fs.readFileSync(filePath, 'utf-8');
       const { data, content } = matter(fileContent);

@@ -169,6 +169,33 @@ export default async function ProjectDemoPage({
             ))}
           </aside>
         </div>
+
+        <div className="mt-12 rounded-[28px] border border-[var(--color-amber-300)]/30 bg-[linear-gradient(135deg,rgba(212,165,116,0.10),rgba(127,188,140,0.08))] p-6 md:p-8">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="max-w-xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-amber-300)]">
+                {locale === 'zh' ? '回到案例叙事' : 'Back to the narrative'}
+              </p>
+              <h3 className="mt-2 text-xl font-bold text-[var(--color-text-primary)] md:text-2xl">
+                {locale === 'zh'
+                  ? '从「可点击 Demo」跳回「案例页」'
+                  : 'Jump back from the interactive demo to the case study'}
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
+                {locale === 'zh'
+                  ? '案例页是项目的完整叙事和架构讲解，里面有从真实源码摘出来的 Python 代码块、设计权衡、价值点。'
+                  : 'The case study is the full narrative — Python code blocks lifted from source, design trade-offs, the value proposition.'}
+              </p>
+            </div>
+            <Link
+              href={`/${locale}/projects/${slug}`}
+              className="inline-flex flex-shrink-0 items-center gap-2 rounded-full border border-[var(--color-amber-300)]/40 bg-[var(--color-amber-300)]/18 px-6 py-3 text-base font-semibold text-[var(--color-amber-300)] transition-all hover:scale-[1.02] hover:border-[var(--color-amber-300)]/70 hover:bg-[var(--color-amber-300)]/25"
+            >
+              <FileText className="w-5 h-5" />
+              {locale === 'zh' ? '← 返回案例页' : '← Back to case study'}
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );

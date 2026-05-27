@@ -1,0 +1,202 @@
+---
+title: "企业私有化 NL2SQL 微调系统"
+title_en: "Enterprise NL2SQL Fine-Tuning System"
+date: "2026-03-14"
+category: project
+tags: ["LoRA", "QLoRA", "FastAPI", "WebSocket", "SQL", "Evaluation", "vLLM"]
+lang: both
+cover: "/projects/enterprise-nl2sql-fine-tuning-system/cover.svg"
+excerpt: "围绕企业私有数据库场景构建的 NL2SQL 流水线，从 schema-aware 数据构造到训练、校验与评估一体化完成。"
+excerpt_en: "An enterprise NL2SQL system that spans schema-aware data generation, LoRA tuning, validation, and execution-aware evaluation."
+platforms: [website]
+github: ""
+demo: "/demo/enterprise-nl2sql-fine-tuning-system"
+published: true
+---
+
+<Callout type="info">
+  这不是「让 ChatGPT 写 SQL」的玩具。项目把 NL2SQL 当**全流水线问题**做：从私有 DB 元数据自动造训练数据 → LlamaFactory LoRA 微调 → 双轨评估（文本相似度 + 真跑 SQL 比结果集）。3 个仓库 `data_create/`、`Web_shargpt/`、`nl2sql_fine_tuning/` 各管一段。
+</Callout>
+
+## 为什么不直接调通用大模型？
+
+通用模型不知道你公司的字段名。同一个「上个月销售额」，每家公司表叫 `sales_table`、`tx_summary`、还是 `order_metric` 完全靠运气猜。LoRA 微调让模型记住**你这家公司的 schema 风格**，比 prompt 注入 schema 在长 schema / 复杂 JOIN 场景下稳得多。
+
+## 系统拆成 3 个仓库
+
+| 仓库 | 角色 | 入口 |
+|---|---|---|
+| `data_create/` | React + Vite 配置界面，用来给非技术人员配数据生成参数 | `index.html` + `App.tsx` |
+| `Web_shargpt/` | 完整 FastAPI 后端，6 阶段数据生成流水线 | `app.py` + `modules/*.py` |
+| `nl2sql_fine_tuning/` | LoRA 训练 / 评估 / vLLM 部署 3 个脚本 | `train_lora.py` / `eval_model.py` / `vllm_test.py` |
+
+## 6 阶段数据生成流水线（Web_shargpt/modules/）
+
+```
+DB → metadata_extractor → table_cards → planner (LLM-A) → generator (LLM-B) → validator → exporter
+```
+
+### 阶段 1-3：元数据 → 表卡片
+
+`db_connector.py` 用 PyMySQL / psycopg2 / pyodbc 支持 MySQL / Postgres / SQL Server。`metadata_extractor.py` 拉出每张表的列（名/类型/可空/注释）+ 主键 + 外键。`table_cards.py` 把这些压缩成 LLM 易读的「表卡片摘要」，保留外键关系。
+
+### 阶段 4：主题规划（LLM-A）
+
+planner 让 LLM 把表分组成业务主题，每个主题分配样本数。真实 prompt：
+
+```python
+# Web_shargpt/modules/planner.py:_build_planning_prompt
+prompt = f"""你是数据库分析专家。以下是数据库表卡片摘要：
+
+{table_cards_text}
+
+请基于以上数据库结构，规划出若干个业务主题（topics），
+每个主题选择 {min_tables}~{max_tables} 张相关联的表，
+用于生成 NL2SQL 训练样本。
+
+要求：
+1. 主题应覆盖不同业务场景（用户分析、订单统计、销售报表…）
+2. 每个主题的表应有业务关联性（外键或业务逻辑相关）
+3. 所有主题的 count 之和 = {total_samples}
+4. 每个主题至少 20 个样本
+
+请输出 JSON：
+{{
+  "topics": [
+    {{
+      "name": "主题名称",
+      "tables": ["table1", "table2", "table3"],
+      "reason": "选择这些表的理由",
+      "count": 100,
+      "dialect": "{dialect}"
+    }}
+  ]
+}}"""
+```
+
+`_validate_and_adjust_plan()` 会硬校验：表名必须在 metadata 里、count 总和 = total_samples、不够就按比例 scale。
+
+### 阶段 5：样本生成（LLM-B）
+
+每个主题独立调 LLM：拼出简化 DDL + 方言 + 目标条数 → 解析 LLM 输出的 NL+SQL 对。若返回数量不足会自动补一轮。
+
+### 阶段 6：3 层 SQL 校验
+
+```python
+# Web_shargpt/modules/validator.py
+def validate_sql(self, sql: str, dialect: str = "mysql"):
+    # Layer 1: 语法
+    is_valid, error = self._check_syntax(sql, dialect)
+    if not is_valid:
+        return False, f"语法错误: {error}"
+
+    # Layer 2: Schema 绑定
+    is_valid, error = self._check_schema(sql, dialect)
+    if not is_valid:
+        return False, f"Schema错误: {error}"
+
+    # Layer 3: 可选执行（自动加 LIMIT 1）
+    if self.enable_execution_check and self.db_connector:
+        is_valid, error = self._check_execution(sql)
+        if not is_valid:
+            return False, f"执行错误: {error}"
+
+    return True, ""
+```
+
+`_check_schema` 用 sqlglot 遍历 `exp.Table` / `exp.Column`，**构建别名映射** `alias_to_table = {alias: actual_table}`，然后逐列检查 `table_columns[actual_table]` 是否包含该列名——能抓到「字段对了但表名错了」这种典型错误。
+
+## LoRA 微调（nl2sql_fine_tuning/）
+
+```bash
+llamafactory-cli train \
+    --stage sft \
+    --model_name_or_path /home/ubuntu/Qwen3-4B \
+    --finetuning_type lora \
+    --template qwen3_nothink \
+    --dataset_dir data \
+    --dataset sql_train_alpaca \
+    --cutoff_len 2048 \
+    --learning_rate 5e-05 \
+    --num_train_epochs 3.0 \
+    --per_device_train_batch_size 8 \
+    --gradient_accumulation_steps 8 \
+    --lr_scheduler_type cosine \
+    --bf16 True \
+    --lora_rank 8 \
+    --lora_alpha 16 \
+    --lora_target all
+```
+
+有效 batch = 8 × 8 = 64，cosine 退火，bf16 混合精度。`lora_target all` 意味着所有 7 层线性都加 LoRA：
+
+```python
+# nl2sql_fine_tuning/train_lora.py:265
+target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                "gate_proj", "up_proj", "down_proj"]
+```
+
+## 训练前后真实评估
+
+`predict_with_generate=True` 在留出集 ~1034 条上跑，**真实数字**（不是挑出来的）：
+
+| 指标 | 微调前 | 微调后 | 提升 |
+|---|---|---|---|
+| BLEU-4 | 10.25 | 22.90 | +123% · 不可用 → 可用 |
+| ROUGE-1 | 19.14 | 44.67 | +133% · 差 → 良好 |
+| ROUGE-2 | 5.35 | 14.54 | +172% · 很差 → 中等 |
+| ROUGE-L | 10.31 | 28.05 | +172% · 差 → 良好 |
+| 推理速度 | 0.94 样本/秒 | 0.904 样本/秒 | 基本持平 |
+
+## 双轨评估：文本 vs 执行
+
+文本匹配（BLEU / ROUGE）只能说「生成的 SQL 长得像」，不代表「跑出来结果对」。所以 `eval_model.py` 同时跑两条线：
+
+```python
+# nl2sql_fine_tuning/utils.py
+def calculate_execution_accuracy(predictions, references, executor):
+    """基于执行结果的准确率（项目最终的 truth signal）"""
+    execution_success = 0  # 生成的 SQL 能跑通
+    result_match = 0       # 跑出来结果集和标准答案一致
+
+    for pred, ref in zip(predictions, references):
+        success, result = executor.execute_sql(pred)
+        if success:
+            execution_success += 1
+            match, _ = executor.compare_results(pred, ref)
+            if match:
+                result_match += 1
+
+    return {
+        "execution_success_rate": execution_success / total,
+        "result_match_rate": result_match / total
+    }
+```
+
+DeepSeek-Coder 6.7B 分支的真实数字：**语法 91%、执行匹配 61%、可训参 0.59%（~40M/6.7B）**。
+
+## vLLM 高速部署的小技巧
+
+vLLM batch 推理 batch=32 时单卡 ~0.7 样本/秒。但更关键的是 `SQLExecutor.execute_batch()` **复用单个 PyMySQL 连接**跑整批 SQL——不复用的话每条都新建连接，eval 速度直接掉 10 倍。
+
+```python
+class SQLExecutor:
+    def execute_batch(self, sqls):
+        results = []
+        self.connect()  # 只建一次连接
+        for sql in sqls:
+            result = self.execute_sql(sql)
+            results.append(result)
+        return results
+```
+
+## 价值点
+
+- 把 NL2SQL 当**全栈工程问题**：数据自动造 → 微调 → 双轨评估 → vLLM 部署，全链路真实可跑
+- 评估围绕**真实失败模式**（schema 漂移 / 幻觉 join / 语义不匹配）而不是单一 BLEU
+- 模型 / 框架 / 评估互相独立可替换：Qwen3-4B 换成 DeepSeek-Coder、LlamaFactory 换成手写 train_lora.py，不动数据流水线
+
+<DemoStatus
+  title="Demo 真实材料对应"
+  description="互动 Demo 取自案例7 notebook《企业私有化Nl2SQL模型微调实战.ipynb》：6 阶段流水线、verbatim llamafactory-cli 命令、predict_with_generate 真实评估表（BLEU-4 10.25→22.90 等）、DeepSeek-Coder 分支 91/61% 数字、SQLExecutor 连接复用细节。点上面「打开 Demo」可看交互版。"
+/>
