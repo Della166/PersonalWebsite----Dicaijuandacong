@@ -100,24 +100,33 @@ const PIPELINE = [
   },
   {
     name: 'data_synthesizer.py · chosen',
-    detail: 'DataSynthesizer._generate_chosen(task) — DeepSeek-chat 在完整 schema 下产出「正确」的 <function_call>。',
+    detail: 'DataSynthesizer._generate_chosen(task) — 单轮 vs 多轮分支：多轮调 generate_multi_turn_dialogue(), 写回 task._multi_turn_context。',
   },
   {
     name: 'data_synthesizer.py · smart_rejected',
-    detail: 'DataSynthesizer._generate_rejected(task, chosen) — 让 LLM 参考 chosen 故意犯错：错工具 / 空参 / 跳过工具 / 误解意图。',
+    detail: 'synthesize_sample_with_smart_rejected() — 5 步：并发跑 chosen+rejected → LLM 自评 quality_score + similarity_score → 策略 1 (质量<5 且能修正→ 拿 corrected_chosen 当新 chosen) → 策略 2 (相似度>80% → 用 temperature=1.2 重生成更差的 rejected) → 收尾。',
   },
   {
     name: 'validator.py',
-    detail: 'Validator.validate_sample() — 硬规则：required 字段齐 · chosen ≠ rejected · function_call JSON 解析通过；可选 LLM 自评 quality_score + similarity_score。',
+    detail: 'Validator.validate_sample() — 必填字段齐 · chosen ≠ rejected · function_call JSON 解析通过 · 可选 LLM 自评打分。',
   },
   {
     name: 'concurrent_engine.py',
-    detail: 'ConcurrentEngine.process_tasks() — asyncio.Semaphore 限并发；ProgressStats 推 WebSocket；指数退避重试。',
+    detail: 'ConcurrentEngine.process_tasks() — asyncio.Semaphore + ProgressStats(progress_percent / generation_rate / validation_success_rate) 推 WebSocket; 指数退避重试。',
   },
   {
     name: 'exporter.py',
     detail: 'Exporter.export_to_jsonl() — data_dpo.jsonl + dataset_info.json + generation_stats.json + invalid_samples.jsonl。',
   },
+] as const;
+
+// The 5-step smart_rejected strategy from data_synthesizer.py:89-200, shown as its own block.
+const SMART_REJECTED_STRATEGY = [
+  { step: 1, label: '并发生成', detail: 'asyncio.gather(_generate_chosen, _generate_rejected) — chosen 和 rejected 并发跑，省一轮 LLM 等待。' },
+  { step: 2, label: '构造临时样本', detail: '把 task + chosen + rejected 装成临时 sample 字典，丢给 LLM 自评。' },
+  { step: 3, label: 'LLM 自评', detail: 'llm_client.validate_and_correct(sample) → quality_score (0-10) + similarity_score (0-100) + 可选 corrected_chosen。' },
+  { step: 4, label: '策略 1 · 修正', detail: '如果 quality_score < 5.0 且 corrected_chosen 存在 → 用 corrected_chosen 当新 chosen，原 rejected 保留为真实错误案例。' },
+  { step: 5, label: '策略 2 · 重生成', detail: '如果 similarity_score > 80% → 用 temperature=1.2 重新生成更差的 rejected (避免「假对比」对 DPO 没用)。' },
 ] as const;
 
 // All 10 tools from backend/configs/tools_registry.json (lifted verbatim).
@@ -332,6 +341,37 @@ export default function FunctionCallingAgentPreview() {
             </div>
           ))}
         </div>
+        <div className="mt-5 rounded-[20px] border border-[var(--color-border-default)] bg-black/10 p-4">
+          <div className="flex items-center gap-2">
+            <GitCompareArrows className="h-4 w-4 text-[var(--color-amber-300)]" />
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+              smart_rejected 策略 · 5 steps · data_synthesizer.py:89-200
+            </p>
+          </div>
+          <div className="mt-3 grid gap-2 md:grid-cols-5">
+            {SMART_REJECTED_STRATEGY.map((s) => (
+              <div
+                key={s.step}
+                className="rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/40 p-3"
+              >
+                <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+                  step {s.step}
+                </p>
+                <p className="mt-1 text-sm font-semibold text-[var(--color-text-primary)]">
+                  {s.label}
+                </p>
+                <p className="mt-1 text-[11px] leading-5 text-[var(--color-text-muted)]">
+                  {s.detail}
+                </p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-[11px] leading-5 text-[var(--color-text-muted)]">
+            5 步走完后样本字段：
+            <code className="ml-1 rounded bg-black/30 px-1">{`{task_id, task_type, system, tools, messages, chosen, rejected, quality_score, similarity_score}`}</code>
+          </p>
+        </div>
+
         <div className="mt-5 grid gap-3 md:grid-cols-3">
           <div className="rounded-2xl border border-[var(--color-border-default)] bg-black/10 p-3">
             <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">

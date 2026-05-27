@@ -424,11 +424,14 @@ export default function StructuredExtractionPreview() {
         <div className="mt-4 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
           {[
             { path: 'main.py', note: 'FastAPI entry · uvicorn app.main:app --reload --port 8000' },
-            { path: 'config.py', note: 'DeepSeek API key + base_url + default model' },
-            { path: 'api/routes.py', note: '/extract endpoints · scenario list · sample list' },
-            { path: 'api/rag_routes.py', note: '+ RAG endpoints (extract → chroma_db/ index → grounded QA)' },
-            { path: 'core/extractor.py', note: 'lx.extract() wrapper · cache.py / sanitize.py support' },
-            { path: 'scenarios/base.py', note: 'BaseScenario abstract class · the 7 subclasses' },
+            { path: 'config.py', note: 'Settings: deepseek_api_key · vector_store_backend (chroma/qdrant) · dashscope_api_key (embeddings) · mineru_api_key (PDF OCR)' },
+            { path: 'api/routes.py', note: '8 endpoints: /health · /scenarios{,_id,/samples} · /extract · /cache/{stats,delete}' },
+            { path: 'api/rag_routes.py', note: '12 endpoints under /rag: pdf/{parse,upload,task/:id} · search · qa · qa/stream · chat · documents · extractions · stats · init' },
+            { path: 'core/extractor.py', note: 'Extractor.extract(text, scenario_id, use_cache) · wraps lx.extract(fence_output=True, use_schema_constraints=False) · builds segments grouped by class with intervals[]' },
+            { path: 'services/{vector_store,vector_store_chroma}.py', note: 'Real Qdrant ↔ Chroma switch · controlled by VECTOR_STORE_BACKEND env · same DocumentChunk schema' },
+            { path: 'services/pdf_parser.py', note: 'MinerU API client · /rag/pdf/upload supports 200MB / 600 pages · markdown chunked by paragraph then indexed' },
+            { path: 'services/qa_agent.py', note: 'LangChain Agent over the vector store · uses DeepSeek-chat · sources returned per answer span' },
+            { path: 'scenarios/base.py', note: 'BaseScenario abstract class + ScenarioRegistry · the 7 subclasses register at import time' },
           ].map((f) => (
             <div
               key={f.path}
@@ -439,12 +442,28 @@ export default function StructuredExtractionPreview() {
             </div>
           ))}
         </div>
+
+        <div className="mt-5 rounded-[20px] border border-[var(--color-border-default)] bg-black/10 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+            POST /rag/pdf/upload — production flow seen in rag_routes.py:197-319
+          </p>
+          <ol className="mt-3 space-y-1 text-sm leading-6 text-[var(--color-text-secondary)]">
+            <li>1. validate .pdf + size ≤ 200MB</li>
+            <li>2. PDFParser.parse_uploaded_file(content, filename, model_version=&quot;vlm&quot;|&quot;pipeline&quot;, timeout=600) → MinerU returns markdown</li>
+            <li>3. markdown.split(&quot;\n\n&quot;) → DocumentChunk[paragraph_index, source=&quot;pdf_upload&quot;]</li>
+            <li>4. vector_store.add_chunks(chunks) → routed to Chroma (chroma_db/) or Qdrant by VECTOR_STORE_BACKEND</li>
+            <li>5. optional: if extract_after_parse + scenario → run Extractor over the markdown → return extractions[] with char_interval</li>
+            <li>6. response: PDFParseResponse(success, task_id, markdown, source, parse_time, extractions[])</li>
+          </ol>
+        </div>
+
         <div className="mt-5 flex flex-wrap items-center gap-2">
           {[
-            { name: 'OCR layer', note: 'MinerU / PaddleOCR-VL / DeepSeek-OCR — the notebook surveys all three' },
-            { name: 'LangExtract', note: 'this app · 7 scenarios · source grounding · attributes' },
-            { name: 'chroma_db/', note: 'on-disk vector store (already shipped in backend/)' },
-            { name: 'LangChain 1.1 Agent', note: 'ReAct tool use · output cites source spans' },
+            { name: 'MinerU (PDF→Markdown)', note: 'POST /rag/pdf/upload · 200MB/600p · vlm or pipeline mode' },
+            { name: 'LangExtract', note: '7 scenarios · source grounding · cache.py de-dupe' },
+            { name: 'Vector store (Qdrant or Chroma)', note: 'real env-switch: VECTOR_STORE_BACKEND=chroma|qdrant' },
+            { name: 'DashScope embeddings', note: 'Tongyi/通义 embedding API for chunk vectors' },
+            { name: 'QAAgent (LangChain)', note: '/rag/qa + /rag/qa/stream + /rag/chat (multi-turn)' },
           ].map((s, i, arr) => (
             <div key={s.name} className="flex items-center gap-2">
               <div className="rounded-2xl border border-[var(--color-border-default)] bg-black/10 px-3 py-2">
