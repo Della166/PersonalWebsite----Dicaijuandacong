@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0e1a14"/>
+      <stop offset="100%" stop-color="#1a2620"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#g)"/>
+  <g font-family="system-ui, -apple-system, sans-serif" fill="#f0e8d9">
+    <text x="80" y="180" font-size="32" font-weight="700" fill="#7fbc8c" letter-spacing="4">QWEN-VL · LLAMAFACTORY</text>
+    <text x="80" y="320" font-size="110" font-weight="900">中文图表 VQA</text>
+    <text x="80" y="430" font-size="60" font-weight="700" fill="#d4a574">多模态模型垂直微调</text>
+    <text x="80" y="600" font-size="36" fill="#c6d2cb">data_create + LlamaFactory LoRA + zh-train chart dataset</text>
+    <text x="80" y="660" font-size="36" fill="#c6d2cb">柱状 · 折线 · 饼图 · 堆叠柱 · 含中文标签的真实分布</text>
+    <g transform="translate(80, 750)">
+      <rect x="0" y="0" rx="999" ry="999" width="240" height="60" fill="none" stroke="#d4a574" stroke-width="3"/>
+      <text x="120" y="40" font-size="28" fill="#d4a574" text-anchor="middle" font-weight="600">Qwen2.5-VL</text>
+      <rect x="260" y="0" rx="999" ry="999" width="240" height="60" fill="none" stroke="#d4a574" stroke-width="3"/>
+      <text x="380" y="40" font-size="28" fill="#d4a574" text-anchor="middle" font-weight="600">LlamaFactory</text>
+      <rect x="520" y="0" rx="999" ry="999" width="170" height="60" fill="none" stroke="#7fbc8c" stroke-width="3"/>
+      <text x="605" y="40" font-size="28" fill="#7fbc8c" text-anchor="middle" font-weight="600">LoRA</text>
+    </g>
+  </g>
+</svg>

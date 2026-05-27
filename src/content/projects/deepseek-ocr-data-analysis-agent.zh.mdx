@@ -1,0 +1,119 @@
+---
+title: "全自动数据分析可视化 Agent"
+title_en: "End-to-End Data Analysis Agent (DeepSeek-OCR + vLLM)"
+date: "2026-05-02"
+category: project
+tags: ["DeepSeek-OCR", "vLLM", "Data Analysis", "Visualization", "FastAPI"]
+lang: both
+cover: "/projects/deepseek-ocr-data-analysis-agent/cover.svg"
+excerpt: "扔一张 PDF 报表或者一张表格图：DeepSeek-OCR 把它读成结构化数据，FastAPI 后端跑分析，自动生成图表。OCR / 分析 / 可视化三层独立可替换。"
+excerpt_en: "Drop in a PDF report or a table image: DeepSeek-OCR turns it into structured data, the FastAPI backend runs analysis, charts get auto-generated. OCR / analysis / visualization are three swappable layers."
+platforms: [website]
+github: ""
+demo: ""
+published: true
+---
+
+<Callout type="info">
+  「以后不再手抠 Excel」的工作流：扔进一张 PDF 或者表格截图，吐回分析 + 图表。<strong>DeepSeek-OCR-2</strong> 做解析（财报 / 科研表格碾压传统 OCR），FastAPI 后端编排分析 + 可视化，vLLM 把 OCR 推理压在生产可用延迟。
+</Callout>
+
+## 三层架构，每层独立可换
+
+```
+backend/
+├── core/
+│   ├── ocr/                       # DeepSeek-OCR-2 客户端 + 表结构识别
+│   ├── analysis/                  # pandas 风格统计 + LLM 驱动摘要
+│   └── visualization/             # matplotlib / plotly 图表生成
+├── services/
+│   ├── ocr_service.py
+│   ├── analysis_service.py
+│   ├── visualization_service.py
+│   └── integration_service.py     # 顶层编排器：串 3 层
+├── api/                           # FastAPI 路由
+└── main.py
+```
+
+每层 = 1 个 service 模块 + 1 个 core 实现。想把 DeepSeek-OCR 换成 PaddleOCR-VL？替 `core/ocr/`，`services/ocr_service.py` 接口不变。想加 D3 图表？再丢一个 renderer 进 `core/visualization/`。
+
+## 为什么非 DeepSeek-OCR-2 不可
+
+真实 PDF 里的表格（财报、论文、实验报告）能把传统 OCR 干崩：合并单元格、多行表头、注脚混在行里。**DeepSeek-OCR-2 自带表结构识别**，吐出**带 row/col 坐标的单元格**而不只是文本——下游 pandas 入库丝滑。
+
+```python
+# core/ocr/deepseek_ocr_client.py（伪代码示意）
+from openai import OpenAI
+
+class DeepSeekOCRClient:
+    def __init__(self, base_url: str, api_key: str):
+        # 部署到 vLLM 后通过 OpenAI 兼容接口调用
+        self.client = OpenAI(base_url=base_url, api_key=api_key)
+
+    def parse_table(self, image_path: str) -> dict:
+        """返回 {cells: [{row, col, text, rowspan?, colspan?}], rows: int, cols: int}"""
+        with open(image_path, 'rb') as f:
+            image_b64 = base64.b64encode(f.read()).decode()
+        response = self.client.chat.completions.create(
+            model="deepseek-ocr-2",
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_b64}"}},
+                    {"type": "text", "text": "Extract table structure as JSON with cell coordinates."},
+                ],
+            }],
+        )
+        return json.loads(response.choices[0].message.content)
+```
+
+## vLLM 上线：3s/页 → 0.6s/页
+
+OCR 在用户感知的 real-time 循环里跑（上传 → 读 → 分析 → 渲染），延迟非常关键。
+
+| 部署方式 | 单页延迟 (相同 GPU) |
+|---|---|
+| 原生 transformers + transformers.pipeline | ~3s |
+| **vLLM 持续批处理** | ~0.6s |
+
+vLLM 的 continuous batching 让多个并发请求**共享 KV cache**，单次推理的 batch 是动态调度的——这也是 OpenAI 在线服务背后的关键技术。
+
+```bash
+# 启动 vLLM 把 DeepSeek-OCR-2 暴露成 OpenAI 兼容 API
+python -m vllm.entrypoints.openai.api_server \
+  --model /home/ubuntu/deepseek-ocr-2 \
+  --host 0.0.0.0 \
+  --port 8000 \
+  --tensor-parallel-size 1 \
+  --gpu-memory-utilization 0.85 \
+  --max-model-len 8192 \
+  --trust-remote-code
+```
+
+## 一次完整请求流向
+
+```
+用户上传 PDF / 截图
+  └─> POST /api/analyze (FastAPI)
+        ├─> integration_service.run()
+        │     ├─> ocr_service.parse(file)           # 调 vLLM OCR
+        │     │     → 表结构 JSON + 单元格坐标
+        │     ├─> analysis_service.analyze(table)   # pandas 统计 + LLM 摘要
+        │     │     → {summary, kpis, anomalies}
+        │     └─> visualization_service.render(...)  # 自动选图表类型
+        │           → PNG/SVG bytes
+        └─> response: {ocr_result, analysis, chart_url}
+```
+
+`analysis_service` 里有个小巧思：让 LLM **先决定**「这份数据适合什么图表」（柱状 / 折线 / 散点 / 饼图），再调对应的 visualization 子模块——比硬编码 if-else 灵活得多。
+
+## 价值点
+
+- **分层 AI 系统**：OCR / 分析 / 可视化各 1 service + 1 core，不是 monolith
+- **按场景选 OCR**：表结构感知（DeepSeek-OCR-2）≫ 纯文本 OCR
+- **关注推理延迟**：vLLM 上线而不是裸 transformers
+
+<DemoStatus
+  title="Demo 待补"
+  description="上传样例 PDF → 看 OCR 结果 → 看图表 的引导式 sandbox 在 roadmap 上。这个案例页讲清了三层架构和每一层选型动机。"
+/>

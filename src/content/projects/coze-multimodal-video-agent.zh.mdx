@@ -1,0 +1,87 @@
+---
+title: "Coze 多模态视频生成 Agent"
+title_en: "Coze Multimodal Video Generation Agent"
+date: "2026-05-08"
+category: project
+tags: ["Coze", "Workflow", "Image Generation", "Video Generation", "Multimodal"]
+lang: both
+cover: "/projects/coze-multimodal-video-agent/cover.svg"
+excerpt: "在 Coze（字节扣子）上拼出来的「文案 → 图片 → 视频」全自动短视频流水线，5 个互相调用的 workflow，每个 workflow 是一个独立的 zip。"
+excerpt_en: "An end-to-end short-video generation pipeline on Coze (ByteDance Kouzi), with 5 interconnected workflows — text → image → video, each shipping as its own workflow zip."
+platforms: [website]
+github: ""
+demo: ""
+published: true
+---
+
+<Callout type="info">
+  Coze（扣子）是字节的低代码 Agent 平台。「输入一个选题 brief → 产出成片短视频」这种内容流水线，写长代码反而过度——用节点 workflow 才合理。这是一套**真能跑通的 5 workflow 链**，从 brief 一路跑到成片视频。
+</Callout>
+
+## 5 个 workflow 协作
+
+```
+工作流合集/
+├── Workflow-produce-draft-1308.zip          # 顶层：根据 brief 决定走哪条子流程
+├── Workflow-get_produce-draft-1319.zip      # 文案生成：标题 / 分镜 / 旁白
+├── Workflow-create_image-draft-1329.zip     # 图片生成：每个分镜对应一张图
+├── Workflow-create_video-draft-1324.zip     # 视频生成：分镜图 + 旁白 → 视频片段
+└── Workflow-get_video-draft-1314.zip        # 视频合并：所有片段拼成成片
+```
+
+每个 workflow 是一个 Coze 导出的 JSON/YAML 包——别人导入到自己的 Coze 工作空间就能用。
+
+## 数据流
+
+```
+输入：「关于深圳早高峰地铁的 60 秒短视频」
+  │
+  ▼
+[produce]               主控 workflow 接 brief
+  │
+  ├──▶ [get_produce]    文案生成：
+  │      ├─ 标题       「8 点的深圳地铁，是什么样子？」
+  │      ├─ 6 个分镜   「拥挤的车厢 / 紧握扶手的手 / 站台上的奔跑 …」
+  │      └─ 旁白       每个分镜对应 1-2 句旁白
+  │
+  ├──▶ [create_image]   对每个分镜调图生模型（MidJourney / 即梦 / 文心一格）
+  │      └─ 返回 6 张图
+  │
+  ├──▶ [create_video]   对每张图 + 对应旁白调视频生成模型（即梦 / 可灵）
+  │      └─ 返回 6 个 ~10s 视频片段
+  │
+  └──▶ [get_video]      ffmpeg 合并 6 个片段 + 背景音乐 + 字幕
+         └─ 输出：1 个完整短视频
+```
+
+## 关键设计：workflow 拆开是有道理的
+
+**不是**把 5 个步骤塞进一个超大 workflow——拆开是为了：
+
+1. **独立失败**：图生失败时只重跑 create_image，不重新生文案
+2. **独立替换**：想从 MidJourney 换成即梦？只动 create_image，其他不动
+3. **独立 cache**：跑过一次的文案不需要重生成，直接复用
+4. **独立调试**：每个 workflow 可以单独触发，独立看日志
+
+## 为什么用 Coze 不用 LangChain / Dify
+
+3 个平台都能做，但场景不同：
+
+| 平台 | 长代码可行性 | 适合场景 |
+|---|---|---|
+| **Coze (扣子)** | 几乎不需要 | **内容生产流水线**：图生 / 视频生 / 多模态调用都是平台内置插件 |
+| **Dify** | 偶尔需要 code 节点 | 知识库 / 长文 / 复杂分支的对话型 Agent |
+| **LangChain** | 全是代码 | 自定义工具 / 自托管模型 / 不可低代码的逻辑 |
+
+Coze 的杀手锏是**字节系图生 / 视频生模型内置成插件**，不用自己接 API key、不用管 rate limit、不用付国际信用卡——对内容创作场景大幅省事。
+
+## 价值点
+
+- 知道**什么时候用低代码平台**：内容生产流水线不需要写长代码
+- 能设计**模块化 workflow**：按能力拆分，按 ID 引用组合
+- 能在 **Coze / Dify / LangChain 之间挑对工具**：内容选 Coze、对话选 Dify、自定义选 LangChain
+
+<DemoStatus
+  title="Demo 待补"
+  description="workflow 图谱 viewer + 样例成片展示在 roadmap 上。5 个 .zip 文件来自 案例10 工作流合集，导入任何 Coze 工作空间都能直接用。"
+/>

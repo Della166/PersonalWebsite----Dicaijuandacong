@@ -1,0 +1,68 @@
+---
+title: "全自动数据分析可视化 Agent"
+title_en: "End-to-End Data Analysis Agent (DeepSeek-OCR + vLLM)"
+date: "2026-05-02"
+category: project
+tags: ["DeepSeek-OCR", "vLLM", "Data Analysis", "Visualization", "FastAPI"]
+lang: both
+cover: "/projects/deepseek-ocr-data-analysis-agent/cover.svg"
+excerpt: "扔一张 PDF 报表或者一张表格图：DeepSeek-OCR 把它读成结构化数据，FastAPI 后端跑分析，自动生成图表。OCR / 分析 / 可视化三层独立可替换。"
+excerpt_en: "Drop in a PDF report or a table image: DeepSeek-OCR turns it into structured data, the FastAPI backend runs analysis, charts get auto-generated. OCR / analysis / visualization are three swappable layers."
+platforms: [website]
+github: ""
+demo: ""
+published: true
+---
+
+<Callout type="info">
+  This is the "no more manual Excel" workflow: feed in a PDF or screenshot of tabular data, get back
+  analysis and charts. <strong>DeepSeek-OCR-2</strong> handles the parsing (much better than legacy OCR
+  on financial / scientific tables), a FastAPI backend orchestrates analysis + visualization
+  generation, and vLLM keeps the OCR model serving at production latency.
+</Callout>
+
+## Three layers, swappable
+
+```
+backend/
+├── core/
+│   ├── ocr/             # DeepSeek-OCR-2 client + table-structure extraction
+│   ├── analysis/        # pandas-style stats + LLM-driven summarization
+│   └── visualization/   # matplotlib / plotly chart generation
+├── services/
+│   ├── ocr_service.py
+│   ├── analysis_service.py
+│   ├── visualization_service.py
+│   └── integration_service.py    # top-level orchestrator
+├── api/                  # FastAPI routes
+└── main.py
+```
+
+Each layer is one service module + one core implementation. Want to swap DeepSeek-OCR for
+PaddleOCR-VL? Replace `core/ocr/` and `services/ocr_service.py` keeps its interface. Want to add D3
+charts? Drop another renderer into `core/visualization/`.
+
+## Why DeepSeek-OCR-2 specifically
+
+Tables in real-world PDFs (财报, 论文, lab reports) break legacy OCR — merged cells, multi-line
+headers, footnotes mixed into rows. DeepSeek-OCR-2 ships with **dedicated table-structure
+recognition** that emits cells with row/col coordinates, not just text — making downstream pandas
+ingestion painless.
+
+## vLLM for serving
+
+OCR runs in a real-time loop (user uploads → reads → analyzes → renders), so latency matters. vLLM
+gets the OCR model from ~3s/page (raw transformers) to ~0.6s/page on the same GPU through
+continuous batching.
+
+## What this signals
+
+- You design **layered** AI systems, not monoliths — each capability (OCR / analysis / viz) is one
+  service + one core
+- You pick **the right OCR for the job** — table-structure-aware (DeepSeek-OCR-2) over plain text-only OCR
+- You care about **inference latency** — vLLM serving instead of raw transformers
+
+<DemoStatus
+  title="Demo to be added"
+  description="A guided sandbox (upload sample PDF → see OCR result → see chart) is on the roadmap. For now, this case study covers the layered design and why each layer choice matters."
+/>

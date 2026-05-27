@@ -1,0 +1,47 @@
+---
+title: "Coze 多模态视频生成 Agent"
+title_en: "Coze Multimodal Video Generation Agent"
+date: "2026-05-08"
+category: project
+tags: ["Coze", "Workflow", "Image Generation", "Video Generation", "Multimodal"]
+lang: both
+cover: "/projects/coze-multimodal-video-agent/cover.svg"
+excerpt: "在 Coze（字节扣子）上拼出来的「文案 → 图片 → 视频」全自动短视频流水线，5 个互相调用的 workflow，每个 workflow 是一个独立的 zip。"
+excerpt_en: "An end-to-end short-video generation pipeline on Coze (ByteDance Kouzi), with 5 interconnected workflows — text → image → video, each shipping as its own workflow zip."
+platforms: [website]
+github: ""
+demo: ""
+published: true
+---
+
+<Callout type="info">
+  Coze (扣子) is ByteDance's no-code agent platform. Long-form code is overkill for content
+  pipelines like "turn a brief into a finished short video" — node-based workflow is. This project
+  is a real, runnable 5-workflow chain that takes a topic brief and produces a finished video.
+</Callout>
+
+## 5 个 workflow 配合
+
+```
+工作流合集/
+├── Workflow-produce-draft-1308.zip         # 顶层：根据 brief 决定走什么子流程
+├── Workflow-get_produce-draft-1319.zip     # 文案生成：标题 / 分镜 / 旁白
+├── Workflow-create_image-draft-1329.zip    # 图片生成：每个分镜对应一张图
+├── Workflow-create_video-draft-1324.zip    # 视频生成：分镜图 + 旁白 → 视频片段
+└── Workflow-get_video-draft-1314.zip       # 视频合并：所有片段拼接成最终视频
+```
+
+Each workflow is a Coze JSON/YAML export — importable into any other Coze workspace.
+
+## What this signals
+
+- You can build **production content pipelines** in no-code platforms when long-form code would
+  be overkill
+- You understand **modular workflow composition** — split by capability, compose by ID reference
+- You can pick the right **product format** — Coze for content pipelines, Dify for chat, LangChain
+  for custom code
+
+<DemoStatus
+  title="Demo to be added"
+  description="A workflow graph viewer + sample-output gallery is on the roadmap. The 5 .zip files in 案例10 工作流合集 are directly importable into any Coze workspace."
+/>

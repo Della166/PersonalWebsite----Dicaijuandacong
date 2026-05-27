@@ -1,0 +1,75 @@
+---
+title: "Dify 长文案编写 Agent"
+title_en: "Dify Long-Form Content Agent"
+date: "2026-04-15"
+category: project
+tags: ["Dify", "DeepSeek", "Workflow", "Iteration", "Style Checker"]
+lang: both
+cover: "/projects/dify-long-content-agent/cover.svg"
+excerpt: "用 Dify advanced-chat workflow 把「写长文」拆成可控的迭代循环：先大纲、再分段扩写、最后跑风格校验工具，每一步独立可观察可干预。"
+excerpt_en: "A Dify advanced-chat workflow that breaks long-form writing into a controllable iterative loop: outline first, then section-by-section expansion, finally a style-checker tool — each step independently observable and intervenable."
+platforms: [website]
+github: ""
+demo: ""
+published: true
+---
+
+<Callout type="info">
+  写长文是 LLM 的经典失败模式——飘、重复、3 段之后忘了之前说过什么。这套方案把写文流程**做成 Dify advanced-chat 工作流**：大纲 / 扩写 / 风格校验各成一个节点，迭代状态用类型化变量管理。
+</Callout>
+
+## 为什么不直接「写一篇 5000 字的 X」
+
+单 prompt 让模型自己写长文 = 抛硬币。它自己决定什么时候停、哪段保持连贯、哪段展开。Workflow 路线强制 3 个属性：
+
+- **显式状态**：草稿 + 大纲 + 每段进度全是 Dify 变量，不在模型 context 里
+- **每步模型可选**：大纲 / 扩写 / 风格校验不必同一个模型——扩写用 DeepSeek（长上下文便宜），风格校验用更小模型
+- **可恢复**：某段失败重启那一段，不是从零
+
+## 3 个工作流（真实 YAML）
+
+```yaml
+# 循环扩充文本.yml — 主控循环
+app:
+  mode: advanced-chat        # 支持分支 / 迭代 / 代码节点
+  name: 循环扩充文本
+
+dependencies:
+  - type: marketplace
+    value:
+      marketplace_plugin_unique_identifier: langgenius/deepseek:0.0.6@...
+
+workflow:
+  conversation_variables:
+    - name: zishu             # 已写字数预算
+      id: 7a9d78e7-...
+  nodes:
+    - type: iteration         # 关键：Dify 原生迭代节点
+      input_selector: outline.sections
+      max_iterations: 8
+      body:
+        - type: llm           # 调 DeepSeek 扩写当前段
+          provider: langgenius/deepseek
+          model: deepseek-chat
+        - type: code          # Python 节点：累加字数 + 更新 state
+        - type: if-else       # 字数达标 → break
+```
+
+3 个文件分工：
+
+| 文件 | 角色 |
+|---|---|
+| `长文本扩展.yml` | 单段扩写工具——传入「主题 + 当前段落标题 + 已写内容」，吐扩展段 |
+| `循环扩充文本.yml` | 主控 workflow——管大纲、迭代、字数预算 |
+| `Tool-StyleChecker.yml` | 风格 / 重复 / 矛盾自检工具——每写完 N 段调一次 |
+
+## 价值点
+
+- **可设计 Dify 复杂 workflow**：分支 / 迭代 / 代码节点 / 类型化变量
+- **状态和模型调用分离**：进行中的文章是 Dify 变量，不是模型 chat context
+- **按步选工具**：扩写长上下文模型、校验小模型、loop 控制走 code 节点
+
+<DemoStatus
+  title="Demo 待补"
+  description="Dify workflow 复演 demo 在 roadmap 上（类似 deep-research-agent）。本案例页讲清了 graph 设计；3 个真实 YAML 文件来自 案例2 工作流合集。"
+/>

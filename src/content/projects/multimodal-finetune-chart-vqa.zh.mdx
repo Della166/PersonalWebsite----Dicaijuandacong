@@ -1,0 +1,116 @@
+---
+title: "多模态模型微调（中文图表 VQA）"
+title_en: "Multimodal Fine-Tuning for Chinese Chart VQA"
+date: "2026-04-22"
+category: project
+tags: ["Multimodal", "LlamaFactory", "Qwen-VL", "Chart VQA", "Fine-tuning"]
+lang: both
+cover: "/projects/multimodal-finetune-chart-vqa/cover.svg"
+excerpt: "LlamaFactory + 中文图表数据集 zh.train，把通用 VLM 微调成「能读懂中文柱状/折线/饼图并回答问题」的垂直模型。数据构造工具是配套 React + FastAPI 项目，整套 pipeline 可复用。"
+excerpt_en: "Fine-tuning a general VLM into a Chinese chart VQA specialist using LlamaFactory and a curated zh-train chart dataset. The data-generation tool is a companion React + FastAPI project; the whole pipeline is reusable."
+platforms: [website]
+github: ""
+demo: ""
+published: true
+---
+
+<Callout type="info">
+  通用 VLM 看英文截图还行，碰到「营业收入 / 同比 / 万/亿」的中文图表就懵。这个项目用 <strong>LlamaFactory</strong> 把它微调成能读这种图表的垂直模型。数据构造本身是个配套的 React + FastAPI 项目，跟案例 7 NL2SQL 的 data_create 是一个套路。
+</Callout>
+
+## 两个仓库分工
+
+```
+案例6/
+├── data_create/                        # React + Vite UI + FastAPI 后端，专门生成训练数据
+└── llamafactory_train.jsonl            # 真实可用的训练数据
+   llamafactory_val.jsonl               # 验证集
+```
+
+数据格式是 LlamaFactory 原生 JSONL，每行是一个多轮对话 + 图片引用，trainer 可以直接吃。
+
+## 为什么不直接 SFT GPT-4o
+
+3 个原因：
+
+| 原因 | 解释 |
+|---|---|
+| **词汇粒度** | 中文图表标签（营业收入 / 同比增长 / 占比）希望在模型词表里是**单 token**，不是被切碎。短期小微调能很快修这个 |
+| **大规模成本** | 跑通后能本地 GPU 推理，不再按 API 调用付费 |
+| **领域风格** | 你公司图表有自己的配色 / 字体 / 坐标轴风格。微调让模型学这种风格，不再问「这是柱状还是直方图？」|
+
+## 数据生成（data_create 仓库）
+
+跟案例 7 NL2SQL 的 data_create 一个模式，但目标是 VLM：
+
+```
+1. 挑图表模板（柱状 / 折线 / 饼图 / 堆叠柱）
+2. 生成有真实感的合成数据（行业 / 地区 / 时间窗口的中文标签）
+3. 用 matplotlib / plotly 渲染成 PNG
+4. 调 LLM 给每张图生成 5-10 组 Q&A 对
+     "营收最高的是哪个？"
+     "同比增长率多少？"
+     "占比第二的是什么？"
+5. 导出 LlamaFactory JSONL
+```
+
+样例数据行（JSONL）：
+
+```json
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {"type": "image", "image": "imgs/chart_001.png"},
+        {"type": "text", "text": "图中营收最高的行业是哪个？同比增长率多少？"}
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": "营收最高的是科技行业，约 156 亿元。同比增长率为 +18.3%。"
+    }
+  ]
+}
+```
+
+## LlamaFactory 训练命令
+
+```bash
+llamafactory-cli train \
+    --stage sft \
+    --model_name_or_path /home/ubuntu/Qwen2.5-VL-7B-Instruct \
+    --finetuning_type lora \
+    --template qwen2_vl \
+    --dataset_dir data \
+    --dataset chart_vqa_train \
+    --cutoff_len 4096 \
+    --image_resolution 448 \
+    --num_train_epochs 3.0 \
+    --per_device_train_batch_size 2 \
+    --gradient_accumulation_steps 8 \
+    --lr_scheduler_type cosine \
+    --learning_rate 1e-4 \
+    --lora_rank 16 \
+    --lora_alpha 32 \
+    --lora_target all \
+    --bf16 True
+```
+
+关键参数：
+
+- `--template qwen2_vl`：用 Qwen2-VL 专用 chat 模板（含 image token 注入）
+- `--image_resolution 448`：图像 resize 到 448×448（Qwen2-VL 推荐尺寸）
+- `--cutoff_len 4096`：留出空间给 image tokens + 多轮对话
+- `--lora_rank 16, alpha 32`：比 NL2SQL 项目稍大，因为 VLM 任务更复杂
+
+## 价值点
+
+- 能端到端跑**垂直领域多模态微调**——不是只调 API
+- 理解**数据构造和训练同等重要**——你也能搭出数据生成工具
+- 留在 **LlamaFactory 生态**里——跟 NL2SQL / 函数调用 / Qwen-VL RL 几个项目能组合复用
+
+<DemoStatus
+  title="Demo 待补"
+  description="「丢一张图表 → 看 Q&A」的交互式 demo 在 roadmap 上。这个案例页讲清了数据构造 + 训练 setup。"
+/>

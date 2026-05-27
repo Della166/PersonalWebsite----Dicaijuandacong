@@ -1,0 +1,70 @@
+---
+title: "Dify 长文案编写 Agent"
+title_en: "Dify Long-Form Content Agent"
+date: "2026-04-15"
+category: project
+tags: ["Dify", "DeepSeek", "Workflow", "Iteration", "Style Checker"]
+lang: both
+cover: "/projects/dify-long-content-agent/cover.svg"
+excerpt: "用 Dify advanced-chat workflow 把「写长文」拆成可控的迭代循环：先大纲、再分段扩写、最后跑风格校验工具，每一步独立可观察可干预。"
+excerpt_en: "A Dify advanced-chat workflow that breaks long-form writing into a controllable iterative loop: outline first, then section-by-section expansion, finally a style-checker tool — each step independently observable and intervenable."
+platforms: [website]
+github: ""
+demo: ""
+published: true
+---
+
+<Callout type="info">
+  Long-form writing is the canonical failure mode of LLMs — they drift, repeat, and forget what they
+  said three paragraphs ago. This project tames that by building the writing loop as a
+  <strong>Dify advanced-chat workflow</strong>, where each phase (outline / expand / style-check) is
+  its own node and the iteration state is a typed variable.
+</Callout>
+
+## Why a workflow, not a single prompt
+
+A single prompt that says "write me a 5000-character article on X" is a coin flip — the model decides
+itself when to stop, what to keep coherent, and what to elaborate. The workflow approach forces three
+properties:
+
+- **explicit state**: the article's running draft + outline + per-section status live as Dify variables, not in the model's context
+- **per-step model choice**: outline / expansion / style-check don't have to use the same model — use DeepSeek for expansion (long context, cheap), and a smaller model for style-check
+- **resumable**: if a section fails, restart from that section, not from scratch
+
+## The 3 workflows
+
+The case ships three real Dify YAML files (`长文本扩展.yml`, `循环扩充文本.yml`, `Tool-StyleChecker.yml`),
+all `mode: advanced-chat`:
+
+```yaml
+app:
+  description: ''
+  icon: 🤖
+  mode: advanced-chat            # branching + iteration + code nodes
+  name: 循环扩充文本
+
+dependencies:
+  - type: marketplace
+    value:
+      marketplace_plugin_unique_identifier: langgenius/deepseek:0.0.6@...
+
+workflow:
+  conversation_variables:
+    - description: ''
+      id: 7a9d78e7-81a0-429c-b449-25b50e6f5e9f
+      name: zishu          # running character budget
+```
+
+## What this signals
+
+- You can design a non-trivial **Dify workflow** with branching, iteration, code nodes, and typed
+  conversation variables — not just a chat prompt
+- You separate **state** from **model calls** — the article-in-progress is a Dify variable, not
+  the model's chat context
+- You pick **the right tool for each step** — long-context model for expansion, lighter model for
+  style-check, real code node for the loop control
+
+<DemoStatus
+  title="Demo to be added"
+  description="A Dify workflow replay (similar to deep-research-agent) is on the roadmap. The case study above explains the graph design; the YAML files ship in 案例2 工作流合集."
+/>

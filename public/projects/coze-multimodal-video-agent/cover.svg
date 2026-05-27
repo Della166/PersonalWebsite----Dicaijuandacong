@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0e1a14"/>
+      <stop offset="100%" stop-color="#1a2a22"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#g)"/>
+  <g font-family="system-ui, -apple-system, sans-serif" fill="#f0e8d9">
+    <text x="80" y="180" font-size="32" font-weight="700" fill="#7fbc8c" letter-spacing="4">COZE · 字节扣子</text>
+    <text x="80" y="320" font-size="110" font-weight="900">短视频生成流水线</text>
+    <text x="80" y="430" font-size="60" font-weight="700" fill="#d4a574">5 个 workflow 协作 · 全自动</text>
+    <text x="80" y="600" font-size="36" fill="#c6d2cb">brief → 文案 → 分镜 → 图片 → 视频 → 合并成片</text>
+    <text x="80" y="660" font-size="36" fill="#c6d2cb">字节系图生 / 视频生模型内置插件 · 不用国际信用卡</text>
+    <g transform="translate(80, 750)">
+      <rect x="0" y="0" rx="999" ry="999" width="180" height="60" fill="none" stroke="#d4a574" stroke-width="3"/>
+      <text x="90" y="40" font-size="28" fill="#d4a574" text-anchor="middle" font-weight="600">Coze</text>
+      <rect x="200" y="0" rx="999" ry="999" width="200" height="60" fill="none" stroke="#d4a574" stroke-width="3"/>
+      <text x="300" y="40" font-size="28" fill="#d4a574" text-anchor="middle" font-weight="600">即梦/可灵</text>
+      <rect x="420" y="0" rx="999" ry="999" width="240" height="60" fill="none" stroke="#7fbc8c" stroke-width="3"/>
+      <text x="540" y="40" font-size="28" fill="#7fbc8c" text-anchor="middle" font-weight="600">5 workflows</text>
+    </g>
+  </g>
+</svg>

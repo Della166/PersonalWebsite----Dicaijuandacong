@@ -1,0 +1,85 @@
+---
+title: "多模态模型微调（中文图表 VQA）"
+title_en: "Multimodal Fine-Tuning for Chinese Chart VQA"
+date: "2026-04-22"
+category: project
+tags: ["Multimodal", "LlamaFactory", "Qwen-VL", "Chart VQA", "Fine-tuning"]
+lang: both
+cover: "/projects/multimodal-finetune-chart-vqa/cover.svg"
+excerpt: "LlamaFactory + 中文图表数据集 zh.train，把通用 VLM 微调成「能读懂中文柱状/折线/饼图并回答问题」的垂直模型。数据构造工具是配套 React + FastAPI 项目，整套 pipeline 可复用。"
+excerpt_en: "Fine-tuning a general VLM into a Chinese chart VQA specialist using LlamaFactory and a curated zh-train chart dataset. The data-generation tool is a companion React + FastAPI project; the whole pipeline is reusable."
+platforms: [website]
+github: ""
+demo: ""
+published: true
+---
+
+<Callout type="info">
+  Generic VLMs read English screenshots fine, but choke on a 中文 chart with 万/亿/同比 labels and
+  mixed Chinese/English axes. This project fine-tunes one to actually read those, on top of
+  <strong>LlamaFactory</strong>. The dataset construction is itself a small React + FastAPI
+  product, mirroring case 7's data_create design.
+</Callout>
+
+## Two halves
+
+```
+case6/
+├── data_create/             # React + Vite UI + FastAPI backend that GENERATES the training data
+└── llamafactory_train.jsonl + llamafactory_val.jsonl  # the actual dataset used to fine-tune
+```
+
+The dataset format is LlamaFactory-native: each row is a multi-turn conversation with an image
+reference, all bundled into JSONL ready for the trainer.
+
+## Why not just SFT GPT-4o
+
+Three reasons:
+
+1. **Vocabulary specificity** — 中文 chart labels (营业收入 / 同比增长 / 占比) need to land in the
+   model's vocabulary as single tokens, not be fragmented. A small fine-tune fixes this fast.
+2. **Cost at scale** — once it works, you can run inference on your own GPU; no per-call API spend.
+3. **Domain familiarity** — your charts have a house style (color palette, font, axis convention).
+   The fine-tune learns that style and stops asking "is this a bar or a column?"
+
+## Dataset construction (data_create)
+
+Mirrors case 7's NL2SQL data_create design, but for VLM:
+
+- pick a chart template (柱状 / 折线 / 饼图 / 堆叠柱)
+- generate synthetic data with realistic Chinese labels (industries / regions / time periods)
+- render the chart (matplotlib / plotly) and save as PNG
+- LLM generates 5-10 Q&A pairs per chart ("营收最高的是哪个？" "同比增长率多少？")
+- export as LlamaFactory JSONL
+
+## Training (LlamaFactory)
+
+```bash
+llamafactory-cli train \
+    --stage sft \
+    --model_name_or_path /home/ubuntu/Qwen2.5-VL-7B-Instruct \
+    --finetuning_type lora \
+    --template qwen2_vl \
+    --dataset_dir data \
+    --dataset chart_vqa_train \
+    --cutoff_len 4096 \
+    --image_resolution 448 \
+    --num_train_epochs 3.0 \
+    --per_device_train_batch_size 2 \
+    --gradient_accumulation_steps 8 \
+    --lora_rank 16 \
+    --lora_alpha 32 \
+    --bf16 True
+```
+
+## What this signals
+
+- You can run **vertical-domain multimodal fine-tuning** end to end — not just call the API
+- You understand the **data generation half** matters as much as the trainer — and you can build it
+- You stay in the **LlamaFactory ecosystem** so it composes with the rest of the lineup
+  (NL2SQL / function-calling / Qwen-VL RL)
+
+<DemoStatus
+  title="Demo to be added"
+  description="A chart VQA preview (drop in a chart image, see Q&A) is on the roadmap. The case study above covers the data construction + training setup."
+/>
