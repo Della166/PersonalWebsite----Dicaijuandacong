@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
 
-export const runtime = 'edge';
+// Run on Node runtime — Edge runtime + Satori in Next 16 was returning
+// 200 with Content-Length: 0 (silent failure). Node runtime produces the PNG.
 export const alt = 'fulingchen — AI Engineer & Creator';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
