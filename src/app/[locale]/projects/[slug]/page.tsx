@@ -168,9 +168,9 @@ export default async function ProjectPage({
           <div className="mt-12 flex justify-center">
             <Link
               href={getProjectDemoHref({ demo: frontmatter.demo, locale, slug })}
-              className="inline-flex items-center gap-2 rounded-full border border-[var(--color-green-300)]/30 px-5 py-2.5 text-sm font-medium text-[var(--color-green-300)] transition-colors hover:border-[var(--color-green-300)]/60 hover:bg-[var(--color-green-300)]/10"
+              className="inline-flex items-center gap-2.5 rounded-full border-2 border-[var(--color-green-300)]/45 bg-[var(--color-green-300)]/8 px-7 py-3 text-base font-semibold text-[var(--color-green-300)] transition-colors hover:border-[var(--color-green-300)]/75 hover:bg-[var(--color-green-300)]/15"
             >
-              <Sparkles className="w-4 h-4" />
+              <Sparkles className="w-[18px] h-[18px]" />
               {locale === 'zh' ? '打开互动 Demo' : 'Open interactive Demo'}
             </Link>
           </div>
