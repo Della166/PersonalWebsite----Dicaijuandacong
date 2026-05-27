@@ -6,6 +6,9 @@ import GrpoReasoningPreview from '@/components/mdx/GrpoReasoningPreview';
 import DocReviewAgentPreview from '@/components/mdx/DocReviewAgentPreview';
 import OpenClawSkillPreview from '@/components/mdx/OpenClawSkillPreview';
 import DeepResearchPreview from '@/components/mdx/DeepResearchPreview';
+import EnterpriseNl2sqlPreview from '@/components/mdx/EnterpriseNl2sqlPreview';
+import FunctionCallingAgentPreview from '@/components/mdx/FunctionCallingAgentPreview';
+import StructuredExtractionPreview from '@/components/mdx/StructuredExtractionPreview';
 
 interface LocalizedText {
   en: string;
@@ -401,6 +404,165 @@ export const projectDemos = {
       {
         label: { en: 'Best signal', zh: '最强信号' },
         value: { en: 'Evidence-first agent workflow design in low-code', zh: '低代码里的证据优先 agent 工作流设计' },
+      },
+    ],
+  },
+  'enterprise-nl2sql-fine-tuning-system': {
+    component: EnterpriseNl2sqlPreview,
+    eyebrow: {
+      en: 'Schema-aware NL2SQL preview',
+      zh: '面向私有 schema 的 NL2SQL 预览',
+    },
+    summary: {
+      en: 'Three enterprise schemas, preset NL prompts, the SQL the tuned model produced, and the four validation signals (syntax / schema-bound / executes / semantic) from the project\'s execution-aware eval pipeline.',
+      zh: '三套企业级 schema、预置 NL 问题，配上调教后模型输出的 SQL，以及项目自带的四轴评估（语法 / schema 绑定 / 可执行 / 语义匹配）。',
+    },
+    localNote: {
+      en: 'The model isn\'t re-invoked client-side. The point is to make the project\'s evaluation discipline visible — every query is judged on four axes, not a single accuracy number.',
+      zh: '客户端不重跑模型。这个预览要展示的是项目的评估纪律——每条 SQL 都有四个评估轴，而不是只看一个准确率数字。',
+    },
+    whatToTry: {
+      en: [
+        'Switch schemas (Sales / HR / Inventory) and watch how the question style changes with the domain.',
+        'Read the SQL alongside the schema preview — confirm every column resolves to a real table.',
+        'Compare the four validation badges to see why "executes cleanly" is not the same as "semantically correct".',
+      ],
+      zh: [
+        '切换 schema（销售 / HR / 库存），看不同领域里问题风格如何变化。',
+        '把 SQL 对照 schema 看——确认每个列都能落到真实的表上。',
+        '对比四个验证徽章，体会「能跑通」≠「语义对」。',
+      ],
+    },
+    whatItProves: {
+      en: [
+        'You treat NL2SQL as a pipeline problem (data generation + tuning + execution-aware eval), not just a prompt-an-LLM project.',
+        'You design evaluation around real-world failure modes — schema drift, hallucinated joins, semantic mismatch — not BLEU.',
+        'You can package model adaptation as a deployable enterprise workflow.',
+      ],
+      zh: [
+        '你把 NL2SQL 当成 pipeline 问题来做（数据构造 + 微调 + 可执行评估），不是单纯让 LLM 来答题。',
+        '你的评估围绕真实失败模式设计——schema 漂移、幻觉 join、语义不匹配——不是 BLEU。',
+        '你能把模型适配做成可部署的企业工作流。',
+      ],
+    },
+    highlights: [
+      {
+        label: { en: 'Stack', zh: '技术栈' },
+        value: { en: 'LoRA / QLoRA · FastAPI + WebSocket · vLLM serving', zh: 'LoRA / QLoRA · FastAPI + WebSocket · vLLM' },
+      },
+      {
+        label: { en: 'Eval axes', zh: '评估维度' },
+        value: { en: 'syntax · schema-bound · executes · semantic match', zh: '语法 · schema 绑定 · 可执行 · 语义匹配' },
+      },
+      {
+        label: { en: 'Best signal', zh: '最强信号' },
+        value: { en: 'Execution-aware evaluation, not BLEU', zh: '看执行结果而不是看文本相似度' },
+      },
+    ],
+  },
+  'rl-tuned-function-calling-agent-pipeline': {
+    component: FunctionCallingAgentPreview,
+    eyebrow: {
+      en: 'Trace replay · base vs DPO-tuned',
+      zh: '工具轨迹复演·基线 vs DPO 调优',
+    },
+    summary: {
+      en: 'Three agent tasks (travel booking, refund triage, API incident response). For each task the base SFT trace and the DPO-tuned trace are shown side by side, plus the four-axis rubric (tool choice / arg completeness / step efficiency / outcome grounding) used to label chosen vs rejected pairs.',
+      zh: '三个 Agent 任务（订机票、退款判定、API 事故响应）。每个任务并排展示基线 SFT 模型轨迹和 DPO 调优后的轨迹，并列出用来标 chosen / rejected 的四轴评估（工具选择 / 参数完整 / 步骤效率 / 结果可依据）。',
+    },
+    localNote: {
+      en: 'Traces are auditable replays from the project\'s preference dataset — not live agent runs. The full pipeline (task generation, trace collection, pair construction, DPO training, eval) lives in the FastAPI/WebSocket backend behind closed scenarios.',
+      zh: '展示的是项目偏好数据集里的可审计真实轨迹回放——不是现场跑 Agent。完整 pipeline（任务生成、轨迹收集、配对构造、DPO 训练、评估）跑在 FastAPI/WebSocket 后端。',
+    },
+    whatToTry: {
+      en: [
+        'Pick a task and compare the base vs tuned traces step by step.',
+        'Notice how the tuned model frontloads context into the first tool call — fewer steps, fewer retries.',
+        'Check the rubric: "step efficiency" is judged conditional on outcome, so faster-but-wrong scores poorly.',
+      ],
+      zh: [
+        '选一个任务，把基线轨迹和调优后的轨迹一步步对照。',
+        '注意调优后的模型如何把上下文塞进第一次工具调用——步数更少、重试更少。',
+        '看四轴评估：「步骤效率」是结合结果判分的，所以「快但错」分数会很低。',
+      ],
+    },
+    whatItProves: {
+      en: [
+        'You think about agent quality at the tool-call decision layer, not just text fluency.',
+        'You build the data scaffolding that preference optimization actually needs: traces, pair labeling, rubric.',
+        'You can defend an evaluation rubric in front of a hiring manager — each axis is grounded in a failure mode.',
+      ],
+      zh: [
+        '你在工具调用决策层思考 Agent 质量，而不是只关心文本流畅度。',
+        '你搭得起偏好优化真正需要的数据骨架：轨迹、配对标注、评估准则。',
+        '你能在面试官面前为评估指标辩护——每条轴对应一个真实失败模式。',
+      ],
+    },
+    highlights: [
+      {
+        label: { en: 'Method', zh: '方法' },
+        value: { en: 'DPO on agent tool-call traces · multi-turn trace collection', zh: '基于工具轨迹的 DPO · 多轮轨迹采集' },
+      },
+      {
+        label: { en: 'Rubric', zh: '评估准则' },
+        value: { en: 'tool choice · arg completeness · step efficiency · outcome grounding', zh: '工具选择 · 参数完整 · 步骤效率 · 结果可依据' },
+      },
+      {
+        label: { en: 'Best signal', zh: '最强信号' },
+        value: { en: 'Agent quality measured at the decision layer', zh: '在决策层度量 Agent 质量' },
+      },
+    ],
+  },
+  'structured-extraction-retrieval-qa-platform': {
+    component: StructuredExtractionPreview,
+    eyebrow: {
+      en: 'Vertical sandbox · extract + QA',
+      zh: '垂直沙盒·抽取 + 问答',
+    },
+    summary: {
+      en: 'Three vertical documents (radiology, finance, news). For each one you can see what LangExtract pulled out as structured fields and how the LangChain + DeepSeek QA layer answers a grounded question over the same document, with the vector backend (Qdrant or Chroma) selectable.',
+      zh: '三份垂直文档（影像报告、财报、新闻）。每一份都能看到 LangExtract 抽出的结构化字段，以及 LangChain + DeepSeek 问答层针对同一文档的有依据回答，向量后端（Qdrant / Chroma）可切换。',
+    },
+    localNote: {
+      en: 'No open upload endpoint. The documents and extracted fields come from the project\'s real LangExtract output on these verticals; the backend toggle reflects how the platform is actually pluggable between Qdrant and Chroma in production.',
+      zh: '不开放无限制上传。文档和抽取字段来自项目在这些垂直场景下真实跑出来的 LangExtract 结果；后端切换反映了真实系统在 Qdrant / Chroma 之间可插拔的设计。',
+    },
+    whatToTry: {
+      en: [
+        'Switch verticals — extraction fields change shape because each domain has its own schema.',
+        'Toggle Qdrant ↔ Chroma to see how the platform exposes its vector backend as a swappable choice.',
+        'Compare the extracted fields table with the grounded QA answer — both pull from the same document, but the user-facing shape is different.',
+      ],
+      zh: [
+        '切换垂直领域——每个领域 schema 不同,抽取字段的形态也跟着变。',
+        '在 Qdrant ↔ Chroma 之间切换,体会平台如何把向量后端做成可替换组件。',
+        '对照结构化字段表和有依据问答——同一份文档,但面向用户的呈现形态不一样。',
+      ],
+    },
+    whatItProves: {
+      en: [
+        'You design document AI as a workflow (parse → extract → index → grounded QA), not as standalone tools.',
+        'You take extraction and retrieval as a single shape — same document, two consumption patterns.',
+        'You ship the platform with a pluggable vector backend instead of hardcoding one provider.',
+      ],
+      zh: [
+        '你把文档智能做成工作流（解析 → 抽取 → 入库 → 有依据问答），而不是一堆零散工具。',
+        '你把抽取和检索当成同一形态的两个出口——同一份文档、两种消费方式。',
+        '你把平台做成支持可插拔向量后端,而不是硬绑一个 provider。',
+      ],
+    },
+    highlights: [
+      {
+        label: { en: 'Stack', zh: '技术栈' },
+        value: { en: 'LangExtract · LangChain · DeepSeek · Qdrant / Chroma · React + FastAPI', zh: 'LangExtract · LangChain · DeepSeek · Qdrant / Chroma · React + FastAPI' },
+      },
+      {
+        label: { en: 'Shape', zh: '产品形态' },
+        value: { en: 'extract layer + retrieval layer + grounded QA, one workflow', zh: '抽取层 + 检索层 + 有依据问答，统一工作流' },
+      },
+      {
+        label: { en: 'Best signal', zh: '最强信号' },
+        value: { en: 'Vertical document AI as a reusable product, not a one-off', zh: '把垂直文档智能做成可复用产品，而不是一次性脚本' },
       },
     ],
   },

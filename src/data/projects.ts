@@ -48,6 +48,7 @@ export const projects: Project[] = [
     description_en: 'A document intelligence platform that combines structured extraction, vector search, and grounded QA across radiology, medication, finance, and news workflows.',
     category: 'document',
     tags: ['FastAPI', 'Qdrant', 'Chroma', 'LangChain', 'DeepSeek'],
+    demo: '/demo/structured-extraction-retrieval-qa-platform',
     cover: '/projects/structured-extraction-retrieval-qa-platform/cover.svg',
   },
   {
@@ -58,6 +59,7 @@ export const projects: Project[] = [
     description_en: 'An enterprise NL2SQL pipeline that generates schema-aware training data, then supports tuning, validation, and evaluation for natural-language SQL workflows.',
     category: 'ml',
     tags: ['LoRA', 'QLoRA', 'FastAPI', 'WebSocket', 'SQL'],
+    demo: '/demo/enterprise-nl2sql-fine-tuning-system',
     cover: '/projects/enterprise-nl2sql-fine-tuning-system/cover.svg',
     featured: true,
   },
@@ -69,6 +71,7 @@ export const projects: Project[] = [
     description_en: 'A function-calling agent pipeline for preference data generation and evaluation, designed to improve tool selection and argument quality.',
     category: 'agent',
     tags: ['DPO', 'Function Calling', 'Evaluation', 'FastAPI', 'Agents'],
+    demo: '/demo/rl-tuned-function-calling-agent-pipeline',
     cover: '/projects/rl-tuned-function-calling-agent-pipeline/cover.svg',
   },
   {
