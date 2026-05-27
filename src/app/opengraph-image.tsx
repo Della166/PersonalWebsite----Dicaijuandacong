@@ -68,7 +68,7 @@ export default async function Image() {
               maxWidth: 920,
             }}
           >
-            10 个含真实代码细节的工业级 AI 项目案例：NL2SQL · DPO Agent · LangExtract RAG · Deep Research · GRPO · VLM RL
+            10 industrial-grade AI case studies with real source code: NL2SQL · DPO Agent · LangExtract RAG · Deep Research · GRPO · VLM RL
           </div>
         </div>
 
