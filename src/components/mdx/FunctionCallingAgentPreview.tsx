@@ -92,31 +92,46 @@ const SAMPLES: DpoSample[] = [
   },
 ];
 
+// Real module map taken from backend/core/ in AutoToolDPO.zip. Six modules, named exactly.
 const PIPELINE = [
   {
-    name: 'TaskGenerator',
-    detail: '从 68 个 task 模板里抽题，绑定 toolset，输出 Task{user_query, tools, system_prompt}。',
+    name: 'task_generator.py',
+    detail: 'TaskGenerator.generate_tasks() — 抽 task 模板、随机绑定 toolset、产出 Task(user_query, tools, system_prompt)。',
   },
   {
-    name: 'DataSynthesizer · chosen',
-    detail: 'LLM 在完整 tool schema 下生成「正确」的 <function_call> 调用 + 必要的澄清话术。',
+    name: 'data_synthesizer.py · chosen',
+    detail: 'DataSynthesizer._generate_chosen(task) — DeepSeek-chat 在完整 schema 下产出「正确」的 <function_call>。',
   },
   {
-    name: 'DataSynthesizer · smart rejected',
-    detail: '参考 chosen，让 LLM 「故意」犯错：错工具 / 空参 / 跳过工具 / 误解意图。',
+    name: 'data_synthesizer.py · smart_rejected',
+    detail: 'DataSynthesizer._generate_rejected(task, chosen) — 让 LLM 参考 chosen 故意犯错：错工具 / 空参 / 跳过工具 / 误解意图。',
   },
   {
-    name: 'LLM self-validate',
-    detail: '可选：再调一次 LLM 给 sample 打 quality_score + similarity_score。',
+    name: 'validator.py',
+    detail: 'Validator.validate_sample() — 硬规则：required 字段齐 · chosen ≠ rejected · function_call JSON 解析通过；可选 LLM 自评 quality_score + similarity_score。',
   },
   {
-    name: 'Validator',
-    detail: '硬规则：required 字段齐 · chosen ≠ rejected · UTF-8 · 无尾逗号。',
+    name: 'concurrent_engine.py',
+    detail: 'ConcurrentEngine.process_tasks() — asyncio.Semaphore 限并发；ProgressStats 推 WebSocket；指数退避重试。',
   },
   {
-    name: 'Exporter',
-    detail: '导成 LLaMA-Factory 风格 JSONL (每行一个 sample) + dataset_info.json。',
+    name: 'exporter.py',
+    detail: 'Exporter.export_to_jsonl() — data_dpo.jsonl + dataset_info.json + generation_stats.json + invalid_samples.jsonl。',
   },
+] as const;
+
+// All 10 tools from backend/configs/tools_registry.json (lifted verbatim).
+const TOOLS_REGISTRY = [
+  { name: 'get_current_time', version: 'v1', category: 'time', desc: '获取当前时间', params: '(无参数)' },
+  { name: 'get_weather', version: 'v1', category: 'weather', desc: '查询指定城市的天气信息', params: 'city' },
+  { name: 'calculate', version: 'v1', category: 'math', desc: '执行数学计算', params: 'expression' },
+  { name: 'web_search', version: 'v1', category: 'search', desc: '在互联网上搜索信息', params: 'query, max_results?' },
+  { name: 'translate_text', version: 'v1', category: 'translation', desc: '翻译文本到目标语言', params: 'text, target_language' },
+  { name: 'send_email', version: 'v1', category: 'communication', desc: '发送电子邮件', params: 'to, subject, body' },
+  { name: 'get_stock_price', version: 'v1', category: 'finance', desc: '获取股票实时价格', params: 'symbol' },
+  { name: 'create_reminder', version: 'v1', category: 'productivity', desc: '创建提醒事项', params: 'title, time' },
+  { name: 'get_news', version: 'v1', category: 'news', desc: '获取最新新闻', params: 'category, country?' },
+  { name: 'convert_currency', version: 'v1', category: 'finance', desc: '货币汇率转换', params: 'amount, from_currency, to_currency' },
 ] as const;
 
 function MessageRow({ role, content }: { role: 'user' | 'assistant'; content: string }) {
@@ -272,7 +287,35 @@ export default function FunctionCallingAgentPreview() {
         <div className="flex items-center gap-2">
           <Layers className="h-4 w-4 text-[var(--color-amber-300)]" />
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-            Backend 6-stage pipeline · FastAPI + asyncio.Semaphore(concurrency=10)
+            backend/configs/tools_registry.json · 10 tools shipped
+          </p>
+        </div>
+        <div className="mt-4 grid gap-2 md:grid-cols-2 lg:grid-cols-5">
+          {TOOLS_REGISTRY.map((t) => (
+            <div
+              key={t.name}
+              className="rounded-2xl border border-[var(--color-border-default)] bg-black/10 p-3"
+            >
+              <p className="font-mono text-[12px] text-[var(--color-amber-300)]">
+                {t.name}@{t.version}
+              </p>
+              <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">{t.desc}</p>
+              <p className="mt-1 font-mono text-[10px] text-[var(--color-text-muted)]">
+                category=&quot;{t.category}&quot; · args: {t.params}
+              </p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-[11px] leading-5 text-[var(--color-text-muted)]">
+          The 3 samples above sample subsets of these 10 tools (the project also supports{' '}
+          <code className="rounded bg-black/30 px-1">tool_count_min/max</code> range mode to pick 2-5 tools per
+          sample at random). Adding tools = edit this JSON, no code change.
+        </p>
+
+        <div className="mt-5 flex items-center gap-2">
+          <Layers className="h-4 w-4 text-[var(--color-amber-300)]" />
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+            Backend 6-module pipeline · FastAPI + asyncio.Semaphore(concurrency=10)
           </p>
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-3 lg:grid-cols-6">

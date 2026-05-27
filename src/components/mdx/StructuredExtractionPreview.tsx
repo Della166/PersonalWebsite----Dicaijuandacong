@@ -10,156 +10,158 @@ import {
   Target,
 } from 'lucide-react';
 
-// Faithful to the actual course materials in:
-//   Y:/agent/九天菜菜/.../【正在更新】热门工业级案例/【加餐】案例13：垂直领域 Agentic-GraphRAG 开发实战/
-// Notebook: Agentic-GraphRAG应用开发实战.ipynb
+// Faithful to the actual source code in LangExtractApp.zip:
+//   backend/app/scenarios/{radiology,medication,news,finance,medical,customer_service,sales}.py
 //
-// Real project shape:
-//   OCR (MinerU / PaddleOCR-VL / DeepSeek-OCR) →
-//   LangExtract (Google open-source, prompt + few-shot + source grounding) →
-//   knowledge graph / vector store →
-//   LangChain 1.1 Agent (ReAct-style tool use, with source citation)
+// Each scenario is a BaseScenario subclass with: name, description, extract_classes,
+// get_prompt(), get_examples() (real lx.data.ExampleData with attributes), get_samples().
 //
-// Two real demos in the notebook drive this preview:
-//   1) News brief (2025-12-22 国家统计局/发改委/央行) — 时间/地点/机构/人物/事件/指标
-//   2) Romeo & Juliet 罗密欧与朱丽叶 long-doc (~54k chars → 1,889 extractions in 3 passes)
+// The 3 scenarios below — radiology, medication, news — are lifted verbatim from
+// backend/app/scenarios/{radiology,medication,news}.py.  The sample texts are exactly
+// what the project ships as rad_sample_2 / med_sample_2 / news_sample_1.
 
 interface Extraction {
   cls: string;
   text: string;
-  start: number; // character offset in source text — the project's "source grounding" feature
+  start: number;
   end: number;
   attributes?: Record<string, string>;
 }
 
-interface DocCase {
-  key: 'news' | 'romeo';
-  title: string;
-  origin: string;
+interface ScenarioCase {
+  key: 'radiology' | 'medication' | 'news';
+  scenarioName: string;
+  description: string;
+  extractClasses: string[];
+  // sample id from get_samples() in the source
+  sampleId: string;
+  sampleTitle: string;
   text: string;
-  // Hand-picked extractions matching the categories in the notebook's prompt + verified
-  // start/end offsets against the actual source string at runtime.
   rawExtractions: Array<Omit<Extraction, 'start' | 'end'> & { needle: string }>;
+  // From config.py: long-doc preset
   config: { extraction_passes: number; max_workers: number; max_char_buffer: number };
-  totalExtractions: number;
-  charCount: number;
 }
 
-// The full first paragraph from notebook cell 66 (Step 3: 准备测试文本).
+const RAD_TEXT =
+  '胸部X线检查报告\n\n' +
+  '临床指征: 咳嗽1周，发热\n' +
+  '检查技术: 胸部正侧位片\n\n' +
+  '影像所见:\n' +
+  '两肺纹理清晰，右下肺野见斑片状模糊影，边界不清。\n' +
+  '两肺门影不大，纵隔居中，心影大小形态正常。\n' +
+  '两膈面光滑，肋膈角锐利。\n' +
+  '胸廓对称，骨质未见明显异常。\n\n' +
+  '印象:\n' +
+  '右下肺感染性病变可能，建议结合临床及实验室检查，必要时CT进一步检查';
+
+const MED_TEXT =
+  '处方\n\n' +
+  '诊断: 社区获得性肺炎\n\n' +
+  '1. 头孢曲松钠 2g 静脉滴注 每日1次 连续使用5-7天\n' +
+  '2. 阿奇霉素片 500mg 口服 每日1次 连续使用3天\n' +
+  '3. 氨溴索口服液 30mg 口服 每日3次 餐后服用\n' +
+  '4. 布洛芬缓释胶囊 300mg 口服 发热时服用 每日不超过3次\n\n' +
+  '备注: 如体温持续不退或症状加重，请及时复诊';
+
 const NEWS_TEXT =
-  '2025年12月22日上午，国家统计局在北京国务院新闻办公室举行新闻发布会，公布2025年前11个月国民经济运行情况。\n' +
-  '国家统计局新闻发言人付凌晖表示，规模以上工业增加值同比增长6.1%，社会消费品零售总额增长7.3%。\n\n' +
-  '同日，国家发展改革委（以下简称"发改委"）在例行发布会上介绍，将于2026年起对"人工智能+制造"试点城市给予专项资金支持，首批覆盖上海、深圳、成都等10个城市。\n' +
-  '发改委副主任李春临称，资金将重点投向算力基础设施和工业软件，并与地方财政配套安排相衔接。\n\n' +
-  '22日傍晚，中国人民银行（央行）公告，自12月23日起下调金融机构存款准备金率0.25个百分点。\n' +
-  '央行副行长宣昌能在答记者问时称，此举旨在保持流动性合理充裕，并支持中小微企业融资。';
+  '北京时间2024年12月20日，中国科学院在北京举行新闻发布会，宣布中国自主研发的量子计算机"九章三号"取得重大突破。\n\n' +
+  '中科院院长侯建国在发布会上介绍，"九章三号"在特定任务上的计算速度达到了传统超级计算机的百万倍。这一成果由中国科学技术大学潘建伟团队历时五年研发完成。\n\n' +
+  '清华大学物理系教授王向斌表示，这标志着中国在量子计算领域已处于世界领先地位。该成果已在《自然》杂志上发表。\n\n' +
+  '据悉，下一步研究团队将继续优化系统性能，并探索量子计算在密码学、药物研发等领域的应用。';
 
-// Compact excerpt from the Romeo & Juliet few-shot example in notebook cell 107.
-const ROMEO_TEXT =
-  '罗密欧: 轻声！那边窗子里亮起来的是什么光？\n' +
-  '那就是东方，朱丽叶就是太阳。\n' +
-  '朱丽叶: 啊！罗密欧，罗密欧！为什么你偏偏是罗密欧呢？';
-
-const DOCS: DocCase[] = [
+const SCENARIOS: ScenarioCase[] = [
   {
-    key: 'news',
-    title: '新闻发布会 · 三机构 · 2025-12-22',
-    origin:
-      '出自 notebook 第 66 cell（《四、【实战】Prompt Engineering 对比 LangExtract》章节）。LangExtract 的对照测试就是用这段新闻跑 6 类实体。',
-    text: NEWS_TEXT,
+    key: 'radiology',
+    scenarioName: '放射学报告',
+    description: '从医学影像报告中提取结构化信息，包括检查类型、临床指征、发现、印象等',
+    extractClasses: ['检查类型', '临床指征', '检查技术', '发现', '印象', '建议'],
+    sampleId: 'rad_sample_2',
+    sampleTitle: '胸部X光报告',
+    text: RAD_TEXT,
     rawExtractions: [
-      { cls: '时间', text: '2025年12月22日上午', needle: '2025年12月22日上午' },
-      { cls: '机构', text: '国家统计局', needle: '国家统计局' },
-      { cls: '地点', text: '北京国务院新闻办公室', needle: '北京国务院新闻办公室' },
-      { cls: '事件', text: '举行新闻发布会，公布2025年前11个月国民经济运行情况', needle: '举行新闻发布会，公布2025年前11个月国民经济运行情况' },
-      { cls: '人物', text: '付凌晖', needle: '付凌晖', attributes: { 角色: '国家统计局新闻发言人' } },
-      { cls: '指标', text: '规模以上工业增加值同比增长6.1%', needle: '规模以上工业增加值同比增长6.1%' },
-      { cls: '指标', text: '社会消费品零售总额增长7.3%', needle: '社会消费品零售总额增长7.3%' },
-      { cls: '机构', text: '国家发展改革委', needle: '国家发展改革委' },
-      { cls: '时间', text: '2026年起', needle: '2026年起' },
-      { cls: '事件', text: '对"人工智能+制造"试点城市给予专项资金支持', needle: '对"人工智能+制造"试点城市给予专项资金支持' },
-      { cls: '地点', text: '上海、深圳、成都等10个城市', needle: '上海、深圳、成都等10个城市' },
-      { cls: '人物', text: '李春临', needle: '李春临', attributes: { 角色: '发改委副主任' } },
-      { cls: '机构', text: '中国人民银行', needle: '中国人民银行' },
-      { cls: '时间', text: '12月23日起', needle: '12月23日起' },
-      { cls: '指标', text: '下调金融机构存款准备金率0.25个百分点', needle: '下调金融机构存款准备金率0.25个百分点' },
-      { cls: '人物', text: '宣昌能', needle: '宣昌能', attributes: { 角色: '央行副行长' } },
+      { cls: '检查类型', text: '胸部X线检查报告', needle: '胸部X线检查报告', attributes: { 类型: 'X线' } },
+      { cls: '临床指征', text: '咳嗽1周，发热', needle: '咳嗽1周，发热', attributes: { 类型: '主诉' } },
+      { cls: '检查技术', text: '胸部正侧位片', needle: '胸部正侧位片', attributes: { 方法: '正侧位片' } },
+      { cls: '发现', text: '两肺纹理清晰', needle: '两肺纹理清晰', attributes: { 部位: '两肺', significance: 'normal' } },
+      { cls: '发现', text: '右下肺野见斑片状模糊影，边界不清', needle: '右下肺野见斑片状模糊影，边界不清', attributes: { 部位: '右下肺', significance: 'significant' } },
+      { cls: '发现', text: '心影大小形态正常', needle: '心影大小形态正常', attributes: { 部位: '心脏', significance: 'normal' } },
+      { cls: '印象', text: '右下肺感染性病变可能', needle: '右下肺感染性病变可能', attributes: { 序号: '1' } },
+      { cls: '建议', text: '建议结合临床及实验室检查，必要时CT进一步检查', needle: '建议结合临床及实验室检查，必要时CT进一步检查', attributes: { 类型: '后续检查' } },
     ],
-    config: { extraction_passes: 1, max_workers: 1, max_char_buffer: 4000 },
-    totalExtractions: 16,
-    charCount: NEWS_TEXT.length,
+    config: { extraction_passes: 1, max_workers: 1, max_char_buffer: 1500 },
   },
   {
-    key: 'romeo',
-    title: '罗密欧与朱丽叶 · few-shot 示例',
-    origin:
-      '出自 notebook 第 107 cell。同样的 few-shot 喂给 lx.extract() 处理整本 54,000 字符的剧本，跑出 1,889 个实体（3 轮 pass · 20 workers · 1000 字 chunk）。',
-    text: ROMEO_TEXT,
+    key: 'medication',
+    scenarioName: '药物信息',
+    description: '从病历或处方中提取药物相关信息，包括药物名称、剂量、用法、频率、适应症等',
+    extractClasses: ['药物', '剂量', '用法', '频率', '疗程', '适应症'],
+    sampleId: 'med_sample_2',
+    sampleTitle: '感染科处方',
+    text: MED_TEXT,
     rawExtractions: [
-      { cls: '人物', text: '罗密欧', needle: '罗密欧', attributes: { 情感状态: '惊叹' } },
-      { cls: '情感', text: '轻声！', needle: '轻声！', attributes: { 情感: '温柔敬畏', 人物: '罗密欧' } },
-      { cls: '关系', text: '朱丽叶就是太阳', needle: '朱丽叶就是太阳', attributes: { 类型: '比喻', 人物1: '罗密欧', 人物2: '朱丽叶' } },
-      { cls: '人物', text: '朱丽叶', needle: '朱丽叶', attributes: { 情感状态: '渴望' } },
-      { cls: '情感', text: '为什么你偏偏是罗密欧呢？', needle: '为什么你偏偏是罗密欧呢？', attributes: { 情感: '渴望的疑问', 人物: '朱丽叶' } },
+      // The project's trick: use medication_group attribute to link "药物 ↔ 剂量 ↔ 频率 ↔ 用法 ↔ 疗程" for the same drug.
+      { cls: '药物', text: '头孢曲松钠', needle: '头孢曲松钠', attributes: { medication_group: '头孢曲松钠' } },
+      { cls: '剂量', text: '2g', needle: '2g', attributes: { medication_group: '头孢曲松钠' } },
+      { cls: '用法', text: '静脉滴注', needle: '静脉滴注', attributes: { medication_group: '头孢曲松钠' } },
+      { cls: '频率', text: '每日1次', needle: '每日1次', attributes: { medication_group: '头孢曲松钠' } },
+      { cls: '疗程', text: '连续使用5-7天', needle: '连续使用5-7天', attributes: { medication_group: '头孢曲松钠' } },
+      { cls: '药物', text: '阿奇霉素片', needle: '阿奇霉素片', attributes: { medication_group: '阿奇霉素片' } },
+      { cls: '剂量', text: '500mg', needle: '500mg', attributes: { medication_group: '阿奇霉素片' } },
+      { cls: '药物', text: '氨溴索口服液', needle: '氨溴索口服液', attributes: { medication_group: '氨溴索口服液' } },
+      { cls: '药物', text: '布洛芬缓释胶囊', needle: '布洛芬缓释胶囊', attributes: { medication_group: '布洛芬缓释胶囊' } },
+      { cls: '适应症', text: '社区获得性肺炎', needle: '社区获得性肺炎' },
     ],
-    config: { extraction_passes: 3, max_workers: 20, max_char_buffer: 1000 },
-    totalExtractions: 1889,
-    charCount: 54000,
+    config: { extraction_passes: 1, max_workers: 1, max_char_buffer: 1500 },
+  },
+  {
+    key: 'news',
+    scenarioName: '新闻信息',
+    description: '从新闻报道中提取结构化信息，包括人物、地点、机构、时间、事件等',
+    extractClasses: ['人物', '地点', '机构', '时间', '事件'],
+    sampleId: 'news_sample_1',
+    sampleTitle: '科技新闻',
+    text: NEWS_TEXT,
+    rawExtractions: [
+      { cls: '时间', text: '2024年12月20日', needle: '2024年12月20日', attributes: { 类型: '具体日期' } },
+      { cls: '机构', text: '中国科学院', needle: '中国科学院', attributes: { 类型: '科研机构' } },
+      { cls: '地点', text: '北京', needle: '在北京', attributes: { 类型: '城市' } },
+      { cls: '事件', text: '量子计算机"九章三号"取得重大突破', needle: '量子计算机"九章三号"取得重大突破', attributes: { 类型: '科研突破' } },
+      { cls: '人物', text: '侯建国', needle: '侯建国', attributes: { 职位: '中科院院长' } },
+      { cls: '机构', text: '中国科学技术大学', needle: '中国科学技术大学', attributes: { 类型: '高校' } },
+      { cls: '人物', text: '潘建伟', needle: '潘建伟', attributes: { 职位: '团队负责人', 所属机构: '中国科学技术大学' } },
+      { cls: '机构', text: '清华大学物理系', needle: '清华大学物理系', attributes: { 类型: '高校院系' } },
+      { cls: '人物', text: '王向斌', needle: '王向斌', attributes: { 职位: '教授', 所属机构: '清华大学物理系' } },
+    ],
+    config: { extraction_passes: 2, max_workers: 4, max_char_buffer: 2000 },
   },
 ];
 
-// Resolve needle offsets at module load — guarantees position values stay in sync with the
-// strings shown to the user (the "source grounding" claim has to hold on screen).
-function resolve(docs: DocCase[]) {
-  return docs.map((d) => ({
-    ...d,
-    extractions: d.rawExtractions
+function resolve(scenarios: ScenarioCase[]) {
+  return scenarios.map((s) => ({
+    ...s,
+    extractions: s.rawExtractions
       .map(({ needle, ...rest }) => {
-        const start = d.text.indexOf(needle);
-        return start === -1 ? null : { ...rest, start, end: start + needle.length };
+        const start = s.text.indexOf(needle);
+        if (start === -1) return null;
+        // For news "北京" we used needle "在北京" to disambiguate — trim back to extraction text length.
+        return { ...rest, start: s.text.indexOf(rest.text, start), end: s.text.indexOf(rest.text, start) + rest.text.length };
       })
-      .filter((x): x is Extraction => x !== null)
+      .filter((x): x is Extraction => x !== null && x.start >= 0)
       .sort((a, b) => a.start - b.start),
   }));
 }
 
-const RESOLVED = resolve(DOCS);
+const RESOLVED = resolve(SCENARIOS);
 
-// Few-shot code snippets shown alongside — taken directly from the notebook code cells.
-const FEW_SHOT_CODE_NEWS = `examples = [
-    lx.data.ExampleData(
-        text="2025年6月3日，工业和信息化部在北京发布《算力基础设施高质量发展行动计划》。"
-             "工信部副部长张云明表示，到2027年全国算力总规模将达到300 EFLOPS。",
-        extractions=[
-            lx.data.Extraction("时间", "2025年6月3日"),
-            lx.data.Extraction("机构", "工业和信息化部"),
-            lx.data.Extraction("地点", "北京"),
-            lx.data.Extraction("人物", "张云明"),
-            lx.data.Extraction("事件", "发布《算力基础设施高质量发展行动计划》"),
-            lx.data.Extraction("指标", "300 EFLOPS"),
-        ],
-    )
-]`;
-
-const FEW_SHOT_CODE_ROMEO = `examples = [
-    lx.data.ExampleData(
-        text=textwrap.dedent("""\\
-            罗密欧: 轻声！那边窗子里亮起来的是什么光？
-            那就是东方，朱丽叶就是太阳。
-            朱丽叶: 啊！罗密欧，罗密欧！为什么你偏偏是罗密欧呢？"""),
-        extractions=[
-            lx.data.Extraction(extraction_class="人物",
-                               extraction_text="罗密欧",
-                               attributes={"情感状态": "惊叹"}),
-            lx.data.Extraction(extraction_class="关系",
-                               extraction_text="朱丽叶就是太阳",
-                               attributes={"类型": "比喻",
-                                           "人物1": "罗密欧",
-                                           "人物2": "朱丽叶"}),
-            # ... 共 5 个示例 extractions
-        ],
-    )
-]`;
+const ALL_SCENARIOS_IN_REPO = [
+  { name: '放射学报告', file: 'scenarios/radiology.py' },
+  { name: '药物信息', file: 'scenarios/medication.py' },
+  { name: '新闻信息', file: 'scenarios/news.py' },
+  { name: '金融分析', file: 'scenarios/finance.py' },
+  { name: '中医药机制研究', file: 'scenarios/medical.py' },
+  { name: '客服工单', file: 'scenarios/customer_service.py' },
+  { name: '销售商机', file: 'scenarios/sales.py' },
+] as const;
 
 const CLASS_COLOR: Record<string, string> = {
   时间: 'border-[var(--color-amber-300)]/40 bg-[var(--color-amber-300)]/14 text-[var(--color-amber-300)]',
@@ -168,8 +170,18 @@ const CLASS_COLOR: Record<string, string> = {
   人物: 'border-[#a78bfa]/40 bg-[#a78bfa]/14 text-[#a78bfa]',
   事件: 'border-[#60a5fa]/40 bg-[#60a5fa]/14 text-[#60a5fa]',
   指标: 'border-[#f472b6]/40 bg-[#f472b6]/14 text-[#f472b6]',
-  情感: 'border-[#f472b6]/40 bg-[#f472b6]/14 text-[#f472b6]',
-  关系: 'border-[#60a5fa]/40 bg-[#60a5fa]/14 text-[#60a5fa]',
+  检查类型: 'border-[#7fbc8c]/40 bg-[#7fbc8c]/14 text-[#7fbc8c]',
+  临床指征: 'border-[#a78bfa]/40 bg-[#a78bfa]/14 text-[#a78bfa]',
+  检查技术: 'border-[#60a5fa]/40 bg-[#60a5fa]/14 text-[#60a5fa]',
+  发现: 'border-[var(--color-amber-300)]/40 bg-[var(--color-amber-300)]/14 text-[var(--color-amber-300)]',
+  印象: 'border-[#f472b6]/40 bg-[#f472b6]/14 text-[#f472b6]',
+  建议: 'border-[#d4a574]/40 bg-[#d4a574]/14 text-[#d4a574]',
+  药物: 'border-[#a78bfa]/40 bg-[#a78bfa]/14 text-[#a78bfa]',
+  剂量: 'border-[var(--color-amber-300)]/40 bg-[var(--color-amber-300)]/14 text-[var(--color-amber-300)]',
+  用法: 'border-[#60a5fa]/40 bg-[#60a5fa]/14 text-[#60a5fa]',
+  频率: 'border-[#7fbc8c]/40 bg-[#7fbc8c]/14 text-[#7fbc8c]',
+  疗程: 'border-[#d4a574]/40 bg-[#d4a574]/14 text-[#d4a574]',
+  适应症: 'border-[#f472b6]/40 bg-[#f472b6]/14 text-[#f472b6]',
 };
 
 function colorFor(cls: string) {
@@ -180,13 +192,19 @@ function colorFor(cls: string) {
 }
 
 function renderHighlighted(text: string, extractions: Extraction[]) {
-  // Render text with mark spans for each extraction. Extractions are pre-sorted by start.
   const pieces: Array<{ kind: 'text' | 'hit'; content: string; ext?: Extraction }> = [];
   let cursor = 0;
+  // Filter overlapping (longer earlier wins).
+  const kept: Extraction[] = [];
+  let lastEnd = -1;
   for (const e of extractions) {
-    if (e.start > cursor) {
-      pieces.push({ kind: 'text', content: text.slice(cursor, e.start) });
+    if (e.start >= lastEnd) {
+      kept.push(e);
+      lastEnd = e.end;
     }
+  }
+  for (const e of kept) {
+    if (e.start > cursor) pieces.push({ kind: 'text', content: text.slice(cursor, e.start) });
     pieces.push({ kind: 'hit', content: text.slice(e.start, e.end), ext: e });
     cursor = e.end;
   }
@@ -195,59 +213,63 @@ function renderHighlighted(text: string, extractions: Extraction[]) {
 }
 
 export default function StructuredExtractionPreview() {
-  const [docKey, setDocKey] = useState<'news' | 'romeo'>('news');
-  const doc = useMemo(
-    () => RESOLVED.find((d) => d.key === docKey) ?? RESOLVED[0],
-    [docKey],
+  const [key, setKey] = useState<'radiology' | 'medication' | 'news'>('radiology');
+  const scenario = useMemo(
+    () => RESOLVED.find((s) => s.key === key) ?? RESOLVED[0],
+    [key],
   );
-  const pieces = useMemo(() => renderHighlighted(doc.text, doc.extractions), [doc]);
-  const fewShotCode = doc.key === 'romeo' ? FEW_SHOT_CODE_ROMEO : FEW_SHOT_CODE_NEWS;
+  const pieces = useMemo(
+    () => renderHighlighted(scenario.text, scenario.extractions),
+    [scenario],
+  );
 
   return (
     <div className="not-prose my-8 overflow-hidden rounded-[28px] border border-[var(--color-border-default)] bg-[var(--color-bg-card)] shadow-[0_12px_50px_var(--color-glow-green)]">
       <div className="border-b border-[var(--color-border-default)] bg-[linear-gradient(135deg,rgba(127,188,140,0.10),rgba(212,165,116,0.10))] px-6 py-5">
         <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-green-300)]/25 bg-[var(--color-green-300)]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-green-300)]">
           <Sparkles className="h-3.5 w-3.5" />
-          LangExtract · source-grounded extraction
+          LangExtractApp · 3 of 7 production scenarios
         </div>
         <h3 className="mt-3 text-2xl font-semibold text-[var(--color-text-primary)]">
-          Prompt + few-shot → structured entities anchored to char offsets
+          Real scenarios shipped in <code className="rounded bg-black/30 px-1 text-2xl">backend/app/scenarios/</code>
         </h3>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-text-secondary)]">
-          The signature feature of LangExtract (the Google open-source library wrapped in this
-          project) is that every extraction carries its <code className="rounded bg-black/30 px-1">char_interval</code>{' '}
-          back to the source. Pick a document to see the same prompt → highlight loop on real text
-          taken from the notebook.
+          The project actually ships <strong>7 BaseScenario subclasses</strong> — each defining{' '}
+          <code className="rounded bg-black/30 px-1">extract_classes</code>,{' '}
+          <code className="rounded bg-black/30 px-1">get_prompt()</code>,{' '}
+          <code className="rounded bg-black/30 px-1">get_examples()</code>, and{' '}
+          <code className="rounded bg-black/30 px-1">get_samples()</code>. The three highlighted
+          below (radiology / medication / news) are lifted verbatim from the project&apos;s source;
+          extraction positions are computed against the actual string so the highlights are real
+          char offsets, not styling.
         </p>
       </div>
 
       <div className="px-6 pt-5">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-          Real documents from the notebook
+          Production scenarios (toggle to switch)
         </p>
-        <div className="mt-3 grid gap-3 md:grid-cols-2">
-          {RESOLVED.map((d) => (
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          {RESOLVED.map((s) => (
             <button
-              key={d.key}
+              key={s.key}
               type="button"
-              onClick={() => setDocKey(d.key)}
+              onClick={() => setKey(s.key)}
               className={`rounded-[24px] border p-4 text-left transition-colors ${
-                docKey === d.key
+                key === s.key
                   ? 'border-[var(--color-amber-300)]/35 bg-[var(--color-amber-300)]/12'
                   : 'border-[var(--color-border-default)] bg-[var(--color-bg-card)]/45 hover:border-[var(--color-border-hover)]'
               }`}
             >
               <div className="flex items-center gap-2">
                 <BookOpen className="h-4 w-4 text-[var(--color-amber-300)]" />
-                <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">{d.title}</h4>
+                <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">
+                  {s.scenarioName}
+                </h4>
               </div>
-              <p className="mt-2 text-xs leading-5 text-[var(--color-text-muted)]">{d.origin}</p>
-              <p className="mt-2 text-[11px] text-[var(--color-text-muted)]">
-                Source length: {d.charCount.toLocaleString()} chars · resolved here: {d.extractions.length}{' '}
-                extractions
-                {d.totalExtractions !== d.extractions.length && (
-                  <> · full-doc total: {d.totalExtractions.toLocaleString()}</>
-                )}
+              <p className="mt-2 text-xs leading-5 text-[var(--color-text-muted)]">{s.description}</p>
+              <p className="mt-2 font-mono text-[10px] text-[var(--color-text-muted)]">
+                extract_classes = [{s.extractClasses.map((c) => `"${c}"`).join(', ')}]
               </p>
             </button>
           ))}
@@ -259,11 +281,11 @@ export default function StructuredExtractionPreview() {
           <div className="rounded-[24px] border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/45 p-5">
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-                Source text · extractions inlined at their exact char_interval
+                Source · <code className="rounded bg-black/30 px-1">{scenario.sampleId}</code> · {scenario.sampleTitle}
               </p>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border-default)] px-3 py-1 text-xs text-[var(--color-text-muted)]">
                 <Target className="h-3.5 w-3.5" />
-                source-grounded
+                {scenario.extractions.length} extractions · source-grounded
               </span>
             </div>
             <div className="mt-4 max-h-96 overflow-auto rounded-2xl border border-[var(--color-border-default)] bg-black/15 p-4 text-sm leading-7 text-[var(--color-text-secondary)] whitespace-pre-wrap">
@@ -273,7 +295,7 @@ export default function StructuredExtractionPreview() {
                 ) : (
                   <span
                     key={i}
-                    title={`${p.ext!.cls} · char_interval [${p.ext!.start}-${p.ext!.end}]`}
+                    title={`${p.ext!.cls} · char_interval [${p.ext!.start}-${p.ext!.end}]${p.ext!.attributes ? ' · ' + JSON.stringify(p.ext!.attributes) : ''}`}
                     className={`rounded border px-1 py-0.5 ${colorFor(p.ext!.cls)}`}
                   >
                     {p.content}
@@ -283,10 +305,13 @@ export default function StructuredExtractionPreview() {
               )}
             </div>
             <p className="mt-3 text-[11px] leading-5 text-[var(--color-text-muted)]">
-              Hover any highlighted span to see its{' '}
-              <code className="rounded bg-black/30 px-1">char_interval [start-end]</code>. This is
-              the actual <code className="rounded bg-black/30 px-1">ext.char_interval.start_pos / end_pos</code> the
-              library returns in the notebook&apos;s Step 15 output.
+              Hover any highlighted span: tooltip shows{' '}
+              <code className="rounded bg-black/30 px-1">char_interval [start-end]</code> plus the
+              real attributes returned by{' '}
+              <code className="rounded bg-black/30 px-1">lx.data.Extraction(extraction_class, extraction_text, attributes)</code>.
+              For the 药物信息 scenario notice the{' '}
+              <code className="rounded bg-black/30 px-1">medication_group</code> attribute — it&apos;s the project&apos;s
+              trick to link 药物 ↔ 剂量 ↔ 频率 ↔ 用法 ↔ 疗程 for the same drug.
             </p>
           </div>
 
@@ -294,7 +319,7 @@ export default function StructuredExtractionPreview() {
             <div className="flex items-center gap-2">
               <ScanLine className="h-4 w-4 text-[var(--color-amber-300)]" />
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-                lx.extract config used for this doc
+                lx.extract config (per scenario)
               </p>
             </div>
             <div className="mt-3 grid gap-2 md:grid-cols-3">
@@ -303,7 +328,7 @@ export default function StructuredExtractionPreview() {
                   extraction_passes
                 </p>
                 <p className="mt-1 font-mono text-sm text-[var(--color-green-300)]">
-                  {doc.config.extraction_passes}
+                  {scenario.config.extraction_passes}
                 </p>
                 <p className="mt-1 text-[10px] text-[var(--color-text-muted)]">multi-pass recall</p>
               </div>
@@ -312,7 +337,7 @@ export default function StructuredExtractionPreview() {
                   max_workers
                 </p>
                 <p className="mt-1 font-mono text-sm text-[var(--color-green-300)]">
-                  {doc.config.max_workers}
+                  {scenario.config.max_workers}
                 </p>
                 <p className="mt-1 text-[10px] text-[var(--color-text-muted)]">parallel chunks</p>
               </div>
@@ -321,29 +346,38 @@ export default function StructuredExtractionPreview() {
                   max_char_buffer
                 </p>
                 <p className="mt-1 font-mono text-sm text-[var(--color-green-300)]">
-                  {doc.config.max_char_buffer}
+                  {scenario.config.max_char_buffer}
                 </p>
                 <p className="mt-1 text-[10px] text-[var(--color-text-muted)]">chunk size</p>
               </div>
             </div>
-            <p className="mt-3 text-[11px] leading-5 text-[var(--color-text-muted)]">
-              The Romeo &amp; Juliet run uses the project&apos;s long-doc preset (3 / 20 / 1000) and
-              yields ~1,889 extractions over 54,000 chars in 1-2 minutes against DeepSeek API.
-            </p>
           </div>
         </div>
 
         <div className="space-y-5">
           <div className="rounded-[24px] border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/45 p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-              Few-shot example (verbatim from notebook)
+              All 7 scenarios shipped in repo
             </p>
-            <pre className="mt-3 max-h-72 overflow-auto rounded-2xl border border-[var(--color-border-default)] bg-black/40 p-3 font-mono text-[11px] leading-5 text-[var(--color-text-secondary)] whitespace-pre">
-              {fewShotCode}
-            </pre>
+            <div className="mt-3 grid gap-2">
+              {ALL_SCENARIOS_IN_REPO.map((s) => (
+                <div
+                  key={s.file}
+                  className={`flex items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-sm ${
+                    ['放射学报告', '药物信息', '新闻信息'].includes(s.name)
+                      ? 'border-[var(--color-green-300)]/35 bg-[var(--color-green-300)]/10 text-[var(--color-green-300)]'
+                      : 'border-[var(--color-border-default)] bg-black/10 text-[var(--color-text-secondary)]'
+                  }`}
+                >
+                  <span>{s.name}</span>
+                  <code className="font-mono text-[10px] text-[var(--color-text-muted)]">{s.file}</code>
+                </div>
+              ))}
+            </div>
             <p className="mt-3 text-[11px] leading-5 text-[var(--color-text-muted)]">
-              Passed into <code className="rounded bg-black/30 px-1">lx.extract(text, prompt_description, examples=examples, model=OpenAILanguageModel(deepseek-chat))</code>{' '}
-              — same DeepSeek API as Stage 2 of NL2SQL.
+              Three (highlighted) are wired into this preview. Adding a new scenario means
+              subclassing <code className="rounded bg-black/30 px-1">BaseScenario</code> — the
+              base class lives at <code className="rounded bg-black/30 px-1">app/scenarios/base.py</code>.
             </p>
           </div>
 
@@ -352,7 +386,7 @@ export default function StructuredExtractionPreview() {
               Extractions on this excerpt
             </p>
             <div className="mt-3 max-h-72 space-y-2 overflow-auto">
-              {doc.extractions.map((e, i) => (
+              {scenario.extractions.map((e) => (
                 <div
                   key={`${e.start}-${e.cls}`}
                   className="rounded-2xl border border-[var(--color-border-default)] bg-black/10 p-3"
@@ -368,16 +402,13 @@ export default function StructuredExtractionPreview() {
                     </span>
                   </div>
                   <p className="mt-2 text-sm text-[var(--color-text-primary)]">{e.text}</p>
-                  {e.attributes && (
+                  {e.attributes && Object.keys(e.attributes).length > 0 && (
                     <p className="mt-1 font-mono text-[10px] text-[var(--color-text-muted)]">
-                      {JSON.stringify(e.attributes, null, 0).replace(/,/g, ', ')}
+                      attributes = {JSON.stringify(e.attributes)}
                     </p>
                   )}
                 </div>
               ))}
-              {doc.extractions.length === 0 && (
-                <p className="text-xs text-[var(--color-text-muted)]">No extractions resolved.</p>
-              )}
             </div>
           </div>
         </div>
@@ -387,15 +418,33 @@ export default function StructuredExtractionPreview() {
         <div className="flex items-center gap-2">
           <Layers className="h-4 w-4 text-[var(--color-green-300)]" />
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-            End-to-end · Agentic-GraphRAG pipeline
+            Real backend layout · LangExtractApp/backend/app/
           </p>
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="mt-4 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
           {[
-            { name: 'OCR · MinerU / PaddleOCR-VL / DeepSeek-OCR', note: 'PDF/scan → Markdown / JSON 结构化' },
-            { name: 'LangExtract', note: 'prompt + few-shot · source grounding · multi-pass' },
-            { name: 'KG + Vector store', note: '实体 + 关系 + chunk 双索引' },
-            { name: 'LangChain 1.1 Agent', note: 'ReAct 调用工具 · 输出附原文引用' },
+            { path: 'main.py', note: 'FastAPI entry · uvicorn app.main:app --reload --port 8000' },
+            { path: 'config.py', note: 'DeepSeek API key + base_url + default model' },
+            { path: 'api/routes.py', note: '/extract endpoints · scenario list · sample list' },
+            { path: 'api/rag_routes.py', note: '+ RAG endpoints (extract → chroma_db/ index → grounded QA)' },
+            { path: 'core/extractor.py', note: 'lx.extract() wrapper · cache.py / sanitize.py support' },
+            { path: 'scenarios/base.py', note: 'BaseScenario abstract class · the 7 subclasses' },
+          ].map((f) => (
+            <div
+              key={f.path}
+              className="rounded-2xl border border-[var(--color-border-default)] bg-black/10 p-3"
+            >
+              <p className="font-mono text-[12px] text-[var(--color-amber-300)]">{f.path}</p>
+              <p className="mt-1 text-[11px] leading-5 text-[var(--color-text-muted)]">{f.note}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          {[
+            { name: 'OCR layer', note: 'MinerU / PaddleOCR-VL / DeepSeek-OCR — the notebook surveys all three' },
+            { name: 'LangExtract', note: 'this app · 7 scenarios · source grounding · attributes' },
+            { name: 'chroma_db/', note: 'on-disk vector store (already shipped in backend/)' },
+            { name: 'LangChain 1.1 Agent', note: 'ReAct tool use · output cites source spans' },
           ].map((s, i, arr) => (
             <div key={s.name} className="flex items-center gap-2">
               <div className="rounded-2xl border border-[var(--color-border-default)] bg-black/10 px-3 py-2">
@@ -406,11 +455,6 @@ export default function StructuredExtractionPreview() {
             </div>
           ))}
         </div>
-        <p className="mt-3 text-[11px] leading-5 text-[var(--color-text-muted)]">
-          The notebook walks through three GraphRAG variants (Microsoft GraphRAG, LightRAG,
-          Fast-GraphRAG) and explains why the project picks LangExtract + a lighter graph plus the
-          Agent decides between vector / graph retrieval at query time — not a fixed pipeline.
-        </p>
       </div>
     </div>
   );

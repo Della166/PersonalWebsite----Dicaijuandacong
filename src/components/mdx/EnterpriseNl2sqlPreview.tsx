@@ -19,30 +19,33 @@ import {
 //   2) "nl2sql_fine_tuning" — LLaMA-Factory CLI (Qwen3-4B + LoRA r=8 α=16) OR a custom train_lora.py on DeepSeek-Coder 6.7B
 // Eval is BLEU-4 + ROUGE-1/2/L from llamafactory-cli predict_with_generate=True.
 
+// Real module paths in Web_shargpt.zip → Web_shargpt/modules/ (the integrated backend).
+// The data_create project is the standalone React + Vite UI; Web_shargpt is the full FastAPI app
+// that wires UI + backend together. They share the same 6-step pipeline.
 const PIPELINE_STEPS = [
   {
-    name: 'DB connect',
+    name: 'modules/db_connector.py',
     detail: 'PyMySQL / psycopg2 / pyodbc · validate reachability of MySQL / Postgres / SQL Server.',
   },
   {
-    name: 'Metadata extractor',
+    name: 'modules/metadata_extractor.py',
     detail: 'All columns (name, type, nullable, comment) + primary keys + foreign keys.',
   },
   {
-    name: 'Table cards',
-    detail: 'Compress full metadata into LLM-digestible table summaries; preserve FK links.',
+    name: 'modules/table_cards.py',
+    detail: 'Compress full metadata into LLM-digestible table cards; preserve FK links.',
   },
   {
-    name: 'Topic planning · LLM stage A',
+    name: 'modules/planner.py · LLM stage A',
     detail: 'LLM groups related tables into business topics and allocates a per-topic sample budget.',
   },
   {
-    name: 'Sample generation · LLM stage B',
-    detail: 'Per topic: build prompt with full DDL + dialect → LLM emits NL ↔ SQL pairs.',
+    name: 'modules/generator.py · LLM stage B',
+    detail: 'Per topic: build prompt with simplified DDL + dialect → LLM emits NL ↔ SQL pairs; auto-补充 if topic count is short.',
   },
   {
-    name: 'SQL validation + export',
-    detail: 'SQLGlot syntax check → write Alpaca / ShareGPT JSONL → ready for LLaMA-Factory.',
+    name: 'modules/validator.py + exporter.py',
+    detail: 'SQLGlot syntax check → write Alpaca / ShareGPT JSONL (nl2sql.jsonl) → ready for LLaMA-Factory --dataset sql_train_alpaca.',
   },
 ] as const;
 
@@ -328,9 +331,14 @@ export default function EnterpriseNl2sqlPreview() {
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-[var(--color-green-300)]" />
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-                Stage 2 · custom train_lora.py on DeepSeek-Coder 6.7B
+                Stage 2 · nl2sql_fine_tuning/ on DeepSeek-Coder 6.7B
               </p>
             </div>
+            <p className="mt-2 text-[11px] leading-5 text-[var(--color-text-muted)]">
+              Files: train_lora.py · eval_model.py · vllm_test.py · utils.py · README.md ·
+              requirements.txt. Default params: rank=16, alpha=32, early-stopping patience=3,
+              auto Alpaca / ShareGPT format detection.
+            </p>
             <div className="mt-3 grid gap-2 text-sm text-[var(--color-text-secondary)]">
               <div className="flex items-center justify-between rounded-2xl border border-[var(--color-border-default)] px-3 py-2">
                 <span className="inline-flex items-center gap-2">
@@ -356,14 +364,17 @@ export default function EnterpriseNl2sqlPreview() {
               <div className="flex items-center justify-between rounded-2xl border border-[var(--color-border-default)] px-3 py-2">
                 <span className="inline-flex items-center gap-2">
                   <ArrowRight className="h-3.5 w-3.5 text-[var(--color-text-muted)]" />
-                  vLLM batch throughput
+                  vLLM batch throughput (batch=32)
                 </span>
-                <span className="font-mono text-xs text-[var(--color-green-300)]">351 samples/s</span>
+                <span className="font-mono text-xs text-[var(--color-green-300)]">~0.7 sample/s/GPU</span>
               </div>
             </div>
             <p className="mt-3 text-[11px] leading-5 text-[var(--color-text-muted)]">
-              Eval splits text-match (BLEU/ROUGE) from execution-match (run both SQL on a real DB
-              and compare result sets) — the project counts the latter as the truth signal.
+              eval_model.py runs both <code className="rounded bg-black/40 px-1">--eval_text_match</code>{' '}
+              (Exact-Match + Token-F1) and{' '}
+              <code className="rounded bg-black/40 px-1">--eval_sql_execution</code> (run the predicted
+              SQL on a real DB, compare result sets). The project counts execution-match as the
+              truth signal. Deploy via vLLM API server (OpenAI-compatible) on port 8000.
             </p>
           </div>
         </div>
