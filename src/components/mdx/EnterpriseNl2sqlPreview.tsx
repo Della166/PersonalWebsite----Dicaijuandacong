@@ -156,6 +156,68 @@ const TRAIN_CMD = `llamafactory-cli train \\
     --lora_alpha 16 \\
     --lora_target all`;
 
+// Real planner prompt (modules/planner.py:_build_planning_prompt) — abbreviated for screen.
+const PLANNER_PROMPT_PREVIEW = `你是数据库分析专家。以下是数据库表卡片摘要：
+{table_cards_text}
+
+请基于以上数据库结构，规划出若干个业务主题（topics），
+每个主题选择 {min_tables}~{max_tables} 张相关联的表，
+用于生成 NL2SQL 训练样本。
+
+要求：
+1. 主题应覆盖不同业务场景（用户分析、订单统计、销售报表…）
+2. 每个主题的表应有业务关联性（外键或业务逻辑）
+3. 所有主题的 count 之和 = {total_samples}
+4. 每个主题至少 20 个样本
+
+输出 JSON：
+{
+  "topics": [
+    { "name": "...", "tables": [...], "reason": "...",
+      "count": 100, "dialect": "{dialect}" }
+  ]
+}`;
+
+// Real validator.py rule set (3 layers, in order).
+const VALIDATOR_LAYERS = [
+  {
+    name: '_check_syntax(sql, dialect)',
+    detail: 'sqlglot.parse_one(sql, read=dialect) — 失败立即 reject。',
+  },
+  {
+    name: '_check_schema(sql, dialect)',
+    detail: '遍历 exp.Table / exp.Column；构建别名映射 alias_to_table；表名+列名必须落到 metadata.table_columns。',
+  },
+  {
+    name: '_check_execution(sql) · 可选',
+    detail: '只允许 SELECT；自动加 LIMIT 1；db_connector.execute_query 真跑一次。',
+  },
+] as const;
+
+// Real eval-time metric functions from nl2sql_fine_tuning/utils.py.
+const EVAL_FUNCTIONS = [
+  {
+    name: 'normalize_sql(sql)',
+    detail: 'sqlparse.format(keyword_case="lower", strip_comments=True) → 单行空格归一。',
+  },
+  {
+    name: 'calculate_exact_match(preds, refs)',
+    detail: '两边都 normalize_sql 后字符串比较 — 严格但稳定。',
+  },
+  {
+    name: 'calculate_token_f1(pred, ref)',
+    detail: 're.findall(r"\\w+", lower) → set；precision · recall · F1。',
+  },
+  {
+    name: 'calculate_execution_accuracy(preds, refs, executor)',
+    detail: '逐条 executor.execute_sql 跑生成 SQL → execution_success_rate；再 executor.compare_results 比执行结果集 → result_match_rate。',
+  },
+  {
+    name: 'extract_sql_from_output(output)',
+    detail: '从模型输出里抠 ```sql ... ``` 代码块；处理「我先解释一下…」之类的冗余。',
+  },
+] as const;
+
 export default function EnterpriseNl2sqlPreview() {
   const [activeSchema, setActiveSchema] = useState<string>(SCHEMAS[0].key);
   const schema = useMemo(
@@ -376,7 +438,75 @@ export default function EnterpriseNl2sqlPreview() {
               SQL on a real DB, compare result sets). The project counts execution-match as the
               truth signal. Deploy via vLLM API server (OpenAI-compatible) on port 8000.
             </p>
+            <p className="mt-2 text-[11px] leading-5 text-[var(--color-text-muted)]">
+              Real LoRA target_modules (train_lora.py:265):{' '}
+              <code className="rounded bg-black/30 px-1">[q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]</code>{' '}
+              · all 7 linear layers of the Llama / DeepSeek attention + MLP blocks.
+            </p>
           </div>
+        </div>
+      </div>
+
+      <div className="border-t border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/35 px-6 py-5">
+        <div className="grid gap-5 lg:grid-cols-2">
+          <div className="rounded-[20px] border border-[var(--color-border-default)] bg-black/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+              Real planner prompt · modules/planner.py:_build_planning_prompt
+            </p>
+            <pre className="mt-3 max-h-72 overflow-auto rounded-2xl border border-[var(--color-border-default)] bg-black/40 p-3 font-mono text-[11px] leading-5 text-[var(--color-text-secondary)] whitespace-pre">
+              {PLANNER_PROMPT_PREVIEW}
+            </pre>
+            <p className="mt-2 text-[11px] leading-5 text-[var(--color-text-muted)]">
+              Output is JSON-validated by <code className="rounded bg-black/30 px-1">_validate_and_adjust_plan</code>:
+              tables must resolve to metadata; counts re-scaled by ratio if drift; at least 1 sample per topic; topics auto-trimmed if total_samples is small.
+            </p>
+          </div>
+
+          <div className="rounded-[20px] border border-[var(--color-border-default)] bg-black/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+              modules/validator.py · 3-layer SQL check (in order)
+            </p>
+            <div className="mt-3 space-y-2">
+              {VALIDATOR_LAYERS.map((v, i) => (
+                <div
+                  key={v.name}
+                  className="rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/40 p-3"
+                >
+                  <p className="flex items-center gap-2">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[var(--color-amber-300)]/30 bg-[var(--color-amber-300)]/10 text-[10px] font-semibold text-[var(--color-amber-300)]">
+                      {i + 1}
+                    </span>
+                    <code className="font-mono text-[12px] text-[var(--color-amber-300)]">{v.name}</code>
+                  </p>
+                  <p className="mt-1 text-[11px] leading-5 text-[var(--color-text-muted)]">{v.detail}</p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] leading-5 text-[var(--color-text-muted)]">
+              Same <code className="rounded bg-black/30 px-1">table_columns</code> index serves both data_create
+              (validates LLM-generated SQL) and nl2sql_fine_tuning (validates the model&apos;s predictions
+              before grading).
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-[20px] border border-[var(--color-border-default)] bg-black/10 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+            nl2sql_fine_tuning/utils.py · 5 metric functions used by eval_model.py
+          </p>
+          <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+            {EVAL_FUNCTIONS.map((f) => (
+              <div key={f.name} className="rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/40 p-3">
+                <code className="font-mono text-[11px] text-[var(--color-amber-300)]">{f.name}</code>
+                <p className="mt-1 text-[11px] leading-5 text-[var(--color-text-muted)]">{f.detail}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-[11px] leading-5 text-[var(--color-text-muted)]">
+            <code className="rounded bg-black/30 px-1">SQLExecutor</code> reuses one PyMySQL connection across
+            the whole eval pass (<code className="rounded bg-black/30 px-1">execute_batch()</code>) — that&apos;s the trick
+            behind the 351 samples/s number; without connection reuse it&apos;s ~10x slower.
+          </p>
         </div>
       </div>
     </div>

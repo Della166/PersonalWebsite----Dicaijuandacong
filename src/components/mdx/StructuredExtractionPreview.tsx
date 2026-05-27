@@ -474,6 +474,105 @@ export default function StructuredExtractionPreview() {
             </div>
           ))}
         </div>
+
+        <div className="mt-5 grid gap-5 lg:grid-cols-2">
+          <div className="rounded-[20px] border border-[var(--color-border-default)] bg-black/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+              ScenarioRegistry · how the 7 scenarios self-register
+            </p>
+            <pre className="mt-3 overflow-x-auto rounded-2xl border border-[var(--color-border-default)] bg-black/40 p-3 font-mono text-[11px] leading-5 text-[var(--color-text-secondary)]">
+{`class BaseScenario(ABC):
+    name: str = "基础场景"
+    description: str = "场景描述"
+    extract_classes: List[str] = []
+
+    @abstractmethod
+    def get_prompt(self) -> str: ...
+    @abstractmethod
+    def get_examples(self) -> List[lx.data.ExampleData]: ...
+    def get_samples(self) -> List[Dict[str, str]]: return []
+
+class ScenarioRegistry:
+    _scenarios: Dict[str, Type[BaseScenario]] = {}
+
+    @classmethod
+    def register(cls, scenario_id, scenario_class): ...
+    @classmethod
+    def get(cls, scenario_id) -> BaseScenario: ...   # 抛 ValueError 未注册
+    @classmethod
+    def list_all(cls) -> Dict[str, Dict[str, Any]]:  # 给 /scenarios 端点用
+        ...`}
+            </pre>
+            <p className="mt-2 text-[11px] leading-5 text-[var(--color-text-muted)]">
+              新场景 = 写 1 个 BaseScenario 子类 + 在模块顶层调一次{' '}
+              <code className="rounded bg-black/30 px-1">ScenarioRegistry.register("scenario_id", MyScenario)</code> 即可。
+              <code className="rounded bg-black/30 px-1">/scenarios</code> 端点直接返回 list_all() 结果。
+            </p>
+          </div>
+
+          <div className="rounded-[20px] border border-[var(--color-border-default)] bg-black/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+              Qdrant vs Chroma · same interface, 2 deploy modes
+            </p>
+            <div className="mt-3 overflow-x-auto rounded-2xl border border-[var(--color-border-default)]">
+              <table className="w-full border-collapse text-left text-sm">
+                <thead className="bg-black/15 text-[10px] uppercase tracking-[0.16em] text-[var(--color-text-muted)]">
+                  <tr>
+                    <th className="px-3 py-2 font-semibold">aspect</th>
+                    <th className="px-3 py-2 font-semibold">VectorStore (Qdrant)</th>
+                    <th className="px-3 py-2 font-semibold">ChromaVectorStore</th>
+                  </tr>
+                </thead>
+                <tbody className="text-[11px]">
+                  {[
+                    ['deploy mode', 'remote / :memory: fallback', 'local persistent only (chroma_db/)'],
+                    ['env var', 'QDRANT_URL + QDRANT_API_KEY', 'CHROMA_PERSIST_DIR'],
+                    ['client', 'qdrant_client.QdrantClient', 'chromadb.PersistentClient'],
+                    ['distance', 'models.Distance.COSINE', 'hnsw:space=cosine (metadata)'],
+                    ['recreate logic', 'init_collection(recreate=True) 删 + 重建', '删 collection + _init_collection()'],
+                    ['embeddings', 'DashScope text-embedding-v4 · chunk_size=10', '同上 · 同一 OpenAIEmbeddings 实例'],
+                    ['filter API', 'models.Filter / FieldCondition', 'where={"doc_id": {"$eq": ...}}'],
+                  ].map((row, i) => (
+                    <tr key={row[0]} className={`${i % 2 === 0 ? 'bg-transparent' : 'bg-black/5'} border-t border-[var(--color-border-default)]/60`}>
+                      <td className="px-3 py-2 text-[var(--color-text-muted)]">{row[0]}</td>
+                      <td className="px-3 py-2 font-mono text-[var(--color-text-secondary)]">{row[1]}</td>
+                      <td className="px-3 py-2 font-mono text-[var(--color-text-secondary)]">{row[2]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-2 text-[11px] leading-5 text-[var(--color-text-muted)]">
+              <code className="rounded bg-black/30 px-1">DocumentChunk</code> dataclass &amp;{' '}
+              <code className="rounded bg-black/30 px-1">add_chunks() / search() / delete_by_doc_id()</code>{' '}
+              的方法签名两边完全一致 — rag_routes.py 才能在
+              <code className="rounded bg-black/30 px-1">backend.lower() == "chroma"</code> 处分支无缝切换。
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-[20px] border border-[var(--color-border-default)] bg-black/10 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+            QAAgent · services/qa_agent.py · 4 entry methods
+          </p>
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
+            {[
+              { name: 'search_context(query, top_k=5)', note: 'vector_store.search → List[{doc_id, doc_title, content, score, ...}]' },
+              { name: 'format_context(results)', note: '拼成 "[来源 N] ..." 多段文本喂给 prompt' },
+              { name: 'build_prompt(question, context, structured=True)', note: 'system: 「不要在回答中提及来源/文档/参考字眼，直接陈述」 + structured: 「总结一句 → • 分点带【关键词】 → 简短结论」' },
+              { name: 'answer / answer_stream / chat', note: 'answer 一次性 LLM invoke；answer_stream 用 llm.stream 流式 yield；chat 多轮对话注入历史 messages' },
+            ].map((m) => (
+              <div key={m.name} className="rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/40 p-3">
+                <code className="font-mono text-[11px] text-[var(--color-amber-300)]">{m.name}</code>
+                <p className="mt-1 text-[11px] leading-5 text-[var(--color-text-muted)]">{m.note}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-[11px] leading-5 text-[var(--color-text-muted)]">
+            response 包 <code className="rounded bg-black/30 px-1">{`{success, question, answer, sources[{doc_id, doc_title, content_preview, score}], context_count}`}</code>{' '}
+            — sources 总是带回，前端可独立渲染「来源溯源」面板（即使 system prompt 让模型自己不要主动提及）。
+          </p>
+        </div>
       </div>
     </div>
   );

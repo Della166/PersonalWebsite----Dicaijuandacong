@@ -143,6 +143,38 @@ const TOOLS_REGISTRY = [
   { name: 'convert_currency', version: 'v1', category: 'finance', desc: '货币汇率转换', params: 'amount, from_currency, to_currency' },
 ] as const;
 
+// Real task_generator.py TASK_TEMPLATES — counts taken from source. 8 categories, 76 templates.
+const TASK_CATEGORIES = [
+  { name: '天气查询', count: 12, sample: '{city}今天天气怎么样？' },
+  { name: '时间查询', count: 10, sample: '现在几点了？' },
+  { name: '计算', count: 10, sample: '帮我计算{expr}' },
+  { name: '搜索', count: 12, sample: '帮我搜索关于{query}的信息' },
+  { name: '翻译', count: 10, sample: '请把\'{text}\'翻译成{target_lang}' },
+  { name: '货币转换', count: 7, sample: '把{amount}{from_currency}转换成{to_currency}' },
+  { name: '新闻获取', count: 7, sample: '给我看看{category}类的新闻' },
+  { name: '通用', count: 8, sample: '请使用合适的工具帮我完成这个任务' },
+] as const;
+
+// task_generator.py PARAMS pools — diversity baked into template instantiation.
+const PARAM_POOLS = [
+  { name: 'cities', size: 20, sample: '北京 / 上海 / 广州 / 深圳 / 杭州 …' },
+  { name: 'expressions', size: 15, sample: '1+1 / 25*4 / sqrt(144) / 2^10 …' },
+  { name: 'search_queries', size: 18, sample: '人工智能 / 机器学习 / 量子计算 …' },
+  { name: 'texts', size: 13, sample: '你好 / 谢谢 / 早上好 …' },
+  { name: 'target_langs', size: 8, sample: '英语 / 日语 / 法语 …' },
+  { name: 'currencies_from × to', size: 25, sample: '美元↔人民币 / 欧元↔英镑 …' },
+  { name: 'amounts', size: 7, sample: '100 / 500 / 1000 / 5000 …' },
+  { name: 'news_categories', size: 8, sample: '科技 / 体育 / 财经 / 娱乐 …' },
+] as const;
+
+// validate_and_correct LLM prompt fields — verbatim from services/llm_client.py:269-297.
+const VALIDATE_PROMPT_FIELDS = [
+  { axis: 'Chosen 回复质量', detail: '是否正确调用了工具，参数是否准确' },
+  { axis: 'Rejected 回复质量', detail: '是否确实比 chosen 更差' },
+  { axis: '两者差异度', detail: '差异是否明显，是否具有学习价值' },
+  { axis: '格式规范性', detail: '是否符合 function_call 格式要求' },
+] as const;
+
 function MessageRow({ role, content }: { role: 'user' | 'assistant'; content: string }) {
   const isUser = role === 'user';
   return (
@@ -321,6 +353,53 @@ export default function FunctionCallingAgentPreview() {
           sample at random). Adding tools = edit this JSON, no code change.
         </p>
 
+        <div className="mt-5 grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-2xl border border-[var(--color-border-default)] bg-black/10 p-3">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+              backend/core/task_generator.py · TASK_TEMPLATES · 8 categories · 76 templates total
+            </p>
+            <div className="mt-3 grid gap-2 md:grid-cols-2">
+              {TASK_CATEGORIES.map((c) => (
+                <div key={c.name} className="rounded-xl border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/40 p-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-[var(--color-text-primary)]">{c.name}</span>
+                    <span className="font-mono text-[10px] text-[var(--color-amber-300)]">{c.count} templates</span>
+                  </div>
+                  <p className="mt-1 font-mono text-[10px] leading-4 text-[var(--color-text-muted)]">
+                    e.g. <span className="text-[var(--color-text-secondary)]">{c.sample}</span>
+                  </p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-[10px] leading-4 text-[var(--color-text-muted)]">
+              Single vs multi-turn split by <code className="rounded bg-black/30 px-1">multi_ratio</code> (default
+              0.3). Multi-turn joins via 7 connectors: 然后 / 接着 / 同时 / 另外 / 还有 / 并且 / 以及.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-[var(--color-border-default)] bg-black/10 p-3">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+              PARAMS pools · diversity behind the 76 templates
+            </p>
+            <div className="mt-3 space-y-1.5">
+              {PARAM_POOLS.map((p) => (
+                <div key={p.name} className="flex items-start justify-between gap-2 rounded-xl border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/40 px-2 py-1.5">
+                  <div className="min-w-0">
+                    <code className="font-mono text-[11px] text-[var(--color-amber-300)]">{p.name}</code>
+                    <p className="mt-0.5 truncate text-[10px] text-[var(--color-text-muted)]">{p.sample}</p>
+                  </div>
+                  <span className="font-mono text-[10px] text-[var(--color-green-300)] whitespace-nowrap">
+                    ×{p.size}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-[10px] leading-4 text-[var(--color-text-muted)]">
+              76 templates × multiple param slots → realistic 数千 unique user queries even before
+              the multi-turn joiner kicks in.
+            </p>
+          </div>
+        </div>
+
         <div className="mt-5 flex items-center gap-2">
           <Layers className="h-4 w-4 text-[var(--color-amber-300)]" />
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
@@ -370,6 +449,38 @@ export default function FunctionCallingAgentPreview() {
             5 步走完后样本字段：
             <code className="ml-1 rounded bg-black/30 px-1">{`{task_id, task_type, system, tools, messages, chosen, rejected, quality_score, similarity_score}`}</code>
           </p>
+
+          <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr]">
+            <div className="rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/40 p-3">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+                validate_and_correct LLM prompt · 4 axes (services/llm_client.py:269)
+              </p>
+              <div className="mt-2 space-y-1">
+                {VALIDATE_PROMPT_FIELDS.map((v, i) => (
+                  <p key={v.axis} className="text-[11px] leading-5 text-[var(--color-text-secondary)]">
+                    <span className="font-semibold text-[var(--color-amber-300)]">{i + 1}.</span>{' '}
+                    <span className="text-[var(--color-text-primary)]">{v.axis}</span> —{' '}
+                    <span className="text-[var(--color-text-muted)]">{v.detail}</span>
+                  </p>
+                ))}
+              </div>
+              <p className="mt-2 text-[10px] leading-4 text-[var(--color-text-muted)]">
+                返回 JSON 含字段：<code className="rounded bg-black/30 px-1">{`{is_valid, quality_score, similarity_score, issues[], corrected_chosen?, corrected_rejected?}`}</code>
+                ; quality 9-10 极好 / 5-6 一般 / &lt;5 差 ; similarity &lt;50% 优秀 / &gt;80% rejected 不够差。
+              </p>
+            </div>
+            <div className="rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/40 p-3">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+                JSON parse 兜底
+              </p>
+              <p className="mt-2 text-[11px] leading-5 text-[var(--color-text-secondary)]">
+                DeepSeek 偶尔包 <code className="rounded bg-black/30 px-1">```json … ```</code> 输出。
+                客户端先 strip 三种围栏，再 <code className="rounded bg-black/30 px-1">json.loads()</code>；
+                解析失败时回退到 <code className="rounded bg-black/30 px-1">{`{quality_score: 7.0, similarity_score: 50.0, issues: ["LLM返回格式错误"]}`}</code>，
+                不让单次 LLM 抖动掐死整批生成。
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="mt-5 grid gap-3 md:grid-cols-3">
