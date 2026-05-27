@@ -40,7 +40,7 @@ export default async function ProjectDemoPage({
 
   return (
     <div className="min-h-screen pt-20">
-      <div className="mx-auto max-w-6xl px-4 py-12">
+      <div className="mx-auto max-w-7xl px-4 py-12">
         <Link
           href={`/${locale}/projects/${slug}`}
           className="mb-8 inline-flex items-center gap-1.5 text-sm text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-green-300)]"
@@ -125,49 +125,51 @@ export default async function ProjectDemoPage({
           </div>
         </header>
 
-        <div className="mt-10 grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
-          <div className="space-y-6">
-            <DemoComponent />
+        {/* Demo component gets the full width — it has its own internal grids/tables that need room. */}
+        <div className="mt-10">
+          <DemoComponent />
+        </div>
+
+        {/* Aside metadata moves below the demo as a 3-column row so it doesn't squeeze the interactive panels. */}
+        <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="glass-card p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+              {whatToTryLabel}
+            </p>
+            <div className="mt-4 space-y-3">
+              {pickLocalizedList(demo.whatToTry, locale).map((item) => (
+                <p key={item} className="text-sm leading-6 text-[var(--color-text-secondary)]">
+                  {item}
+                </p>
+              ))}
+            </div>
           </div>
 
-          <aside className="space-y-4">
-            <div className="glass-card p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-                {whatToTryLabel}
-              </p>
-              <div className="mt-4 space-y-3">
-                {pickLocalizedList(demo.whatToTry, locale).map((item) => (
-                  <p key={item} className="text-sm leading-6 text-[var(--color-text-secondary)]">
-                    {item}
-                  </p>
-                ))}
-              </div>
+          <div className="glass-card p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+              {whatItProvesLabel}
+            </p>
+            <div className="mt-4 space-y-3">
+              {pickLocalizedList(demo.whatItProves, locale).map((item) => (
+                <p key={item} className="text-sm leading-6 text-[var(--color-text-secondary)]">
+                  {item}
+                </p>
+              ))}
             </div>
+          </div>
 
-            <div className="glass-card p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-                {whatItProvesLabel}
-              </p>
-              <div className="mt-4 space-y-4">
-                {pickLocalizedList(demo.whatItProves, locale).map((item) => (
-                  <p key={item} className="text-sm leading-6 text-[var(--color-text-secondary)]">
-                    {item}
-                  </p>
-                ))}
-              </div>
-            </div>
-
+          <div className="space-y-4">
             {demo.highlights.map((item) => (
-              <div key={pickLocalizedText(item.label, locale)} className="glass-card p-5">
+              <div key={pickLocalizedText(item.label, locale)} className="glass-card p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
                   {pickLocalizedText(item.label, locale)}
                 </p>
-                <p className="mt-3 text-sm leading-6 text-[var(--color-text-primary)]">
+                <p className="mt-2 text-sm leading-6 text-[var(--color-text-primary)]">
                   {pickLocalizedText(item.value, locale)}
                 </p>
               </div>
             ))}
-          </aside>
+          </div>
         </div>
 
         <div className="mt-12 rounded-[28px] border border-[var(--color-amber-300)]/30 bg-[linear-gradient(135deg,rgba(212,165,116,0.10),rgba(127,188,140,0.08))] p-6 md:p-8">

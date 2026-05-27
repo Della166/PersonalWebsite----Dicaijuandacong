@@ -135,14 +135,22 @@ export default async function ProjectPage({
           className="prose prose-invert prose-green max-w-none
                      prose-headings:text-[var(--color-text-primary)]
                      prose-headings:scroll-mt-24
-                     prose-p:text-[var(--color-text-secondary)]
-                     prose-li:text-[var(--color-text-secondary)]
+                     prose-h2:mt-12 prose-h2:mb-5 prose-h2:pb-2 prose-h2:border-b prose-h2:border-[var(--color-border-default)]
+                     prose-h3:mt-8 prose-h3:mb-3
+                     prose-p:text-[var(--color-text-secondary)] prose-p:leading-7
+                     prose-li:text-[var(--color-text-secondary)] prose-li:my-1
                      prose-a:text-[var(--color-green-300)] prose-a:no-underline hover:prose-a:underline
                      prose-strong:text-[var(--color-text-primary)]
-                     prose-code:text-[var(--color-green-200)] prose-code:bg-[var(--color-bg-card)] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
-                     prose-pre:bg-[var(--color-bg-card)] prose-pre:border prose-pre:border-[var(--color-border-default)]
+                     prose-code:text-[var(--color-green-200)] prose-code:bg-[var(--color-bg-card)] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:hidden prose-code:after:hidden
+                     prose-pre:bg-[var(--color-bg-card)] prose-pre:border prose-pre:border-[var(--color-border-default)] prose-pre:rounded-2xl prose-pre:p-4
                      prose-blockquote:border-[var(--color-green-300)]
-                     prose-img:rounded-2xl"
+                     prose-img:rounded-2xl
+                     prose-hr:border-[var(--color-border-default)]
+                     prose-table:border prose-table:border-[var(--color-border-default)] prose-table:rounded-xl prose-table:overflow-hidden
+                     prose-thead:bg-[var(--color-bg-card)] prose-thead:border-b prose-thead:border-[var(--color-border-default)]
+                     prose-th:px-4 prose-th:py-3 prose-th:text-[var(--color-text-primary)] prose-th:font-semibold prose-th:text-left
+                     prose-td:px-4 prose-td:py-3 prose-td:border-t prose-td:border-[var(--color-border-default)]/60 prose-td:align-top
+                     prose-tr:border-0"
         >
           <MDXRemote
             source={content}
