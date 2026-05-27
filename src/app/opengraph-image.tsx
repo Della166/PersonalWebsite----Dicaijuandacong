@@ -46,10 +46,12 @@ export default async function Image() {
           fulingchen.me
         </div>
 
-        {/* Main title */}
+        {/* Main title — Satori requires display:flex on any div with >1 child */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           <div
             style={{
+              display: 'flex',
+              flexDirection: 'column',
               fontSize: 88,
               fontWeight: 900,
               lineHeight: 1.05,
@@ -57,12 +59,12 @@ export default async function Image() {
               letterSpacing: -1,
             }}
           >
-            AI Engineer
-            <br />
-            & Creator
+            <span>AI Engineer</span>
+            <span>& Creator</span>
           </div>
           <div
             style={{
+              display: 'flex',
               fontSize: 32,
               color: '#c6d2cb',
               lineHeight: 1.4,
