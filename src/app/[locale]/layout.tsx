@@ -23,8 +23,55 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "Personal Website | AI Engineer & Creator",
-  description: "AI Engineer, Full-Stack Developer, and Content Creator portfolio",
+  metadataBase: new URL('https://fulingchen.me'),
+  title: {
+    default: 'fulingchen — AI Engineer & Creator',
+    template: '%s · fulingchen',
+  },
+  description:
+    'AI 工程师 / 全栈开发 / 内容创作者作品集。10 个含真实代码细节的工业级 AI 项目案例：NL2SQL 微调、DPO Agent、LangExtract RAG、Deep Research、GRPO、VLM RL …',
+  applicationName: 'fulingchen',
+  authors: [{ name: 'fulingchen', url: 'https://fulingchen.me' }],
+  keywords: [
+    'AI Engineer', 'LangChain', 'LangExtract', 'GRPO', 'DPO', 'NL2SQL',
+    'Multimodal RAG', 'Qwen', 'DeepSeek', 'Agent', 'fulingchen',
+    'AI 工程师', '大模型应用', '智能体开发',
+  ],
+  openGraph: {
+    type: 'website',
+    siteName: 'fulingchen',
+    title: 'fulingchen — AI Engineer & Creator',
+    description:
+      'AI 工程师 / 全栈开发 / 内容创作者作品集。10 个含真实代码细节的工业级 AI 项目案例。',
+    locale: 'zh_CN',
+    alternateLocale: ['en_US'],
+    url: 'https://fulingchen.me',
+    images: [
+      {
+        url: 'https://fulingchen.me/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'fulingchen — AI Engineer & Creator',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'fulingchen — AI Engineer & Creator',
+    description: '10 个含真实代码细节的工业级 AI 项目案例。',
+    images: ['https://fulingchen.me/opengraph-image'],
+  },
+  alternates: {
+    canonical: 'https://fulingchen.me',
+    languages: {
+      'zh-CN': 'https://fulingchen.me/zh',
+      'en-US': 'https://fulingchen.me/en',
+    },
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export function generateStaticParams() {

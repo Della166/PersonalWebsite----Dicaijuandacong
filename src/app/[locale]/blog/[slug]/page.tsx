@@ -14,6 +14,49 @@ export async function generateStaticParams() {
   return posts.map((post) => ({ slug: post.slug }));
 }
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>;
+}) {
+  const { locale, slug } = await params;
+  const post = getContentBySlug('blog', slug, locale);
+  if (!post) return {};
+  const { frontmatter } = post;
+  const title = locale === 'zh' ? frontmatter.title : (frontmatter.title_en || frontmatter.title);
+  const description =
+    locale === 'zh'
+      ? frontmatter.excerpt || frontmatter.excerpt_en
+      : frontmatter.excerpt_en || frontmatter.excerpt;
+  const url = `https://fulingchen.me/${locale}/blog/${slug}`;
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: url,
+      languages: {
+        'zh-CN': `https://fulingchen.me/zh/blog/${slug}`,
+        'en-US': `https://fulingchen.me/en/blog/${slug}`,
+      },
+    },
+    openGraph: {
+      type: 'article',
+      title,
+      description,
+      url,
+      images: ['https://fulingchen.me/opengraph-image'],
+      locale: locale === 'zh' ? 'zh_CN' : 'en_US',
+      publishedTime: frontmatter.date,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: ['https://fulingchen.me/opengraph-image'],
+    },
+  };
+}
+
 export default async function BlogPostPage({
   params,
 }: {
@@ -22,7 +65,7 @@ export default async function BlogPostPage({
   const { locale, slug } = await params;
   setRequestLocale(locale);
   const t = await getTranslations('blog');
-  const post = getContentBySlug('blog', slug);
+  const post = getContentBySlug('blog', slug, locale);
 
   if (!post) notFound();
 

@@ -17,6 +17,48 @@ export function generateStaticParams() {
   return projectDemoSlugs.map((slug) => ({ slug }));
 }
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>;
+}) {
+  const { locale, slug } = await params;
+  const project = projects.find((item) => item.slug === slug);
+  const demo = isProjectDemoSlug(slug) ? projectDemos[slug] : undefined;
+  if (!project || !demo) return {};
+  const title = locale === 'zh'
+    ? `${project.title} · 互动 Demo`
+    : `${project.title_en} · Interactive Demo`;
+  const description = locale === 'zh' ? demo.summary.zh : demo.summary.en;
+  const ogImage = project.cover || 'https://fulingchen.me/opengraph-image';
+  const url = `https://fulingchen.me/${locale}/demo/${slug}`;
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: url,
+      languages: {
+        'zh-CN': `https://fulingchen.me/zh/demo/${slug}`,
+        'en-US': `https://fulingchen.me/en/demo/${slug}`,
+      },
+    },
+    openGraph: {
+      type: 'article',
+      title,
+      description,
+      url,
+      images: [{ url: ogImage, alt: title }],
+      locale: locale === 'zh' ? 'zh_CN' : 'en_US',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [ogImage],
+    },
+  };
+}
+
 export default async function ProjectDemoPage({
   params,
 }: {
