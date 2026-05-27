@@ -6,12 +6,19 @@ import { ContentFrontmatter, ContentItem } from '@/types/content';
 
 const contentDir = path.join(process.cwd(), 'src/content');
 
+// Treat `<slug>.<locale>.mdx` (e.g. foo.zh.mdx) as a locale variant of `<slug>.mdx`,
+// not as a separate piece of content. Without this filter, generateStaticParams +
+// sitemap end up emitting bogus routes like /projects/deep-research-agent.zh.
+const LOCALE_SUFFIX = /\.(zh|en)\.mdx?$/i;
+
 export function getContentByCategory(category: string): ContentItem[] {
   const dir = path.join(contentDir, category);
 
   if (!fs.existsSync(dir)) return [];
 
-  const files = fs.readdirSync(dir).filter((f) => f.endsWith('.mdx') || f.endsWith('.md'));
+  const files = fs
+    .readdirSync(dir)
+    .filter((f) => (f.endsWith('.mdx') || f.endsWith('.md')) && !LOCALE_SUFFIX.test(f));
 
   return files
     .map((filename) => {
