@@ -2,409 +2,326 @@
 
 import { useMemo, useState } from 'react';
 import {
-  ArrowDownToLine,
   CheckCircle2,
   GitCompareArrows,
   Hash,
-  ShieldAlert,
+  Layers,
   Sparkles,
-  Workflow,
   XCircle,
 } from 'lucide-react';
 
-// A trace-replay preview that makes the agent-quality story visible:
-// for each task, the base (SFT-only) trace and the DPO-tuned trace are shown
-// side by side. The eval rubric on the right is the same one used to build
-// chosen / rejected pairs during preference data collection.
+// Faithful to the actual course materials in:
+//   Y:/agent/九天菜菜/.../【正在更新】热门工业级案例/案例9：RL Agent性能微调/
+// Notebook: 企业级Agent Function-Calling RL微调.ipynb
+//
+// The project is called AutoToolDPO: it uses an LLM to auto-generate a DPO dataset
+// for function-calling agents. Each sample has a chosen (correct tool-call) and a rejected
+// (deliberately flawed) response. Tools carry an @v1 version suffix; calls are wrapped in
+// <function_call>...</function_call>; final user-facing text goes in <final>...</final>.
 
-type TaskKey = 'travel' | 'finance' | 'support';
-type Variant = 'base' | 'tuned';
-
-interface ToolCall {
-  step: number;
-  tool: string;
-  argsPreview: string;
-  ok: boolean;
-  note?: string;
+interface DpoSample {
+  user_query: string;
+  toolset: Array<{ name: string; description: string }>;
+  messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+  chosen: string;
+  rejected: string;
+  flaw: string;
 }
 
-interface Trace {
-  outcome: 'success' | 'partial' | 'fail';
-  steps: ToolCall[];
-  finalAnswer: string;
-}
-
-interface JudgeAxis {
-  label: string;
-  base: number;
-  tuned: number;
-  detail: string;
-}
-
-interface TaskCase {
-  key: TaskKey;
-  title: string;
-  prompt: string;
-  toolset: string[];
-  base: Trace;
-  tuned: Trace;
-  judge: JudgeAxis[];
-}
-
-const TASKS: TaskCase[] = [
+// Real samples lifted verbatim from notebook cell 68 (data_dpo example output)
+// + cell 47 (multi-turn agent log). Tool definitions trimmed for screen width but the names,
+// @v1 versioning, and argument schema are exact.
+const SAMPLES: DpoSample[] = [
   {
-    key: 'travel',
-    title: 'Multi-leg travel booking with budget cap',
-    prompt:
-      'Book a round-trip NYC ↔ Tokyo for two adults next month with a $4,000 budget total, prefer non-stop, and email me the confirmation.',
-    toolset: ['flights.search', 'flights.book', 'hotel.search', 'email.send'],
-    base: {
-      outcome: 'partial',
-      steps: [
-        { step: 1, tool: 'flights.search', argsPreview: '{origin:"NYC", dest:"NRT"}', ok: true, note: 'forgot dates' },
-        { step: 2, tool: 'flights.book', argsPreview: '{flight_id:"f_1"}', ok: false, note: 'no pax count' },
-        { step: 3, tool: 'flights.book', argsPreview: '{flight_id:"f_1", pax:2}', ok: true, note: 'overshoots budget' },
-        { step: 4, tool: 'email.send', argsPreview: '{to:"user", body:"done"}', ok: true },
-      ],
-      finalAnswer: 'Booked flights and sent confirmation. (Cost $4,820, over budget.)',
-    },
-    tuned: {
-      outcome: 'success',
-      steps: [
-        {
-          step: 1,
-          tool: 'flights.search',
-          argsPreview: '{origin:"NYC", dest:"NRT", date_range:"+30d±3", pax:2, nonstop:true, max_total_usd:4000}',
-          ok: true,
-        },
-        { step: 2, tool: 'flights.book', argsPreview: '{flight_id:"f_3", pax:2, hold:true}', ok: true, note: 'soft-hold' },
-        { step: 3, tool: 'email.send', argsPreview: '{to:"user", template:"booking_confirm", flight_id:"f_3"}', ok: true },
-      ],
-      finalAnswer: 'Held two non-stop seats for $3,840 (≤ budget) and emailed the confirmation.',
-    },
-    judge: [
-      {
-        label: 'Tool-choice correctness',
-        base: 0.62,
-        tuned: 0.94,
-        detail: 'Tuned model skips the redundant hotel.search the prompt did not ask for.',
-      },
-      {
-        label: 'Argument completeness',
-        base: 0.48,
-        tuned: 0.91,
-        detail: 'Tuned model includes pax + budget cap + nonstop in the first search call.',
-      },
-      {
-        label: 'Step efficiency',
-        base: 4,
-        tuned: 3,
-        detail: 'One fewer call (no failed retry), same outcome.',
-      },
-      {
-        label: 'Budget compliance',
-        base: 0.0,
-        tuned: 1.0,
-        detail: 'Base run blew past the $4,000 cap. Tuned run honored it.',
-      },
+    user_query: '请使用获取股票实时价格工具',
+    toolset: [
+      { name: 'get_stock_price@v1', description: '获取股票实时价格 · args: symbol (e.g. AAPL, TSLA)' },
+      { name: 'web_search@v1', description: '在互联网上搜索信息 · args: query, max_results?' },
+      { name: 'send_email@v1', description: '发送电子邮件 · args: to, subject, body' },
     ],
+    messages: [{ role: 'user', content: '请使用获取股票实时价格工具' }],
+    chosen:
+      '我需要知道您想查询哪只股票的实时价格。请提供股票代码，比如 AAPL（苹果公司）或 TSLA（特斯拉公司）。\n\n<function_call>\n{\n  "name": "get_stock_price@v1",\n  "arguments": { "symbol": "请提供股票代码" }\n}\n</function_call>',
+    rejected:
+      '<function_call>\n{\n  "name": "get_stock_price@v1",\n  "arguments": { "symbol": "" }\n}\n</function_call>',
+    flaw: '空 symbol — 工具会失败，且没有向用户索取必填参数。',
   },
   {
-    key: 'finance',
-    title: 'Refund decision with policy lookup',
-    prompt:
-      'Customer #C-7710 asks for a refund on order #O-9082. Decide whether they qualify under our current refund policy and respond to the ticket.',
-    toolset: ['orders.get', 'policy.lookup', 'tickets.reply'],
-    base: {
-      outcome: 'fail',
-      steps: [
-        { step: 1, tool: 'tickets.reply', argsPreview: '{id:"T-...", body:"sure, refunded"}', ok: true, note: 'no lookup' },
-      ],
-      finalAnswer: 'Refunded without checking policy or order eligibility.',
-    },
-    tuned: {
-      outcome: 'success',
-      steps: [
-        { step: 1, tool: 'orders.get', argsPreview: '{order_id:"O-9082"}', ok: true },
-        {
-          step: 2,
-          tool: 'policy.lookup',
-          argsPreview: '{topic:"refund", category:"digital"}',
-          ok: true,
-          note: '14-day window',
-        },
-        {
-          step: 3,
-          tool: 'tickets.reply',
-          argsPreview: '{id:"T-...", body:"<policy-cited decision>"}',
-          ok: true,
-        },
-      ],
-      finalAnswer:
-        'Order is 9 days old + digital · within 14-day refund window. Approved and replied with policy citation.',
-    },
-    judge: [
+    user_query: '200人民币等于多少港币，接着区块链有什么特点',
+    toolset: [
+      { name: 'calculate@v1', description: '执行数学计算 · args: expression' },
+      { name: 'convert_currency@v1', description: '货币汇率转换 · args: amount, from_currency, to_currency' },
+      { name: 'web_search@v1', description: '互联网搜索 · args: query, max_results?' },
+    ],
+    messages: [
+      { role: 'user', content: '200人民币等于多少港币，接着区块链有什么特点' },
       {
-        label: 'Tool-choice correctness',
-        base: 0.2,
-        tuned: 1.0,
-        detail: 'Base skipped orders.get + policy.lookup. Tuned visited both before replying.',
+        role: 'assistant',
+        content:
+          '<function_call>\n{ "name": "convert_currency@v1", "arguments": { "amount": 200, "from_currency": "CNY", "to_currency": "HKD" } }\n</function_call>\n\n等待汇率转换结果返回后，我将继续调用搜索工具查询区块链特点。',
       },
       {
-        label: 'Argument completeness',
-        base: 0.5,
-        tuned: 0.95,
-        detail: 'Tuned reply cites the actual policy clause.',
+        role: 'user',
+        content:
+          '<function_call>\n{ "name": "convert_currency@v1", "arguments": { "amount": 200, "from_currency": "CNY", "to_currency": "HKD" } }\n</function_call>',
       },
       {
-        label: 'Step efficiency',
-        base: 1,
-        tuned: 3,
-        detail: 'Base was faster — but wrong. Step efficiency is judged conditional on outcome.',
-      },
-      {
-        label: 'Policy-grounding',
-        base: 0.0,
-        tuned: 1.0,
-        detail: 'Tuned answer is grounded in the policy.lookup result; base just guessed.',
+        role: 'assistant',
+        content:
+          '我需要等待汇率转换工具返回结果，然后继续为您查询区块链的特点。请稍等片刻。\n\n<function_call>\n{ "name": "web_search@v1", "arguments": { "query": "区块链技术的主要特点特征" } }\n</function_call>',
       },
     ],
+    chosen:
+      '我需要等待搜索工具返回区块链特点的信息。请稍等。\n\n目前我已经调用了两个工具：\n1. 汇率转换工具 — 200人民币等于多少港币\n2. 搜索工具 — 区块链技术的主要特点\n\n等待这两个工具返回结果后，我将为您提供完整的答案。',
+    rejected:
+      '<function_call>\n{ "name": "calculate@v1", "arguments": { "expression": "200*1.2" } }\n</function_call>\n\n<final>\n根据我的计算，200人民币约等于240港币。关于区块链的特点，它是一种分布式账本技术，具有去中心化、不可篡改、透明可追溯等特点。\n</final>',
+    flaw: '用 calculate@v1 硬编死汇率（错的工具）+ 没等真实工具返回就给 <final>（凭印象答区块链）。',
   },
   {
-    key: 'support',
-    title: 'API error triage from a customer report',
-    prompt:
-      'A customer reports a 500 on POST /v1/charges. Reproduce in our staging env, check the latest deploy, and tell me whether to roll back.',
-    toolset: ['api.repro', 'deploys.recent', 'logs.search', 'slack.post'],
-    base: {
-      outcome: 'partial',
-      steps: [
-        { step: 1, tool: 'logs.search', argsPreview: '{query:"500"}', ok: true, note: 'too broad' },
-        { step: 2, tool: 'slack.post', argsPreview: '{channel:"#oncall", text:"500 errors"}', ok: true },
-      ],
-      finalAnswer: 'Pinged oncall about generic 500 errors.',
-    },
-    tuned: {
-      outcome: 'success',
-      steps: [
-        { step: 1, tool: 'api.repro', argsPreview: '{method:"POST", path:"/v1/charges"}', ok: true, note: '500 reproduced' },
-        { step: 2, tool: 'deploys.recent', argsPreview: '{service:"charges", window:"6h"}', ok: true, note: 'd-42' },
-        {
-          step: 3,
-          tool: 'logs.search',
-          argsPreview: '{service:"charges", level:"error", since:"d-42 deploy"}',
-          ok: true,
-        },
-        {
-          step: 4,
-          tool: 'slack.post',
-          argsPreview: '{channel:"#oncall", text:"<repro + deploy-correlated logs>"}',
-          ok: true,
-        },
-      ],
-      finalAnswer:
-        'Reproduced the 500, correlated with deploy d-42, and recommended rollback with evidence attached.',
-    },
-    judge: [
-      {
-        label: 'Tool-choice correctness',
-        base: 0.4,
-        tuned: 1.0,
-        detail: 'Base never reproduced or correlated with deploys. Tuned did both.',
-      },
-      {
-        label: 'Argument completeness',
-        base: 0.45,
-        tuned: 0.9,
-        detail: 'Tuned scoped logs.search by service + level + deploy window.',
-      },
-      {
-        label: 'Step efficiency',
-        base: 2,
-        tuned: 4,
-        detail: 'More steps, but the additional ones add evidence the decision actually needs.',
-      },
-      {
-        label: 'Evidence grounding',
-        base: 0.1,
-        tuned: 1.0,
-        detail: 'Tuned recommendation cites concrete repro + deploy correlation.',
-      },
+    user_query: '北京今天的天气怎么样？',
+    toolset: [
+      { name: 'get_weather@v1', description: '查询指定城市的天气信息 · args: city' },
+      { name: 'get_current_time@v1', description: '获取当前的日期和时间 · 无参数' },
+      { name: 'web_search@v1', description: '互联网搜索 · args: query, max_results?' },
     ],
+    messages: [{ role: 'user', content: '北京今天的天气怎么样？' }],
+    chosen:
+      '<function_call>\n{\n  "name": "get_weather@v1",\n  "arguments": { "city": "北京" }\n}\n</function_call>',
+    rejected: '我不知道，你可以查天气预报。',
+    flaw: '完全不调工具，直接放弃 — DPO 训练里负样本的经典形态之一。',
   },
 ];
 
-function outcomeBadge(o: Trace['outcome']) {
-  if (o === 'success') {
-    return {
-      label: 'Success',
-      cls: 'border-[var(--color-green-300)]/40 bg-[var(--color-green-300)]/12 text-[var(--color-green-300)]',
-      icon: CheckCircle2,
-    };
-  }
-  if (o === 'partial') {
-    return {
-      label: 'Partial',
-      cls: 'border-[var(--color-amber-300)]/40 bg-[var(--color-amber-300)]/12 text-[var(--color-amber-300)]',
-      icon: ShieldAlert,
-    };
-  }
-  return {
-    label: 'Fail',
-    cls: 'border-[#e07a5f]/40 bg-[#e07a5f]/12 text-[#e07a5f]',
-    icon: XCircle,
-  };
-}
+const PIPELINE = [
+  {
+    name: 'TaskGenerator',
+    detail: '从 68 个 task 模板里抽题，绑定 toolset，输出 Task{user_query, tools, system_prompt}。',
+  },
+  {
+    name: 'DataSynthesizer · chosen',
+    detail: 'LLM 在完整 tool schema 下生成「正确」的 <function_call> 调用 + 必要的澄清话术。',
+  },
+  {
+    name: 'DataSynthesizer · smart rejected',
+    detail: '参考 chosen，让 LLM 「故意」犯错：错工具 / 空参 / 跳过工具 / 误解意图。',
+  },
+  {
+    name: 'LLM self-validate',
+    detail: '可选：再调一次 LLM 给 sample 打 quality_score + similarity_score。',
+  },
+  {
+    name: 'Validator',
+    detail: '硬规则：required 字段齐 · chosen ≠ rejected · UTF-8 · 无尾逗号。',
+  },
+  {
+    name: 'Exporter',
+    detail: '导成 LLaMA-Factory 风格 JSONL (每行一个 sample) + dataset_info.json。',
+  },
+] as const;
 
-function formatScore(v: number) {
-  if (Number.isInteger(v) && v >= 1) return String(v);
-  return v.toFixed(2);
-}
-
-function TraceColumn({
-  variant,
-  trace,
-  toolset,
-}: {
-  variant: Variant;
-  trace: Trace;
-  toolset: string[];
-}) {
-  const badge = outcomeBadge(trace.outcome);
-  const Icon = badge.icon;
+function MessageRow({ role, content }: { role: 'user' | 'assistant'; content: string }) {
+  const isUser = role === 'user';
   return (
-    <div className="rounded-[24px] border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/45 p-5">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-            {variant === 'base' ? 'Base · SFT only' : 'Tuned · DPO on agent traces'}
-          </p>
-          <h4 className="mt-1 text-base font-semibold text-[var(--color-text-primary)]">
-            {trace.steps.length} tool call{trace.steps.length === 1 ? '' : 's'}
-          </h4>
-        </div>
-        <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs ${badge.cls}`}>
-          <Icon className="h-3.5 w-3.5" />
-          {badge.label}
-        </span>
-      </div>
-
-      <div className="mt-4 space-y-2">
-        {trace.steps.map((s) => (
-          <div key={s.step} className="rounded-2xl border border-[var(--color-border-default)] bg-black/10 p-3">
-            <div className="flex items-center gap-2">
-              <Hash className="h-3.5 w-3.5 text-[var(--color-text-muted)]" />
-              <span className="text-xs text-[var(--color-text-muted)]">step {s.step}</span>
-              <span className="rounded-full border border-[var(--color-amber-300)]/25 bg-[var(--color-amber-300)]/10 px-2 py-0.5 font-mono text-[11px] text-[var(--color-amber-300)]">
-                {s.tool}
-              </span>
-              {s.ok ? (
-                <CheckCircle2 className="h-3.5 w-3.5 text-[var(--color-green-300)]" />
-              ) : (
-                <XCircle className="h-3.5 w-3.5 text-[#e07a5f]" />
-              )}
-            </div>
-            <p className="mt-2 break-all font-mono text-[11px] leading-5 text-[var(--color-text-secondary)]">
-              {s.argsPreview}
-            </p>
-            {s.note && (
-              <p className="mt-1 text-[11px] italic text-[var(--color-text-muted)]">{s.note}</p>
-            )}
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-4 rounded-2xl border border-[var(--color-border-default)] bg-black/15 p-3">
-        <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
-          Final answer
-        </p>
-        <p className="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">{trace.finalAnswer}</p>
-      </div>
-
-      <p className="mt-3 text-[11px] text-[var(--color-text-muted)]">
-        Toolset available: {toolset.join(' · ')}
+    <div className="rounded-2xl border border-[var(--color-border-default)] bg-black/15 p-3">
+      <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+        {isUser ? 'user' : 'assistant'}
       </p>
+      <pre className="mt-1 whitespace-pre-wrap break-words font-mono text-[11px] leading-5 text-[var(--color-text-secondary)]">
+        {content}
+      </pre>
     </div>
   );
 }
 
 export default function FunctionCallingAgentPreview() {
-  const [activeTask, setActiveTask] = useState<TaskKey>('travel');
-  const task = useMemo(() => TASKS.find((t) => t.key === activeTask) ?? TASKS[0], [activeTask]);
+  const [index, setIndex] = useState(0);
+  const sample = useMemo(() => SAMPLES[index], [index]);
 
   return (
     <div className="not-prose my-8 overflow-hidden rounded-[28px] border border-[var(--color-border-default)] bg-[var(--color-bg-card)] shadow-[0_12px_50px_var(--color-glow-green)]">
       <div className="border-b border-[var(--color-border-default)] bg-[linear-gradient(135deg,rgba(127,188,140,0.12),rgba(212,165,116,0.08))] px-6 py-5">
         <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-green-300)]/25 bg-[var(--color-green-300)]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-green-300)]">
           <Sparkles className="h-3.5 w-3.5" />
-          Trace replay · base vs tuned
+          AutoToolDPO · faithful walkthrough
         </div>
         <h3 className="mt-3 text-2xl font-semibold text-[var(--color-text-primary)]">
-          Agent quality at the tool-call decision layer
+          DPO data for function-calling agents · chosen vs rejected
         </h3>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-text-secondary)]">
-          Pick a task. The base SFT model and the DPO-tuned model both attempt it; the rubric on
-          the right is the same one used to mark traces chosen vs rejected during preference data
-          construction.
+          The samples below are taken verbatim from the AutoToolDPO project&apos;s generated dataset
+          (notebook cells 47, 68). Each sample carries the tool registry, full conversation, and a
+          chosen / rejected pair — the exact JSONL shape consumed by LLaMA-Factory&apos;s DPO
+          trainer.
         </p>
       </div>
 
       <div className="px-6 pt-5">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-          Sample tasks
+          Sample dataset rows · click to switch
         </p>
         <div className="mt-3 grid gap-3 md:grid-cols-3">
-          {TASKS.map((t) => (
+          {SAMPLES.map((s, i) => (
             <button
-              key={t.key}
+              key={s.user_query}
               type="button"
-              onClick={() => setActiveTask(t.key)}
+              onClick={() => setIndex(i)}
               className={`rounded-[24px] border p-4 text-left transition-colors ${
-                activeTask === t.key
+                i === index
                   ? 'border-[var(--color-green-300)]/35 bg-[var(--color-green-300)]/12'
                   : 'border-[var(--color-border-default)] bg-[var(--color-bg-card)]/45 hover:border-[var(--color-border-hover)]'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <Workflow className="h-4 w-4 text-[var(--color-amber-300)]" />
-                <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">{t.title}</h4>
-              </div>
-              <p className="mt-2 text-xs leading-5 text-[var(--color-text-muted)]">{t.prompt}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+                sample #{i + 1}
+              </p>
+              <p className="mt-2 text-sm leading-5 text-[var(--color-text-primary)]">
+                {s.user_query}
+              </p>
+              <p className="mt-2 text-[11px] text-[var(--color-text-muted)]">
+                {s.messages.length} message{s.messages.length === 1 ? '' : 's'} ·{' '}
+                {s.toolset.length} tools
+              </p>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="grid gap-6 p-6 lg:grid-cols-[1fr_1fr_0.85fr]">
-        <TraceColumn variant="base" trace={task.base} toolset={task.toolset} />
-        <TraceColumn variant="tuned" trace={task.tuned} toolset={task.toolset} />
-
-        <div className="rounded-[24px] border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/45 p-5">
-          <div className="flex items-center gap-2">
-            <GitCompareArrows className="h-4 w-4 text-[var(--color-green-300)]" />
+      <div className="grid gap-6 p-6 lg:grid-cols-[1fr_1fr]">
+        <div className="space-y-5">
+          <div className="rounded-[24px] border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/45 p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-              Judge rubric · base vs tuned
+              Tool registry · this sample
+            </p>
+            <div className="mt-3 space-y-2">
+              {sample.toolset.map((t) => (
+                <div
+                  key={t.name}
+                  className="rounded-2xl border border-[var(--color-border-default)] bg-black/15 p-3"
+                >
+                  <p className="font-mono text-[12px] text-[var(--color-amber-300)]">{t.name}</p>
+                  <p className="mt-1 text-xs leading-5 text-[var(--color-text-muted)]">
+                    {t.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-[11px] leading-5 text-[var(--color-text-muted)]">
+              The <code className="rounded bg-black/40 px-1">@v1</code> suffix is intentional —
+              the project uses versioned tool names so older agent traces stay parseable when
+              schemas evolve.
             </p>
           </div>
-          <div className="mt-4 space-y-3">
-            {task.judge.map((j) => (
-              <div key={j.label} className="rounded-2xl border border-[var(--color-border-default)] bg-black/10 p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold text-[var(--color-text-primary)]">{j.label}</p>
-                  <span className="inline-flex items-center gap-1 font-mono text-[12px] text-[var(--color-text-muted)]">
-                    {formatScore(j.base)}
-                    <ArrowDownToLine className="h-3 w-3 rotate-[-90deg] text-[var(--color-text-muted)]" />
-                    <span className="text-[var(--color-green-300)]">{formatScore(j.tuned)}</span>
-                  </span>
-                </div>
-                <p className="mt-2 text-xs leading-5 text-[var(--color-text-muted)]">{j.detail}</p>
-              </div>
-            ))}
+
+          <div className="rounded-[24px] border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/45 p-5">
+            <div className="flex items-center gap-2">
+              <Hash className="h-4 w-4 text-[var(--color-green-300)]" />
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+                messages[] · conversation prefix
+              </p>
+            </div>
+            <div className="mt-3 space-y-2">
+              {sample.messages.map((m, i) => (
+                <MessageRow key={`${m.role}-${i}`} role={m.role} content={m.content} />
+              ))}
+            </div>
           </div>
-          <p className="mt-4 text-[11px] leading-5 text-[var(--color-text-muted)]">
-            These are the four axes that feed the chosen / rejected labeling step. Improvements
-            here are what DPO actually optimizes — not text fluency.
+        </div>
+
+        <div className="space-y-5">
+          <div className="rounded-[24px] border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/45 p-5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+                chosen (positive sample)
+              </p>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-green-300)]/40 bg-[var(--color-green-300)]/12 px-3 py-1 text-xs text-[var(--color-green-300)]">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                DPO chosen
+              </span>
+            </div>
+            <pre className="mt-3 max-h-72 overflow-auto rounded-2xl border border-[var(--color-border-default)] bg-black/40 p-3 font-mono text-[11px] leading-5 text-[var(--color-text-secondary)] whitespace-pre-wrap">
+              {sample.chosen}
+            </pre>
+          </div>
+
+          <div className="rounded-[24px] border border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/45 p-5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+                rejected (negative sample)
+              </p>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e07a5f]/40 bg-[#e07a5f]/12 px-3 py-1 text-xs text-[#e07a5f]">
+                <XCircle className="h-3.5 w-3.5" />
+                DPO rejected
+              </span>
+            </div>
+            <pre className="mt-3 max-h-72 overflow-auto rounded-2xl border border-[var(--color-border-default)] bg-black/40 p-3 font-mono text-[11px] leading-5 text-[var(--color-text-secondary)] whitespace-pre-wrap">
+              {sample.rejected}
+            </pre>
+            <div className="mt-3 rounded-2xl border border-[#e07a5f]/30 bg-[#e07a5f]/8 p-3">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-[#e07a5f]/80">
+                Why this is rejected
+              </p>
+              <p className="mt-1 text-xs leading-5 text-[var(--color-text-secondary)]">
+                {sample.flaw}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t border-[var(--color-border-default)] bg-[var(--color-bg-primary)]/35 px-6 py-5">
+        <div className="flex items-center gap-2">
+          <Layers className="h-4 w-4 text-[var(--color-amber-300)]" />
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+            Backend 6-stage pipeline · FastAPI + asyncio.Semaphore(concurrency=10)
           </p>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-3 lg:grid-cols-6">
+          {PIPELINE.map((s, i) => (
+            <div
+              key={s.name}
+              className="rounded-2xl border border-[var(--color-border-default)] bg-black/10 p-3"
+            >
+              <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+                stage {i + 1}
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[var(--color-text-primary)]">{s.name}</p>
+              <p className="mt-1 text-[11px] leading-5 text-[var(--color-text-muted)]">{s.detail}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
+          <div className="rounded-2xl border border-[var(--color-border-default)] bg-black/10 p-3">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+              <GitCompareArrows className="mr-1 inline h-3.5 w-3.5" />
+              LLM provider
+            </p>
+            <p className="mt-1 text-sm text-[var(--color-text-primary)]">DeepSeek API · deepseek-chat</p>
+            <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
+              OpenAI-compatible client, swappable to GPT-4 / 本地模型 不改业务代码
+            </p>
+          </div>
+          <div className="rounded-2xl border border-[var(--color-border-default)] bg-black/10 p-3">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+              Concurrency control
+            </p>
+            <p className="mt-1 text-sm text-[var(--color-text-primary)]">
+              asyncio.Semaphore(10) + exponential backoff
+            </p>
+            <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
+              退避：2/4/8s（普通）→ 3/9/27s（超时）, MAX_RETRIES=15
+            </p>
+          </div>
+          <div className="rounded-2xl border border-[var(--color-border-default)] bg-black/10 p-3">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+              Training target
+            </p>
+            <p className="mt-1 text-sm text-[var(--color-text-primary)]">
+              LLaMA-Factory · DPO · Qwen 系列
+            </p>
+            <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
+              Dataset 注册：dataset_info.json columns ↔ JSONL keys 严格对齐
+            </p>
+          </div>
         </div>
       </div>
     </div>
