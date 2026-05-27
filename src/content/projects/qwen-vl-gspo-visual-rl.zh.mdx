@@ -1,0 +1,154 @@
+---
+title: "Qwen3-VL 视觉强化学习实战（Unsloth + GSPO）"
+title_en: "Qwen3-VL Visual RL with Unsloth + GSPO"
+date: "2026-04-12"
+category: project
+tags: ["Qwen3-VL", "GSPO", "GRPO", "Unsloth", "LoRA", "Vision Language Model", "TRL", "MathVista"]
+lang: both
+cover: "/projects/qwen-vl-gspo-visual-rl/cover.svg"
+excerpt: "在单张消费级 GPU 上，用 Unsloth + GSPO 对 Qwen3-VL 8B 做视觉强化学习，让它在 MathVista 看图解数学题任务上学会规范输出推理过程与数值答案。"
+excerpt_en: "Reinforcement learning for a vision-language model on a single consumer GPU: Unsloth + GSPO fine-tunes Qwen3-VL 8B on MathVista visual math, teaching it to emit structured reasoning and a numeric answer."
+platforms: [website]
+github: ""
+demo: "/demo/qwen-vl-gspo-visual-rl"
+published: true
+---
+
+<Callout type="info">
+  视觉语言模型 + 强化学习 + 单张消费卡，三件事同时成立。基座是 <strong>Qwen3-VL 8B</strong>，通过 <strong>Unsloth</strong> 4-bit 装入显存，用 <strong>GSPO</strong>（GRPO 的序列级版本）在 <strong>MathVista</strong> 看图解数学题任务上训练。目标是方法论清晰——数据 → 奖励 → 训练 → 前后评估——不是冲榜。
+</Callout>
+
+## 任务定义
+
+给一张图（统计图 / 几何图 / 函数图），让模型**先写推理过程，再给一个数值答案**。强制输出结构：
+
+```
+<REASONING>
+…在这里写推理…
+</REASONING>
+<SOLUTION>
+最终数值
+</SOLUTION>
+```
+
+为什么不用更多 SFT 数据而用 RL？因为 MathVista 这种任务**正确答案稀疏但可验证**，RL 比 SFT 更能教模型「**怎么思考**」而不是「**怎么背**」。
+
+## 整个 loop 装得下一张 4090
+
+能在 24 GB 卡上跑通靠两个关键决定：
+
+1. **Unsloth 4-bit + LoRA**：base model 加载用 `unsloth/Qwen3-VL-8B-Instruct-unsloth-bnb-4bit`，4-bit 量化，LoRA 只挂在「语言/attention/MLP」层
+2. **冻结视觉编码器**：现在 vLLM 的 LoRA 共享机制不支持 vision layers + 任务是「让模型对它看到的东西更会推理」，不是「让它看得更清楚」
+
+## 8 阶段流水线（notebook 章节）
+
+```
+1. 环境          ─ Unsloth, transformers 4.57.0, trl 0.22.2, bitsandbytes, PEFT
+2. 模型加载      ─ FastVisionModel.from_pretrained(..., max_seq_length=16384)
+                   （VLM 上下文要够长：image tokens + prompt + 长推理）
+3. LoRA 包装     ─ r=16, lora_alpha=16，挂在语言/attention/MLP 层；视觉冻结
+4. 数据          ─ AI4Math/MathVista (testmini)，过滤到 numeric answer，
+                   image resize 512×512 RGB，按 Qwen-VL chat template
+                   组装成 <REASONING>...<SOLUTION>... 提问；留出 100 条做 eval
+5. Baseline       ─ 未微调模型在留出集上跑，记录 per-sample
+                    {pred, correct, format_ok} 到 baseline_records.json
+6. 训练           ─ GRPOTrainer + 2 个 reward + GSPO 通过 config 开关切换
+7. 训练后 eval    ─ 在同一留出集上重跑，diff vs baseline_records
+8. 导出           ─ 保存 LoRA adapter，验证 A/B 矩阵非零，可选合并到 16/4-bit 或 GGUF
+```
+
+## 奖励设计：2 个可解释 scalar
+
+```python
+def format_reward_func(completions, **kwargs):
+    """格式奖励 · λ=0.3"""
+    rewards = []
+    for c in completions:
+        r = 0.0
+        # 恰好一个 <REASONING>...</REASONING> 块
+        if c.count("<REASONING>") == 1 and c.count("</REASONING>") == 1:
+            r += 1.0
+        # 恰好一个 <SOLUTION>...</SOLUTION> 块
+        if c.count("<SOLUTION>") == 1 and c.count("</SOLUTION>") == 1:
+            r += 1.0
+        # 真实失败模式：Qwen-VL 偶尔重复输出 addCriterion config token
+        # 检测到就扣 2 分，避免 policy collapse 到 gibberish
+        if "addCriterion" in c:
+            r -= 2.0
+        rewards.append(r)
+    return rewards
+
+def correctness_reward_func(completions, answer, **kwargs):
+    """正确性奖励 · λ=1.0"""
+    rewards = []
+    for c, gold in zip(completions, answer):
+        pred = extract_solution(c)
+        if pred == gold:
+            rewards.append(2.0)              # 精确字符串匹配
+        elif numeric_equal(pred, gold):
+            rewards.append(1.5)              # 数值匹配（"3" vs "3.0"）
+        else:
+            rewards.append(0.0)
+    return rewards
+
+# 总奖励 = 0.3 · R_format + 1.0 · R_correct
+```
+
+**addCriterion 惩罚**是个真实的 Qwen-VL 故障模式——模型偶尔会陷入重复输出某个 config-like token 的状态，加这个 negative reward 防止 policy collapse。
+
+## GSPO 在 codebase 里其实只是一个 config 开关
+
+GSPO 不是单独的 trainer，是 GRPO **importance ratio 算在 sequence 级别**而不是 token 级别。开关在这里：
+
+```python
+training_args = GRPOConfig(
+    learning_rate=5e-6,
+    lr_scheduler_type="cosine",
+    optim="adamw_8bit",
+    per_device_train_batch_size=8,
+    gradient_accumulation_steps=4,
+    num_generations=4,                       # K=4 candidates per prompt
+    max_prompt_length=1024,
+    max_completion_length=1024,
+    num_train_epochs=1,
+    max_grad_norm=0.1,
+    # ↓ 这一行把 GRPO 切成 GSPO
+    importance_sampling_level="sequence",
+    mask_truncated_completions=False,
+    loss_type="dr_grpo",
+)
+
+trainer = GRPOTrainer(
+    model=model, tokenizer=tokenizer, args=training_args,
+    train_dataset=train_data,
+    reward_funcs=[format_reward_func, correctness_reward_func],
+    reward_weights=[0.3, 1.0],
+)
+```
+
+**为什么 sequence 级更稳**：长视觉推理链上单个 mis-sampled token 会主导 token 级 gradient；sequence 级 importance correction 让 credit assignment 在整段推理上更稳健。
+
+## 真实评估数字
+
+在 100 条留出集上的诚实数据（短训练，单卡）：
+
+| 指标 | 训练前 | 训练后 |
+|---|---|---|
+| Answer accuracy | 5.0% | 6.0% |
+| Format compliance | 77.0% | 84.0% |
+
+准确率几乎没动——MathVista 太难、训练步数也短。**真正的信号在 format compliance：77% → 84%**——GSPO 把 policy 可靠地推向了「按规定结构输出」，并远离 addCriterion 故障态。
+
+项目自带 `baseline_records.json` / `after_records.json`，每条 sample 的 before/after 都可审计，不是「我说提升了就提升了」。
+
+## 价值点
+
+- 熟练使用**现代 LLM-RL stack**（TRL 的 GRPO/GSPO），不是教科书 PPO
+- **单卡多模态 RL**：Unsloth 4-bit + LoRA 让 VLM RL 在消费级硬件上跑通
+- **奖励工程**：两个可解释 reward 包含真实失败模式的惩罚项
+- **评估纪律**：固定留出集、per-sample 记录、before/after diff，不是单一数字
+
+<DemoStatus
+  title="Demo 真实可跑"
+  description="不是 replay：互动 Demo 是 live reward calculator。你编辑 VLM completion 和 gold 答案，两个真实 reward 函数（formatting 带 addCriterion 惩罚 λ=0.3、correctness 精确-2.0/数值-1.5 λ=1.0，从 notebook 逐字移植）在浏览器里实时重算。真实前后评估（准确率 5%→6%、格式 77%→84%）来自项目自己的 records。双语 EN/中文。"
+/>

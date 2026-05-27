@@ -1,0 +1,164 @@
+---
+title: "OpenClaw Skill 开发实战"
+title_en: "OpenClaw Skill Development"
+date: "2026-04-18"
+category: project
+tags: ["OpenClaw", "Agent Skills", "SKILL.md", "Lobster", "Bash", "Workflow"]
+lang: both
+cover: "/projects/openclaw-skill-framework/cover.svg"
+excerpt: "吃透 OpenClaw 的 Skill 扩展机制（用 SKILL.md 而非代码插件教 Agent 用工具），并从零做出一个完整可用的 Daily Briefing Skill，再用 Lobster 工作流把搜索→总结→审批→推送串成可靠管线。"
+excerpt_en: "A practical study of OpenClaw's Skill system — teaching an agent to use tools via SKILL.md instead of code plugins — plus a complete Daily Briefing skill built from scratch and a Lobster workflow that chains search → summarize → approve → push."
+platforms: [website]
+github: ""
+demo: "/demo/openclaw-skill-framework"
+published: true
+---
+
+<Callout type="info">
+  OpenClaw 是开源 Agent harness，<strong>Skill</strong> 是它最轻的扩展单位——一个 <code>SKILL.md</code> Markdown 文件，**用文档教 Agent 用工具**，而不是写代码插件。这个项目把 Skill 机制的真实运转吃透，再从零搭一个完整可跑的 Daily Briefing Skill，最后用 Lobster 工作流编排。
+</Callout>
+
+## OpenClaw 的 3 种扩展方式（先选对类型）
+
+| | **Skill** | **Plugin** | **Channel** |
+|---|---|---|---|
+| 形态 | `SKILL.md`（Markdown 指令） | TypeScript / Python 代码 | 通讯渠道接入 |
+| 教什么 | 怎么用工具 | 新的 API 表面 | 一个聊天渠道（Slack / Telegram…）|
+| 安装 | `clawhub install` | `openclaw plugins install` | 内置 |
+
+**Skill 就是个 Markdown 文件**（加可选的脚本/参考），Agent 按需加载，读完知道**什么时候**该用、**怎么**用。没有编译、没有 plugin API——这正是 Skill 能 scale 的原因：Agent 自己就能写。
+
+## SKILL.md 的解剖
+
+一个 Skill 是个自包含目录，入口是 `SKILL.md`，**YAML frontmatter + Markdown body**：
+
+```yaml
+---
+name: daily-briefing
+description: "Generate a structured daily work briefing from Git activity and manual input.
+  Use when (1) user says 'daily briefing'; (2) user asks to summarize today's work;
+  (3) user shares work items for formatting."
+metadata:
+  openclaw:
+    emoji: "📋"
+    requires:
+      bins: ["git"]
+    install:
+      - type: brew
+        package: git
+---
+
+## Trigger
+- user says "日报" / "daily briefing"
+- user shares work items
+
+## Process
+1. if no items given, run `{baseDir}/scripts/collect-git-activity.sh` to gather today's commits
+2. classify into ✅ done / ⚠️ blocked / 📅 tomorrow
+3. format with the template below
+
+## Rules
+- use the exact template — no extra sections
+- do NOT add a summary or commentary at the end
+```
+
+3 个最关键的字段：
+
+- **`description`**：路由信号。**封顶约 250 token**，必须明确**何时**该被触发（"Use when (1)…(2)…(3)…"）。Agent 拿这个跟用户输入做匹配——这是 Skill 系统里最高杠杆的字段
+- **`metadata.openclaw.requires`**：声明依赖（`bins` / `env` / `config`），harness 启动前会检查环境
+- **`metadata.openclaw.install`**：缺依赖时怎么装（`brew` / `node` / `go` / `uv` / `download`）
+
+## Skill 是怎么被发现和加载的
+
+层级搜索路径（workspace local 优先 → user level → 内置 ~50 个 skill），`clawhub install` 装的托管 skill 落到 `~/.openclaw/skills/`。**Loader watch 这些目录**，丢一个新 `SKILL.md` 进去几百毫秒就能用，**无需重启**。
+
+但 **Skill 不是免费的**——它**驻留在 system prompt 里**，每多一个就吃 token。所以 description 要写紧，越精炼路由越准。
+
+## 完整可跑的 Daily Briefing Skill
+
+具体交付物：
+
+### 1. `SKILL.md`（路由 + 流程 + 模板）
+
+trigger + process + 固定输出模板（日期 + ✅/⚠️/📅 三段）+ 显式 **Rules** 阻止模型添加闲聊式 commentary。
+
+### 2. `scripts/collect-git-activity.sh`（真实 Bash 脚本）
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# 1. 确认在 git 仓库里
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "✗ 当前目录不是 git 仓库"
+  exit 1
+fi
+
+# 2. 取今天的 commits
+TODAY="$(date '+%Y-%m-%d')"
+COMMITS="$(git log --since="$TODAY 00:00" --oneline --no-merges 2>/dev/null || true)"
+COUNT="$(echo "$COMMITS" | grep -c . || true)"
+
+# 3. 打印一段干净的 activity block 给 agent
+echo "📅 Date: $TODAY"
+echo "📦 Commits today: $COUNT"
+echo ""
+if [[ "$COUNT" -gt 0 ]]; then
+  echo "$COMMITS"
+else
+  echo "(无 commits)"
+fi
+```
+
+### 3. `references/`（report-format 详细指南）
+
+SKILL.md 用 `[link]` 链过去而不是 inline 进 Markdown body——**保持 system prompt 里那部分越小越好**。
+
+## Lobster 编排：人工审批 + 多步管线
+
+多步自动化光靠 Agent 自由发挥不可靠。**Lobster** 是 OpenClaw 的结构化 shell/workflow DSL（YAML/JSON），比 free-form agent 指令稳，比 Bash 结构化：
+
+```yaml
+name: news-briefing
+steps:
+  - id: search
+    command: "bash scripts/tavily-search.sh 'AI Agent 2026'"
+
+  - id: summarize
+    command: "bash scripts/deepseek-summarize.sh"
+    stdin: "$search.stdout"
+
+  - id: preview
+    command: "bash scripts/format-preview.sh"
+    stdin: "$summarize.stdout"
+    approval: "required"             # 暂停等人工审批
+
+  - id: push
+    command: "bash scripts/feishu-push.sh"
+    stdin: "$summarize.stdout"
+    condition: "$preview.approved"   # 审批通过才推送
+```
+
+跑法：
+
+```bash
+lobster run --mode tool         # 跑到 approval 暂停，返回 resume token
+lobster resume --token <TOKEN> --approve yes   # 审批通过 → 推送
+```
+
+**关键设计**：`approval: required` + `condition: $preview.approved` 是工程化的人机协作——不是「我让 Agent 等用户回复」这种脆弱方案，而是 framework 级别的暂停/恢复。
+
+## 诚实边界
+
+源材料是**课程内容（讲义/课件）**，不是已发布的代码仓库——所以这个项目是**对 OpenClaw Skill 模型的忠实研究** + 在它之上从零搭出来的 Daily Briefing Skill 和 Lobster 管线。这是定位本身的价值：**理解机制**（SKILL.md 路由、加载模型、token 成本、Lobster 编排）到能正确写 Skill 的程度，不是虚构一个 CLI 工具。
+
+## 价值点
+
+- 理解 **OpenClaw / Agent-Skills 模型**：SKILL.md vs plugin vs channel、frontmatter 路由、分层加载、system-prompt token 预算
+- 能**端到端写出一个真实 Skill**：紧凑 trigger + 配套 Bash 脚本 + references
+- 知道 **何时需要结构化编排（Lobster）+ 人工审批**——free-form Agent 不够可靠时的下一步
+
+<DemoStatus
+  title="Demo 真实可跑"
+  description="不是 replay：互动 Demo 是 live SKILL.md validator。粘或编辑一份 SKILL.md，浏览器里直接解析 frontmatter，对照 Agent-Skills 规范检查（name 大小写、description token 预算 ≤250、metadata 形态、trigger 措辞）+ 估算 description 的 token 成本。双语 EN/中文。"
+/>

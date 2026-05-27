@@ -1,0 +1,149 @@
+---
+title: "多模态文档 RAG 平台"
+title_en: "Multimodal Document RAG Platform"
+date: "2026-03-14"
+category: project
+tags: ["React", "FastAPI", "LangChain", "Milvus", "PyMuPDF4LLM", "Docker"]
+lang: both
+cover: "/projects/multimodal-document-rag-platform/cover.svg"
+excerpt: "一个面向复杂 PDF 和图文资料的多模态文档检索与问答平台，强调上传、解析、检索和对话的一体化体验。"
+excerpt_en: "A multimodal document RAG system that turns upload, parsing, retrieval, and grounded chat into one integrated product flow."
+platforms: [website]
+github: ""
+demo: "/demo/multimodal-document-rag-platform"
+published: true
+---
+
+<Callout type="info">
+  不是「RAG notebook」，是<strong>完整产品系统</strong>。后端拆成 7 个 FastAPI 微服务，前端 React 把它们串成一个用户能真正操作的产品形态。两个版本：VLM 路线（视觉语言模型直接读图）和 OCR 路线（MinerU 先解析再检索）。
+</Callout>
+
+## 为什么不是单服务
+
+企业 RAG 真实场景里，**「上传」、「解析」、「分块入库」、「检索」、「问答」**是 5 个**独立演化**的能力：
+
+- 上传：要支持 PDF / 扫描件 / Office / 网页快照
+- 解析：要支持 VLM 路线（理解图表）、OCR 路线（精度更高但慢）、Native PDF（文本层完好的快路径）
+- 分块：semantic chunk vs fixed window，影响检索质量
+- 检索：要支持 vector + keyword 双路、过滤、reranker
+- 问答：要支持 grounded 引用、多轮上下文、stream 输出
+
+如果塞一个 monolith FastAPI，每改一个能力都得动整个 deploy。所以**项目拆成 7 个微服务**，各自有 README，各自独立启停。
+
+## 真实的后端微服务清单（backend/）
+
+```
+backend/
+├── knowledge-management/      # 上传 / 文档列表 / 状态机
+├── Text_segmentation/         # 分块（semantic / fixed window）
+├── Information-Extraction/    # 抽取元数据 / 摘要 / 关键词
+├── Database/                  # Milvus + 元数据 SQL
+├── fastapi-document-retrieval/  # 检索 API（vector + keyword）
+├── knowledge-base-api/        # 知识库 CRUD + 权限
+├── chat/                      # LangChain orchestration + 流式 LLM
+├── start_all_services.sh      # 一键启动所有服务
+├── stop_all_services.sh
+├── restart_all_services.sh
+├── status_services.sh         # 健康检查
+├── test_services.sh           # 集成测试
+└── README_SERVICES.md         # 服务关系/端口/启动顺序
+```
+
+OCR 版本（`Multimodal_RAG_OCR`）多一个：
+
+```
+├── mineru_visualizations/     # MinerU 解析可视化（人工 QC 用）
+```
+
+## 一个完整请求的流向
+
+```
+用户在前端上传 PDF
+  └─> POST knowledge-management/upload
+        ├─> 写文件 + 元数据 SQL
+        ├─> 调 MinerU 或 PyMuPDF4LLM 解析
+        ├─> POST Text_segmentation 分块
+        ├─> POST Information-Extraction 抽元数据
+        └─> POST Database/vectors 入库 Milvus
+  └─> 状态机更新到 ready
+
+用户提问
+  └─> POST chat/query
+        ├─> chat 服务调 fastapi-document-retrieval
+        │     ├─> Milvus 向量搜索 top-k
+        │     ├─> 可选 keyword 召回
+        │     └─> rerank（如果配置）
+        ├─> 把命中 chunks + 用户问题塞进 LangChain Agent
+        └─> SSE 流式返回回答 + sources
+```
+
+## 关键技术决定
+
+### 1. Milvus 而不是 Qdrant / Chroma
+
+企业场景里**数据规模可能上百 GB / 数千万条 chunk**——Milvus 的分布式索引（IVF_FLAT、HNSW 都支持）在这个量级下比 Qdrant 单机更线性扩展。代价是部署复杂：要起 etcd / MinIO / pulsar，所以项目用 Docker Compose 打包。
+
+### 2. VLM vs OCR 两条路线并存
+
+- **VLM 路线（Multimodal_RAG）**：用视觉语言模型直接读 PDF 页面图像。**优点**：理解图表 / 公式 / 复杂版式；**缺点**：慢、贵、上下文有限
+- **OCR 路线（Multimodal_RAG_OCR）**：MinerU 解析成 markdown + bbox，再走纯文本 RAG。**优点**：快、准、可解释；**缺点**：图表信息丢失
+
+项目同时实现两条，**让你按文档类型选**——纯文本合同走 OCR、含大量图表的研报走 VLM。
+
+### 3. PyMuPDF4LLM 做 Native PDF 快路径
+
+对**文本层完好的 PDF**（论文、报告、合同），不需要 MinerU / VLM 这么重，直接 `pymupdf4llm.to_markdown(pdf)` 就出干净 markdown。这个快路径处理 80% 的「普通 PDF」场景。
+
+### 4. 服务编排靠 Shell 脚本
+
+```bash
+# backend/start_all_services.sh（简化）
+#!/usr/bin/env bash
+set -euo pipefail
+
+services=(
+  "Database:8001"
+  "knowledge-management:8002"
+  "Text_segmentation:8003"
+  "Information-Extraction:8004"
+  "fastapi-document-retrieval:8005"
+  "knowledge-base-api:8006"
+  "chat:8007"
+)
+
+mkdir -p logs pids
+
+for entry in "${services[@]}"; do
+  name="${entry%:*}"
+  port="${entry#*:}"
+  echo "→ starting $name on port $port"
+  cd "$name"
+  nohup uvicorn main:app --host 0.0.0.0 --port "$port" > "../logs/${name}.log" 2>&1 &
+  echo $! > "../pids/${name}.pid"
+  cd ..
+done
+
+echo "✓ all services started. health-check: ./status_services.sh"
+```
+
+每个服务独立 pid + log 文件——出问题 `tail -f logs/Text_segmentation.log` 就能定位。
+
+## 前端：把一堆服务串成产品
+
+前端只是个 React + Vite 站，但它做了 3 件关键事：
+
+1. **统一上传体验**：用户不知道后台是 MinerU 还是 PyMuPDF4LLM 还是 VLM——前端按文档类型自动选路线
+2. **检索可视化**：先展示 top-k 命中的 chunk + score（让用户**看到证据**再读 AI 回答）
+3. **流式答案 + 引用脚注**：用户读完答案，每段后面有 `[1] [2]` 脚注链回原始 chunk
+
+## 价值点
+
+- **微服务 RAG**：不是单服务塞所有，按能力切分，各自可演化
+- **VLM + OCR 双路线**：按文档类型选最合适的解析路线，不是「VLM 大锤打蚊子」
+- **生产可部署**：Docker Compose、独立 pid/log、健康检查脚本、shutdown 顺序——不是「能跑就行」级别
+- **检索可见化**：让用户看到 RAG 命中了什么 chunk 再读答案，**减少 LLM 编造的容忍度**
+
+<DemoStatus
+  title="Demo 真实材料对应"
+  description="互动 Demo 复演真实多模态 RAG 流程：上传文档 → 解析（VLM 或 OCR 路线）→ 检索 top-k chunks（可见证据）→ grounded 回答带脚注。不调真实 Milvus / VLM，节省成本但保留完整产品形态。"
+/>

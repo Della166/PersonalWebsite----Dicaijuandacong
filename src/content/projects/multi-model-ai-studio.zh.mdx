@@ -1,0 +1,199 @@
+---
+title: "多模型 AI Studio"
+title_en: "Multi-Model AI Studio"
+date: "2026-03-14"
+category: project
+tags: ["React", "TypeScript", "FastAPI", "SQLAlchemy", "Redis", "SSE", "Multimodal"]
+lang: both
+cover: "/projects/multi-model-ai-studio/cover.svg"
+excerpt: "一个统一接入云端与本地大模型的全栈 AI 工作台，覆盖聊天、配置管理、流式响应、多模态输入与批量推理。"
+excerpt_en: "A full-stack AI workspace that unifies hosted and self-hosted models across chat, configuration, streaming responses, multimodal input, and batch inference."
+platforms: [website]
+github: "https://github.com/fufankeji/FuFan-LLM-PlayGround"
+demo: "/demo/multi-model-ai-studio"
+published: true
+---
+
+<Callout type="tip">
+  这个项目要解决的实际产品问题：团队要同时用多个模型 provider（OpenAI / DeepSeek / Qwen / 本地 vLLM …），但每次接入新 provider 都得重写一遍 chat UI / session 层 / config 面板。AI Studio 把这些抽象成<strong>统一操作面</strong>——provider 在后台切换，前端体验保持稳定。
+</Callout>
+
+## 项目截图
+
+![Workspace overview](/projects/multi-model-ai-studio/workspace.svg)
+
+![Provider orchestration view](/projects/multi-model-ai-studio/providers.svg)
+
+![System architecture](/projects/multi-model-ai-studio/architecture.svg)
+
+## 产品形态（5 个 surface）
+
+| Surface | 做什么 |
+|---|---|
+| **统一聊天工作台** | 云端 / 本地模型共用一个 chat UI |
+| **Provider 配置面板** | 切 provider / 调温度 top-p / 注入 API key |
+| **会话历史 + 状态管理** | 多 session 切换不丢上下文 |
+| **推理过程 / 工具调用可视** | debug 和 demo 时看模型怎么想 |
+| **批量推理 flow** | 跑一批 prompt 不用手动 loop |
+
+## 工程实现层
+
+- **Adapter 层**：normalize 不同 provider 的差异（OpenAI 的 `messages` vs Anthropic 的 `system`+`messages` vs 本地 vLLM 的 OpenAI 兼容路径）
+- **SSE 流式响应**：感知延迟降到「立即开始打字」
+- **SQLAlchemy + SQLite**：轻量持久化（session / config）
+- **Celery + Redis**：背景任务队列，跑批量推理时不阻塞 UI
+- **LAN-friendly 启动流程**：localhost 和 LAN IP 都能跑 demo
+
+## 核心抽象：Provider Adapter
+
+```python
+# backend/adapters/base.py
+from abc import ABC, abstractmethod
+from typing import AsyncIterator
+
+class BaseProviderAdapter(ABC):
+    """统一所有 provider 的接入接口。"""
+
+    name: str
+    supports_multimodal: bool = False
+    supports_streaming: bool = True
+
+    @abstractmethod
+    async def chat_completion(
+        self,
+        messages: list[dict],
+        model: str,
+        temperature: float = 0.7,
+        max_tokens: int = 2000,
+        **kwargs,
+    ) -> AsyncIterator[str]:
+        """统一返回 streaming chunks。非流式 provider 在这里 yield 一次完整答案。"""
+        ...
+
+    @abstractmethod
+    async def list_models(self) -> list[str]:
+        """返回该 provider 可用的 model id 列表。"""
+        ...
+```
+
+每个具体 provider 实现一个子类：
+
+```python
+# backend/adapters/openai_compatible.py
+class OpenAICompatibleAdapter(BaseProviderAdapter):
+    """覆盖 OpenAI / DeepSeek / Moonshot / 本地 vLLM 等所有 OpenAI 兼容 API。"""
+
+    name = "openai_compatible"
+    supports_multimodal = True
+
+    def __init__(self, base_url: str, api_key: str):
+        self.client = AsyncOpenAI(base_url=base_url, api_key=api_key)
+
+    async def chat_completion(self, messages, model, **kwargs):
+        stream = await self.client.chat.completions.create(
+            model=model, messages=messages, stream=True, **kwargs
+        )
+        async for chunk in stream:
+            content = chunk.choices[0].delta.content
+            if content:
+                yield content
+```
+
+加新 provider = 写一个 adapter 子类，不动 chat / session / UI 层任何代码。
+
+## SSE 流式路由
+
+```python
+# backend/routers/chat.py
+from fastapi import APIRouter, Depends
+from sse_starlette.sse import EventSourceResponse
+
+router = APIRouter()
+
+@router.post("/api/chat/stream")
+async def chat_stream(req: ChatRequest, db = Depends(get_db)):
+    adapter = get_adapter(req.provider)
+
+    async def event_generator():
+        full_response = ""
+        async for chunk in adapter.chat_completion(
+            messages=req.messages, model=req.model,
+            temperature=req.temperature,
+        ):
+            full_response += chunk
+            yield {"event": "chunk", "data": json.dumps({"text": chunk})}
+
+        # 流结束后写 SQLite
+        await save_session(db, req.session_id, req.messages, full_response)
+        yield {"event": "done", "data": json.dumps({"length": len(full_response)})}
+
+    return EventSourceResponse(event_generator())
+```
+
+前端用 EventSource 接 SSE，response 一边到一边渲染——感知延迟 < 200ms。
+
+## 为什么这个项目有 hiring 信号
+
+不只是「我会调 LLM API」。它展示：
+
+- **能把 LLM 能力做成产品 surface**，不是 notebook demo
+- **管理 session / config / state** 的后端能力
+- **跨 provider 抽象**而不是硬绑一个模型
+- **运营 thinking**：streaming、queue、deploy setup 这些是真正进入生产的关切
+
+## 交互设计原则：换模型不换体验
+
+主要 UX 原则：**模型切换感受要轻量，不要打断**。用户不应该每次换 provider 就重学一遍界面：
+
+1. 选 provider 或本地 runtime
+2. 配 task + model 参数
+3. 发 chat / 多模态输入
+4. 实时流式看回答
+5. 需要时查 reasoning / tool trace
+
+这让 app 既适合个人**实验**，也适合给别人**演示**。
+
+## 系统架构
+
+后端围绕**统一服务边界**组织，不是按 provider 分页。这样**加新 API 或 runtime** 时平台容易扩展：
+
+![Multi-Model AI Studio system architecture](/projects/multi-model-ai-studio/architecture.svg)
+
+### 核心组件
+
+- **前端工作台**：chat / sessions / config / response 渲染
+- **Adapter 层**：normalize 云 API 和自托管 runtime
+- **流式服务**：SSE 推 partial output 回客户端
+- **持久化层**：session 和 config state
+- **任务层**：队列化或后台推理工作流
+
+<Callout type="info">
+  公开部署时最有用的 demo 模式是 <strong>guarded playground</strong>：1-2 个 provider、capped request 量、预置 prompt——让访客感受到产品形态，不暴露敏感 key 也不产生不受控的成本。
+</Callout>
+
+## Demo 形态：三层叠加
+
+我会把这个项目在作品集站上分三层暴露：
+
+- **首页项目卡片**（视觉印象）
+- **招聘可读的案例页**（这个页面 — 讲产品形态、系统设计、工程决策）
+- **嵌入式 sandbox**（让访客**亲手玩**）
+
+三层一起比「光放 GitHub 链接」或「光放截图」都强——访客既能**理解系统**又能**操作系统**。
+
+<div id="live-preview" />
+
+## 嵌入式预览
+
+下面的预览是给作品集访客的。它**模拟** provider 切换、多模态输入、streaming response 行为，让招聘方在没有部署完整 sandbox 的情况下也能感受到产品形态。
+
+<MultiModelStudioPreview />
+
+## 价值点
+
+- **React + FastAPI 全栈交付能力**
+- **模型抽象 + 可用性的产品 thinking**
+- **超越 notebook 实验的 AI 应用工程**
+- **流式 / 任务 / deployment 的系统意识**
+
+对我瞄准的 AI engineer 岗位来说，这是作品集里**最有 flagship 感的项目之一**。

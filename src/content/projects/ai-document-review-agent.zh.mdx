@@ -1,0 +1,158 @@
+---
+title: "通用 AI 文档审核 Agent v2.0"
+title_en: "AI Document Review Agent v2.0"
+date: "2026-04-02"
+category: project
+tags: ["LangChain", "FastAPI", "React", "DeepSeek", "MinerU", "SSE", "HITL", "SQLite"]
+lang: both
+cover: "/projects/ai-document-review-agent/cover.svg"
+excerpt: "一个端到端的全栈文档审核系统:上传 PDF（合同等），MinerU 解析 + LangChain v1.1 Agent + DeepSeek 逐段检测语法错误和绝对化表述，问题实时流式标注回 PDF 原位，支持自定义规则和人工在环复核。"
+excerpt_en: "A full-stack document review system: upload a PDF, MinerU parses it, a LangChain v1.1 + DeepSeek pipeline flags grammar issues and over-definitive language paragraph by paragraph, streams each issue back onto the PDF at its exact location, with custom rules and human-in-the-loop review."
+platforms: [website]
+github: ""
+demo: "/demo/ai-document-review-agent"
+published: true
+---
+
+<Callout type="info">
+  一个**真的能跑**的全栈系统——FastAPI + React/FluentUI 前后端齐全，基于 LangChain v1.1 + DeepSeek。每个被标记的问题都通过 SSE 实时推回浏览器、按真实 bbox 高亮在 PDF 原位、通过 HITL middleware 进入人工审批门、最终持久化到 SQLite。
+</Callout>
+
+## 默认审核两类问题
+
+| 类型 | 内容 | 风险等级 |
+|---|---|---|
+| **语法与拼写** | 错别字、错字、标点、语法错误 | 低 |
+| **绝对化表述** | 「必须 / 保证 / 一定 / 完全 / 绝对」之类在正式承诺语境里的过度承诺用语 | **高（合规/法律风险）** |
+
+除了两个预设规则，审核者可以**运行时定义自定义规则**（名字 + 描述 + examples + risk level），规则被合并进 prompt，模型即时学会新的问题类型。
+
+## 真实架构（v2.0 重构后的样子）
+
+```
+React + FluentUI (Vite)              FastAPI backend (app/api/)
+  ├─ Files page (上传/列表)            ├─ /api/v1/files            (上传 / 列表)
+  ├─ Review page                       ├─ /api/v1/review/{id}/issues  (SSE 流)
+  │   ├─ react-pdf viewer              ├─ /api/v1/rules            (规则 CRUD)
+  │   ├─ annotpdf highlights           └─ /api/v1/.../hitl/{start,resume}
+  │   └─ @microsoft/fetch-event-source
+                                       services/
+                                         ├─ lc_pipeline.py    (LangChain v1.1 + DeepSeek)
+                                         ├─ mineru_client.py  (MinerU v4 PDF 解析)
+                                         ├─ hitl_agent.py     (HumanInTheLoopMiddleware)
+                                         ├─ bbox.py           (3 级坐标映射)
+                                         ├─ rules_service.py  (自定义规则)
+                                         └─ issues_service.py (issue 状态机)
+                                       SQLite (app.db): issues · rules · feedback
+```
+
+后端 deps：`fastapi`、`langchain==1.1.3`、`langchain-deepseek==1.0.1`、`pymupdf`、`aiosqlite`、`sse-starlette`
+前端 deps：`react 18`、`@fluentui/react-components`、`react-pdf`、`annotpdf`、`vite`
+LLM：DeepSeek Chat（通过 LangChain v1 的 `init_chat_model(provider="deepseek")`，fallback 到 OpenAI 兼容客户端）
+
+## 一次完整审核的 7 步
+
+```python
+# services/lc_pipeline.py（简化版伪代码）
+async def review_document(file_id: str):
+    # 1. 取文件
+    pdf_path = await files_service.get(file_id)
+
+    # 2. MinerU 解析（pdf → 段落 + bbox + layout）
+    parsed = await mineru_client.parse(pdf_path)
+
+    # 3. 分块（每 32 段一批，适配上下文）
+    chunks = chunk_paragraphs(parsed.paragraphs, batch_size=32)
+
+    # 4. 逐块审核
+    for chunk in chunks:
+        system_prompt = build_prompt(
+            preset_rules=PRESET_RULES,      # 语法 + 绝对化
+            custom_rules=await rules_service.list_active(),
+            exclusion_list=EXCLUSIONS,      # 不要把列表序号、表单占位符、下划线当问题
+        )
+
+        # 5. LLM 调用 + 用 PydanticOutputParser 解析 (不依赖 provider-specific response_format)
+        raw = await llm.ainvoke([
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=chunk.text),
+        ])
+        issues = pydantic_parser.parse(raw.content)
+
+        # 6. bbox 3 级 fallback：PDF text layer → MinerU layout.json → 段落级 bbox
+        for issue in issues:
+            issue.bbox = locate_bbox(
+                text=issue.text,
+                page=chunk.page,
+                pymupdf_doc=pymupdf_doc,
+                mineru_layout=parsed.layout,
+            )
+
+        # 7. SSE 推送（出一段推一段，不等全跑完）
+        yield SSEEvent(event="issues", data=issues)
+```
+
+### 关键细节
+
+- **不用 provider-specific response_format**：LangChain v1.1 + `PydanticOutputParser` 能跨 DeepSeek / OpenAI / Qwen 统一工作
+- **`EXCLUSIONS` 排除清单**：列表序号、表单占位符、下划线、空格——这些都不是「语法错误」，但 LLM 容易当成问题，要在 prompt 里显式 ban 掉
+- **3 级 bbox fallback**：PDF text layer search 最准 → 失败时用 MinerU layout 的 element-level bbox → 都失败用段落级 bbox 做兜底高亮
+
+## HITL：LangChain v1.1 framework 级别的人工审批
+
+```python
+# services/hitl_agent.py
+from langchain.agents.middleware import HumanInTheLoopMiddleware
+
+agent = create_agent(
+    model=llm,
+    tools=[mark_issue_resolved, dismiss_issue, attach_feedback],
+    middleware=[HumanInTheLoopMiddleware(
+        require_approval_for=["mark_issue_resolved", "dismiss_issue"],
+    )],
+)
+
+# 启动 HITL 会话
+@router.post("/api/v1/review/{review_id}/hitl/start")
+async def start_hitl(review_id: str):
+    state = await agent.astart({...})
+    return {"session_id": state.session_id, "pending_tool_calls": state.pending}
+
+# 用户审批后恢复
+@router.post("/api/v1/review/{review_id}/hitl/resume")
+async def resume_hitl(review_id: str, approval: dict):
+    state = await agent.aresume(approval)
+    return {"resolved": state.resolved_issues}
+```
+
+每一次「接受 / 驳回 / 加意见」**走的是 LangChain middleware 的 tool call 审批门**，而不是手写的业务 if-else。状态最终落到 SQLite。
+
+## v2.0 真正改了什么
+
+| 维度 | v1.0 | v2.0 |
+|---|---|---|
+| 编排 | Azure PromptFlow | 原生 LangChain v1.1 `lc_pipeline.py` |
+| 规则 | 硬编码两类 | 自定义规则引擎，prompt 合并 |
+| 审批 | 手写业务逻辑 | LangChain `HumanInTheLoopMiddleware` |
+| bbox | 单一 PDF text layer search | 3 级 fallback（text → MinerU layout → 段落） |
+| 推送 | 全跑完一次返回 | SSE 流式逐 chunk 推送 |
+
+## 诚实边界
+
+这是个**完整可跑的系统**，不是 demo 脚本：完整 FastAPI 后端、React/FluentUI 前端、SQLite 持久化、可工作的 review loop。跑起来需要：
+
+- **MinerU API key**（PDF 解析走云调用）
+- **DeepSeek API key**
+
+默认 issue 集是 2 类（语法 + 绝对化）针对中文商务文档调过的，其他场景全靠自定义规则。HITL 审批 UI 后端 API 全部 wire 好，前端 HITL 交互层是整个项目最轻的一块。
+
+## 价值点
+
+- **正确使用现代 LangChain v1.1**：基于 provider 的模型初始化、`PydanticOutputParser` 而非 provider-specific 结构化输出、framework 级 HITL
+- **全栈交付**：FastAPI + React/FluentUI + SQLite + SSE，前后通吃
+- **文档锚定纪律**：每个 issue 都钉在真实 PDF 位置，3 级 bbox fallback 保证即使 PDF text layer 损坏或 MinerU layout 不完整也能高亮
+
+<DemoStatus
+  title="Demo 真实可跑"
+  description="这个 Demo 是真东西，不是 replay。「绝对化表述（中文）」检测器用项目原生规则逻辑，在你浏览器里 client-side 即时跑——不需要 API key。「DeepSeek 深度审核」按钮真的调一个 server-side route 用 DeepSeek 跑语法/拼写 + 深度审核（key 在服务端、输入有长度上限、按 IP 限流）。试试：粘一段带「必须 / 保证 / 一定」+ 一个错别字的话进去。"
+/>
