@@ -143,6 +143,18 @@ export const projects: Project[] = [
     cover: '/projects/verl-ppo-training/cover.svg',
   },
   {
+    slug: 'llama-from-scratch',
+    title: '从 0 训练 LLaMA',
+    title_en: 'Train LLaMA from Scratch',
+    description: '不调 API、不加载权重，用 PyTorch 从零复刻 LLaMA 的 decoder-only 架构(RMSNorm / RoPE / GQA / SwiGLU / KV 缓存)并训练。理解大模型的地基。',
+    description_en: 'No API, no pretrained weights: rebuild LLaMA\'s decoder-only architecture (RMSNorm / RoPE / GQA / SwiGLU / KV cache) from scratch in PyTorch and train it. The foundation under everything else.',
+    category: 'ml',
+    tags: ['LLaMA', 'Transformer', 'RoPE', 'RMSNorm', 'PyTorch'],
+    demo: '/demo/llama-from-scratch',
+    cover: '/projects/llama-from-scratch/cover.svg',
+    featured: true,
+  },
+  {
     slug: 'ai-document-review-agent',
     title: '通用 AI 文档审核 Agent v2.0',
     title_en: 'AI Document Review Agent v2.0',

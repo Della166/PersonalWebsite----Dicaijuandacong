@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0e1a14"/>
+      <stop offset="100%" stop-color="#1a2a22"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#g)"/>
+  <g opacity="0.6">
+    <rect x="1180" y="220" width="240" height="46" rx="8" fill="none" stroke="#7fbc8c" stroke-width="2.5"/>
+    <rect x="1180" y="286" width="240" height="46" rx="8" fill="none" stroke="#d4a574" stroke-width="2.5"/>
+    <rect x="1180" y="352" width="240" height="46" rx="8" fill="none" stroke="#d4a574" stroke-width="2.5"/>
+    <rect x="1180" y="418" width="240" height="46" rx="8" fill="none" stroke="#7fbc8c" stroke-width="2.5"/>
+    <line x1="1300" y1="266" x2="1300" y2="286" stroke="#7fbc8c" stroke-width="2"/>
+    <line x1="1300" y1="332" x2="1300" y2="352" stroke="#7fbc8c" stroke-width="2"/>
+    <line x1="1300" y1="398" x2="1300" y2="418" stroke="#7fbc8c" stroke-width="2"/>
+  </g>
+  <g font-family="system-ui, -apple-system, sans-serif" fill="#f0e8d9">
+    <text x="80" y="180" font-size="32" font-weight="700" fill="#7fbc8c" letter-spacing="4">FROM SCRATCH · PYTORCH</text>
+    <text x="80" y="320" font-size="104" font-weight="900">从 0 训练 LLaMA</text>
+    <text x="80" y="430" font-size="54" font-weight="700" fill="#d4a574">RMSNorm · RoPE · GQA · SwiGLU · KV 缓存</text>
+    <text x="80" y="600" font-size="36" fill="#c6d2cb">decoder-only 架构逐块复刻 → 小语料训练</text>
+    <text x="80" y="654" font-size="36" fill="#c6d2cb">理解大模型的地基，不止「会调 API」</text>
+    <g transform="translate(80, 745)">
+      <rect x="0" y="0" rx="999" ry="999" width="150" height="60" fill="none" stroke="#7fbc8c" stroke-width="3"/>
+      <text x="75" y="40" font-size="28" fill="#7fbc8c" text-anchor="middle" font-weight="600">LLaMA</text>
+      <rect x="170" y="0" rx="999" ry="999" width="170" height="60" fill="none" stroke="#d4a574" stroke-width="3"/>
+      <text x="255" y="40" font-size="28" fill="#d4a574" text-anchor="middle" font-weight="600">PyTorch</text>
+      <rect x="360" y="0" rx="999" ry="999" width="140" height="60" fill="none" stroke="#d4a574" stroke-width="3"/>
+      <text x="430" y="40" font-size="28" fill="#d4a574" text-anchor="middle" font-weight="600">RoPE</text>
+    </g>
+  </g>
+</svg>

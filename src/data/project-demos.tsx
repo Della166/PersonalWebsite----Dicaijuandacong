@@ -20,6 +20,7 @@ import ContextEngineeringPreview from '@/components/mdx/ContextEngineeringPrevie
 import VeRLPpoPreview from '@/components/mdx/VeRLPpoPreview';
 import ClipCrossModalPreview from '@/components/mdx/ClipCrossModalPreview';
 import OpenClawMultiAgentPreview from '@/components/mdx/OpenClawMultiAgentPreview';
+import LlamaFromScratchPreview from '@/components/mdx/LlamaFromScratchPreview';
 
 interface LocalizedText {
   en: string;
@@ -1157,6 +1158,59 @@ export const projectDemos = {
       {
         label: { en: 'Best signal', zh: '最强信号' },
         value: { en: 'Evidence-driven orchestration design — knows what doesn\'t work too', zh: '用证据驱动的编排设计——也知道什么不 work' },
+      },
+    ],
+  },
+  'llama-from-scratch': {
+    component: LlamaFromScratchPreview,
+    eyebrow: {
+      en: 'Build + train replay',
+      zh: '搭建+训练复演',
+    },
+    summary: {
+      en: 'Assemble a LLaMA decoder block layer by layer (RMSNorm + RoPE + GQA + SwiGLU + KV cache), then train: the loss curve falls and the sample generation goes from gibberish to coherent.',
+      zh: '逐层拼出 LLaMA decoder block（RMSNorm + RoPE + GQA + SwiGLU + KV 缓存），再训练：loss 曲线下降，采样生成从乱码变通顺。',
+    },
+    localNote: {
+      en: 'The architecture components (RMSNorm/RoPE/GQA/SwiGLU/KV-cache) are the real LLaMA structure from the course\'s LLaMA architecture series (a video course). The config and loss/step numbers are illustrative; no training runs in the browser.',
+      zh: '架构组件（RMSNorm/RoPE/GQA/SwiGLU/KV缓存）是真实 LLaMA 结构，来自大模型原理正课 LLaMA 系列（视频课）。config 与 loss/step 数值为示意；浏览器里不真跑训练。',
+    },
+    whatToTry: {
+      en: [
+        'Build the model and watch the decoder block assemble layer by layer.',
+        'Start training and watch the loss curve fall step by step.',
+        'Watch the same-prompt generation go from gibberish to a coherent sentence.',
+      ],
+      zh: [
+        '搭建模型，看 decoder block 逐层拼出来。',
+        '开始训练，看 loss 曲线一步步下降。',
+        '看同一 prompt 的生成从乱码变成通顺句子。',
+      ],
+    },
+    whatItProves: {
+      en: [
+        'You own the foundation — implement LLaMA from scratch, not just import a model.',
+        'You understand each modern component: RMSNorm / RoPE / GQA / SwiGLU / KV cache.',
+        'You connect layers: KV cache underpins prompt caching; architecture grounds fine-tuning/RL choices.',
+      ],
+      zh: [
+        '你吃透地基——从零实现 LLaMA，而不只是 import 一个模型。',
+        '你理解每个现代组件：RMSNorm / RoPE / GQA / SwiGLU / KV 缓存。',
+        '你打通上下层：KV 缓存支撑 prompt cache，架构理解支撑微调/RL 选择。',
+      ],
+    },
+    highlights: [
+      {
+        label: { en: 'Architecture', zh: '架构' },
+        value: { en: 'Decoder-only · RMSNorm · RoPE · GQA · SwiGLU · KV cache (Pre-Norm)', zh: 'Decoder-only · RMSNorm · RoPE · GQA · SwiGLU · KV 缓存（Pre-Norm）' },
+      },
+      {
+        label: { en: 'From scratch', zh: '从零' },
+        value: { en: 'PyTorch, no pretrained weights — tensors to training loop hand-written', zh: 'PyTorch，不加载权重——从张量到训练循环全手写' },
+      },
+      {
+        label: { en: 'Best signal', zh: '最强信号' },
+        value: { en: 'Foundational depth that underpins fine-tuning, RL, and agents', zh: '支撑微调/RL/Agent 的地基级深度' },
       },
     ],
   },
