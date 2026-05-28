@@ -151,7 +151,7 @@ export default function MultimodalVisionLlmPreview() {
           <div className="rounded-[22px] border border-[var(--color-border-default)] bg-black/10 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-muted)]">{zh ? '架构' : 'Architecture'}</p>
             <p className="mt-2 font-mono text-[11px] leading-5 text-[var(--color-text-secondary)]">
-              modalities → ImageBind (frozen) → 1 linear projection → Vicuna (LLM) → text
+              modalities → ImageBind (frozen, 1024) → linear proj 1024→4096 → 1 soft token → LoRA-Vicuna-7B → text
             </p>
           </div>
         </div>

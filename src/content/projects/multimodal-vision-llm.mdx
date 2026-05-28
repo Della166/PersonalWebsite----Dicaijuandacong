@@ -20,15 +20,16 @@ published: true
 
 ## PandaGPT: one linear layer connects 6 modalities to an LLM
 
-PandaGPT's trick is to **stand on two giants** and train only a projection layer:
+PandaGPT's trick is to **stand on two giants** and train only a projection + LoRA:
 
 ```
-6 modalities → ImageBind (frozen) → one shared space → 1 linear projection → Vicuna (LLM) → text
+6 modalities → ImageBind_huge (frozen, out 1024) → llama_proj (1024→4096) → 1 soft token → LoRA-Vicuna-7B → text
 ```
 
-- **ImageBind** (Meta FAIR, CVPR 2023) aligns **image / text / audio / depth / thermal / IMU** into **one embedding space** — the basis of "emergent zero-shot"
-- **Vicuna** (a LLaMA-derived chat model) is the language brain
-- Only a single **linear projection** is trained, aligning ImageBind's visual embedding into Vicuna's token-embedding space
+- **ImageBind** (Meta FAIR, CVPR 2023) aligns **image / text / audio / depth / thermal / IMU** into **one embedding space** (out 1024) — the basis of "emergent zero-shot"; **fully frozen**
+- **Vicuna-7B** is the language brain, with **LoRA** (`r=32, alpha=32, target=q/k/v/o_proj`)
+- Only a single `nn.Linear(1024, 4096)` is trained: each image `unsqueeze(1)` → **one image = one soft token**; multimodal inference **sums** the per-modality tokens
+- **Only LoRA + the projection train** (delta weights saved); ImageBind + Vicuna stay frozen. Training: DeepSpeed 8×A100, epoch 2 / batch 64 / lr 5e-4 / max_len 1024
 
 ## The most counterintuitive part: emergent cross-modal ability
 
@@ -48,11 +49,12 @@ Upstream it also covers self-supervised learning, vision-foundation-model archit
 
 ## Companion: VPT visual prompt tuning (pathology transfer)
 
-The second hands-on project is **VPT (Visual Prompt Tuning)**: freeze the entire ViT backbone, **insert a few learnable prompt tokens** at the input, and transfer to a downstream task. The course applies it to **pathology images** (the BCI dataset):
+The second hands-on project is **VPT (Visual Prompt Tuning)**: freeze the entire ViT-B/16 backbone, concatenate a few learnable prompt tokens **after the CLS token** (`incorporate_prompt`, default `NUM_TOKENS=5`, prepend + random init), and transfer downstream:
 
-- **VPT-Shallow / VPT-Deep**: prompts inserted at the first layer only vs at every layer
-- Benchmarks: FGVC (fine-grained classification) / VTAB
-- Value: backbone untouched, very few trainable params → low-cost transfer to a vertical domain (medical imaging), competitive with full fine-tuning
+- **VPT-Shallow** (prompts at the input once) vs **VPT-Deep** (`deep_prompt_embeddings(11, NUM_TOKENS, 768)`, re-inserted at every layer)
+- **Only prompts + head train**: `if "prompt" not in k: requires_grad=False`, encoder stays in eval; logs "tuned percent" = trainable/total params
+- Benchmarks: FGVC (CUB/NABirds/Flowers/Dogs/Cars) / VTAB (19 tasks, 800/200 to pick hyperparams → 5 seeded runs); can run on MoCo-v3 / MAE backbones
+- **Pathology transfer** (`configs/prompt/bci.yaml`): the BCI dataset (HE-stained breast-cancer pathology), **4 classes**, backbone untouched → low-cost transfer with very few params
 
 ## What this signals
 

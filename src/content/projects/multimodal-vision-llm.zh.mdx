@@ -20,15 +20,16 @@ published: true
 
 ## PandaGPT：用 1 个线性层把 6 模态接进 LLM
 
-PandaGPT 的巧思是**站在两个巨人肩膀上**，自己只训一个投影层：
+PandaGPT 的巧思是**站在两个巨人肩膀上**，自己只训投影层 + LoRA：
 
 ```
-6 模态输入 → ImageBind(冻结) → 同一向量空间 → 1 个线性投影 → Vicuna(LLM) → 文本回答
+6 模态 → ImageBind_huge(冻结, out 1024) → llama_proj(1024→4096) → 1 个 soft token → LoRA-Vicuna-7B → 文本
 ```
 
-- **ImageBind**（Meta FAIR，CVPR 2023）把 **图像 / 文本 / 音频 / 深度 / 热成像 / IMU** 6 种模态对齐到**同一个嵌入空间**——这是「emergent zero-shot」的基础
-- **Vicuna**（LLaMA 衍生的对话模型）当语言大脑
-- 中间只训一个**线性投影**，把 ImageBind 的视觉嵌入对齐到 Vicuna 的词嵌入空间
+- **ImageBind**（Meta FAIR，CVPR 2023）把 **图/文/音/深度/热成像/IMU** 6 模态对齐到**同一嵌入空间**（out 1024）——「emergent zero-shot」的基础，**整块冻结**
+- **Vicuna-7B** 当语言大脑，挂 **LoRA**（`r=32, alpha=32, target=q/k/v/o_proj`）
+- 只训一个 `nn.Linear(1024, 4096)`：每张图 `unsqueeze(1)` → **一张图就是一个 soft token**，多模态推理时各模态单 token **相加**
+- **只训 LoRA + 投影层**（存 delta 权重），ImageBind + Vicuna 全冻；训练 DeepSpeed 8×A100，epoch 2 / batch 64 / lr 5e-4 / max_len 1024
 
 ## 最反直觉的一点：涌现的跨模态能力
 
@@ -48,11 +49,12 @@ PandaGPT **只在图文指令对上训练**，但因为 ImageBind 已经把 6 �
 
 ## 配套：VPT 视觉提示微调（病理图像迁移）
 
-第二个实战是 **VPT（Visual Prompt Tuning）**：冻结整个 ViT 主干，只在输入端**插入少量可学习的 prompt token**，就能迁移到下游任务。课程把它用在**病理图像**（BCI 数据集）下游迁移：
+第二个实战是 **VPT（Visual Prompt Tuning）**：冻结整个 ViT-B/16 主干，只在 **CLS 后**拼入少量可学习 prompt token（`incorporate_prompt`，默认 `NUM_TOKENS=5`，prepend + random init）：
 
-- **VPT-Shallow / VPT-Deep**：prompt 只插第一层 vs 每层都插
-- 基准：FGVC（细粒度分类）/ VTAB
-- 价值：主干不动、可训参数极少 → 垂直领域（医学影像）低成本迁移，跟全量微调效果接近
+- **VPT-Shallow** 输入端插一次 vs **VPT-Deep** 每层重插（`deep_prompt_embeddings(11, NUM_TOKENS, 768)`，逐层覆盖 prompt 槽）
+- **只训 prompt + 头**：`if "prompt" not in k: requires_grad=False`，train() 里 encoder 保持 eval；log「tuned percent」= 可训参/总参
+- 基准 FGVC（CUB/NABirds/Flowers/Dogs/Cars）/ VTAB（19 任务，800/200 选超参 → 5 seed 跑）；可挂 MoCo-v3 / MAE 预训练骨干
+- **病理迁移**（`configs/prompt/bci.yaml`）：BCI 数据集（HE 染色乳腺癌病理），**4 类**，主干不动 → 极少参数低成本迁移
 
 ## 价值点
 
