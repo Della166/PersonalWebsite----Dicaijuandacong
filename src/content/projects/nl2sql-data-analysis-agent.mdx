@@ -1,0 +1,109 @@
+---
+title: "NL2SQL 数据分析 Agent"
+title_en: "NL2SQL Data-Analysis Agent"
+date: "2026-05-18"
+category: project
+tags: ["LangChain", "Vanna", "Jina Embeddings", "Milvus", "NL2SQL", "ReAct"]
+lang: both
+cover: "/projects/nl2sql-data-analysis-agent/cover.svg"
+excerpt: "用一句中文问数据库：基于 Vanna 改造的 ReAct Agent 把问题转成 SQL、查 MySQL、回表格 + 图表 + 自然语言解释。准头靠 RAG——从三个 Milvus 集合检索 DDL / 业务文档 / 历史 SQL。"
+excerpt_en: "Ask the database in one sentence: a Vanna-forked ReAct agent turns it into SQL, runs it on MySQL, and returns a table + chart + NL explanation. Accuracy comes from RAG over three Milvus collections."
+platforms: [website]
+github: ""
+demo: ""
+published: true
+---
+
+<Callout type="info">
+  This is <strong>not</strong> the "NL2SQL fine-tuning" project (that one trains a model with LlamaFactory LoRA). This is a <strong>runtime RAG agent</strong>: it trains nothing — it retrieves your schema, business knowledge, and past SQL, feeds them to a general LLM, and turns a single-sentence question into SQL that runs on MySQL, then renders a chart + explanation. The base is a fork of the open-source project <strong>Vanna</strong>.
+</Callout>
+
+## Not the same as "NL2SQL fine-tuning"
+
+| | NL2SQL fine-tuning (case 7) | This project (NL2SQL data-analysis agent) |
+|---|---|---|
+| Core method | training (LlamaFactory LoRA) | retrieval (RAG) + prompting |
+| What changes | model weights | the context fed to the model |
+| Deployed form | a fine-tuned private model | a general LLM + vector store + agent orchestration |
+| When to use | stable schema, high volume, local inference | shifting schema, fast onboarding, no training |
+
+The two are complementary — one bakes capability *into* the model, the other feeds capability *into* the context.
+
+## Four-layer architecture (forked from Vanna)
+
+```
+NL2SQLAgent/
+├── frontend/                     # React + Vite (port 3000)
+├── backend/
+│   └── vanna/
+│       ├── api_server.py         # FastAPI main service (port 8000)
+│       └── ...                   # forked from Vanna, adapted for Chinese + Jina
+├── jina-embedding/
+│   └── app_jina_embedding_v4.py  # Jina embedding service, standalone FastAPI
+└── milvus-deployment/
+    └── start.sh                  # Docker Compose for Milvus (port 19550, COSINE)
+```
+
+The agent runs a ReAct loop via **LangChain 1.0's `create_agent`** (`AGENT_RECURSION_LIMIT=50`), with Qwen `qwen-flash` as the LLM (DashScope OpenAI-compatible API, `temperature=0.1`, `max_tokens=14000`).
+
+## RAG is the core: three Milvus collections
+
+NL2SQL accuracy depends less on model size than on whether the model **knows what your database looks like**. The agent's `get_table_schema` tool vectorizes the question and retrieves in **parallel** from three Milvus collections:
+
+```
+question ──embed──┬──▶ collection: DDL / table schemas  → CREATE TABLE for relevant tables
+                  ├──▶ collection: business docs        → column meanings / definitions / terms
+                  └──▶ collection: historical SQL        → correct SQL for similar questions
+                                                            ↓
+                            assembled context → qwen-flash generates SQL
+```
+
+The three hits are assembled into context the model writes SQL from — like fetching a fresh cheat-sheet for this database on every question. The course quotes RAG lifting SQL accuracy from ~40% to over 85% (a course figure; this project ships no eval table, so treat it as a reference).
+
+## Jina Embeddings v4 as its own service
+
+Vector quality directly drives retrieval quality, so the embedding is not Vanna's built-in one — it is swapped for **Jina Embeddings v4**, **deployed as a standalone FastAPI microservice**:
+
+```python
+# app_jina_embedding_v4.py (key points)
+# model: jina-embeddings-v4-vllm-retrieval
+# OpenAI-compatible endpoint: POST /v1/embeddings
+# output vector dimension: 2048
+```
+
+Environment `jina_run` (py3.13.5, `torch==2.8.0` / `transformers==4.56.2` / `fastapi==0.118.3`). Splitting it off follows the same logic as the multimodal RAG project: the embedding is a GPU-heavy component, so start / scale / swap it independently.
+
+## A full question's ReAct trace
+
+```
+Q: "Last month's deal amount per sales region, descending"
+  └─> Agent (qwen-flash) runs a ReAct loop
+        ├─ tool: get_table_schema(question)
+        │     → 3 Milvus collections in parallel → DDL + business terms + similar SQL
+        ├─ generates SQL: SELECT region, SUM(amount) ... GROUP BY region ORDER BY ... DESC
+        ├─ tool: run_sql(sql)   → MySQL executes → result set
+        ├─ tool: plot(result)   → picks chart type → bar chart
+        └─ NL explanation: "East China is highest at ~…; QoQ …"
+  └─> Frontend renders: SQL + data table + chart + explanation
+```
+
+## What was changed in Vanna
+
+After forking Vanna, four changes are spelled out in the courseware:
+
+1. **Embedding swap**: native embedding → Jina Embeddings v4 (better Chinese retrieval)
+2. **Chinese support**: handling for Chinese questions / Chinese-commented SQL
+3. **Batching**: batch embedding + batch insert for much faster indexing
+4. **Dedup**: deduplicate repeated questions so the historical-SQL collection doesn't pile up duplicates
+
+## What this signals
+
+- **Training-vs-retrieval judgment**: for the same NL2SQL goal, knowing when to fine-tune vs when RAG is cheaper
+- **Agent tool design**: three tools (`get_table_schema` / `run_sql` / `plot`) orchestrated autonomously by ReAct
+- **Retrieval is the accuracy lever**: parallel three-collection retrieval (DDL + business docs + historical SQL) is what makes NL2SQL land — not a bigger model
+- **Engineering on top of OSS**: forking Vanna and adapting embedding / Chinese / batching / dedup to real needs
+
+<DemoStatus
+  title="Why this is a case study, not an interactive demo"
+  description="Demonstrating this system needs MySQL (a real business database) + Milvus (three vector collections) + the Jina embedding service running together, which can't be safely replayed in the browser. So this page documents the architecture, the RAG retrieval design, and the Vanna modifications; for the shared agent-orchestration pattern, compare the demos on deep-research-agent and the document-review agent."
+/>

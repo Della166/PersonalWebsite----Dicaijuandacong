@@ -1,0 +1,109 @@
+---
+title: "NL2SQL 数据分析 Agent"
+title_en: "NL2SQL Data-Analysis Agent"
+date: "2026-05-18"
+category: project
+tags: ["LangChain", "Vanna", "Jina Embeddings", "Milvus", "NL2SQL", "ReAct"]
+lang: both
+cover: "/projects/nl2sql-data-analysis-agent/cover.svg"
+excerpt: "用一句中文问数据库：基于 Vanna 改造的 ReAct Agent 把问题转成 SQL、查 MySQL、回表格 + 图表 + 自然语言解释。准头靠 RAG——从三个 Milvus 集合检索 DDL / 业务文档 / 历史 SQL。"
+excerpt_en: "Ask the database in one Chinese sentence: a Vanna-forked ReAct agent turns it into SQL, runs it on MySQL, and returns a table + chart + NL explanation. Accuracy comes from RAG over three Milvus collections."
+platforms: [website]
+github: ""
+demo: ""
+published: true
+---
+
+<Callout type="info">
+  这<strong>不是</strong>「NL2SQL 微调」那个项目（那个用 LlamaFactory LoRA 训模型）。这是一个**运行时 RAG Agent**：不训模型，靠检索把表结构 / 业务知识 / 历史 SQL 喂给通用大模型，让它把一句中文问题变成能在 MySQL 上跑的 SQL，再把结果做成图表 + 解释。底座是 fork 自开源项目 <strong>Vanna</strong>。
+</Callout>
+
+## 跟「NL2SQL 微调」不是一回事
+
+| | NL2SQL 微调系统（案例 7） | 本项目（NL2SQL 数据分析 Agent） |
+|---|---|---|
+| 核心手段 | 训练（LlamaFactory LoRA） | 检索（RAG）+ 提示工程 |
+| 改的是什么 | 模型权重 | 喂给模型的上下文 |
+| 上线形态 | 微调后的私有模型 | 通用大模型 + 向量库 + Agent 编排 |
+| 何时用 | schema 稳定、调用量大、要本地推理 | schema 多变、想快速接入、不想训练 |
+
+两个项目互补——一个把能力「烤进」模型，一个把能力「喂进」上下文。
+
+## 四层架构（fork 自 Vanna）
+
+```
+NL2SQLAgent/
+├── frontend/                     # React + Vite（端口 3000）
+├── backend/
+│   └── vanna/
+│       ├── api_server.py         # FastAPI 主服务（端口 8000）
+│       └── ...                   # fork 自 Vanna，按中文 + Jina 改造
+├── jina-embedding/
+│   └── app_jina_embedding_v4.py  # Jina 向量服务，独立 FastAPI
+└── milvus-deployment/
+    └── start.sh                  # Docker Compose 起 Milvus（端口 19550，COSINE）
+```
+
+Agent 用 **LangChain 1.0 的 `create_agent`** 跑 ReAct 循环（`AGENT_RECURSION_LIMIT=50`），LLM 用 Qwen `qwen-flash`（DashScope OpenAI 兼容接口，`temperature=0.1`、`max_tokens=14000`）。
+
+## RAG 是核心：三个 Milvus 集合
+
+NL2SQL 准不准，关键不在模型多大，而在**它知不知道你的库长什么样**。Agent 的 `get_table_schema` 工具把用户问题向量化，**并行**从三个 Milvus 集合检索：
+
+```
+用户问题 ──向量化──┬──▶ collection: DDL / 表结构      → 相关表的建表语句
+                  ├──▶ collection: 业务文档          → 字段含义 / 口径 / 术语
+                  └──▶ collection: 历史 SQL 示例     → 相似问题的正确 SQL
+                                                       ↓
+                              拼成上下文 → qwen-flash 生成 SQL
+```
+
+三路命中拼成上下文，模型据此写 SQL——相当于每次提问都现查一份「这个库的小抄」。课程里给的数字是 RAG 把 SQL 准确率从约 40% 提到 85% 以上（这是课程口径，本项目没有附带评测表，引用时当参考值看）。
+
+## Jina Embeddings v4 单独成服务
+
+向量质量直接决定检索质量，所以 embedding 没用 Vanna 自带的，而是换成 **Jina Embeddings v4**，并**独立部署成一个 FastAPI 微服务**：
+
+```python
+# app_jina_embedding_v4.py（要点）
+# 模型: jina-embeddings-v4-vllm-retrieval
+# 暴露 OpenAI 兼容端点: POST /v1/embeddings
+# 输出向量维度: 2048
+```
+
+环境 `jina_run`（py3.13.5，`torch==2.8.0` / `transformers==4.56.2` / `fastapi==0.118.3`）。拆成独立服务的好处和多模态 RAG 项目一个道理：embedding 是吃 GPU 的重组件，单独起、单独扩、单独换。
+
+## 一次完整问答的 ReAct 轨迹
+
+```
+问：「上个月每个销售大区的成交额，按降序」
+  └─> Agent (qwen-flash) 起 ReAct 循环
+        ├─ tool: get_table_schema(问题)
+        │     → 三个 Milvus 集合并行检索 → DDL + 业务口径 + 相似 SQL
+        ├─ 生成 SQL：SELECT region, SUM(amount) ... GROUP BY region ORDER BY ... DESC
+        ├─ tool: run_sql(sql)   → MySQL 执行 → 结果集
+        ├─ tool: plot(结果集)    → 选图表类型 → 柱状图
+        └─ 自然语言解释：「华东最高，约 …；环比 …」
+  └─> 前端渲染：SQL + 数据表 + 图表 + 解释
+```
+
+## 对 Vanna 做了哪些改造
+
+fork Vanna 后明确改了 4 处（课件里逐条列出）：
+
+1. **换 embedding**：原生 embedding → Jina Embeddings v4（中文检索更准）
+2. **中文支持**：补中文问题 / 中文 SQL 注释的处理
+3. **批量化**：批量 embedding + 批量入库，建索引快很多
+4. **去重**：重复问题去重，避免历史 SQL 集合里堆同一条
+
+## 价值点
+
+- **训练 vs 检索的判断力**：同样是 NL2SQL，知道什么时候该微调、什么时候 RAG 更划算
+- **Agent 工具设计**：`get_table_schema` / `run_sql` / `plot` 三个工具，ReAct 自主编排
+- **检索是准头来源**：三集合并行检索（DDL + 业务文档 + 历史 SQL）是 NL2SQL 落地的关键，而不是堆更大的模型
+- **工程改造能力**：能 fork 一个开源项目（Vanna）并按真实需求改 embedding / 中文 / 批量 / 去重
+
+<DemoStatus
+  title="为什么这是案例页而非互动 Demo"
+  description="这个系统要同时跑 MySQL（真实业务库）+ Milvus（三个向量集合）+ Jina 向量服务才能演示，浏览器里没法安全复演真实查询。所以这里用案例页讲清架构、RAG 检索设计和对 Vanna 的改造；可对照 deep-research-agent / 文档审核 Agent 等带 Demo 的项目看 Agent 编排的共性。"
+/>

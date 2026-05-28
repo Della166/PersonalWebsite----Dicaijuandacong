@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0e1a14"/>
+      <stop offset="100%" stop-color="#1a2a22"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#g)"/>
+  <g stroke="#7fbc8c" stroke-width="3" opacity="0.5">
+    <line x1="1180" y1="200" x2="1360" y2="300"/>
+    <line x1="1360" y1="300" x2="1280" y2="480"/>
+    <line x1="1180" y1="200" x2="1080" y2="380"/>
+    <line x1="1280" y1="480" x2="1080" y2="380"/>
+  </g>
+  <g fill="#d4a574">
+    <circle cx="1180" cy="200" r="20"/>
+    <circle cx="1360" cy="300" r="16"/>
+    <circle cx="1280" cy="480" r="16"/>
+    <circle cx="1080" cy="380" r="16"/>
+  </g>
+  <g font-family="system-ui, -apple-system, sans-serif" fill="#f0e8d9">
+    <text x="80" y="180" font-size="32" font-weight="700" fill="#7fbc8c" letter-spacing="4">LANGEXTRACT · LANGCHAIN AGENT</text>
+    <text x="80" y="320" font-size="104" font-weight="900">Agentic-GraphRAG</text>
+    <text x="80" y="430" font-size="60" font-weight="700" fill="#d4a574">知识图谱 · 多跳 · DeepSeek</text>
+    <text x="80" y="600" font-size="34" fill="#c6d2cb">MinerU → LangExtract → KG + Chroma → 3-tool agent</text>
+    <text x="80" y="658" font-size="34" fill="#c6d2cb">vector / graph / hybrid · char_interval grounding</text>
+    <g transform="translate(80, 750)">
+      <rect x="0" y="0" rx="999" ry="999" width="210" height="60" fill="none" stroke="#d4a574" stroke-width="3"/>
+      <text x="105" y="40" font-size="28" fill="#d4a574" text-anchor="middle" font-weight="600">LangExtract</text>
+      <rect x="230" y="0" rx="999" ry="999" width="170" height="60" fill="none" stroke="#d4a574" stroke-width="3"/>
+      <text x="315" y="40" font-size="28" fill="#d4a574" text-anchor="middle" font-weight="600">Chroma</text>
+      <rect x="420" y="0" rx="999" ry="999" width="240" height="60" fill="none" stroke="#7fbc8c" stroke-width="3"/>
+      <text x="540" y="40" font-size="28" fill="#7fbc8c" text-anchor="middle" font-weight="600">Knowledge Graph</text>
+    </g>
+  </g>
+</svg>

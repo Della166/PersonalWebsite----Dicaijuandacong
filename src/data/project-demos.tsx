@@ -13,6 +13,7 @@ import DifyLongContentPreview from '@/components/mdx/DifyLongContentPreview';
 import DeepSeekOcrAnalysisPreview from '@/components/mdx/DeepSeekOcrAnalysisPreview';
 import ChartVqaFinetunePreview from '@/components/mdx/ChartVqaFinetunePreview';
 import CozeVideoPipelinePreview from '@/components/mdx/CozeVideoPipelinePreview';
+import AgenticGraphRagPreview from '@/components/mdx/AgenticGraphRagPreview';
 
 interface LocalizedText {
   en: string;
@@ -779,6 +780,59 @@ export const projectDemos = {
       {
         label: { en: 'Best signal', zh: '最强信号' },
         value: { en: 'Modular orchestration + right-tool-for-the-job platform judgment', zh: '模块化编排 + 按场景选平台的判断力' },
+      },
+    ],
+  },
+  'agentic-graphrag-agent': {
+    component: AgenticGraphRagPreview,
+    eyebrow: {
+      en: 'Agent-routing sandbox',
+      zh: 'Agent 路由沙盒',
+    },
+    summary: {
+      en: 'Switch questions and watch the LangChain agent pick vector / graph / hybrid retrieval: the graph path lights up the knowledge-graph entities hop by hop, and each answer carries char_interval source citations.',
+      zh: '换不同问题，看 LangChain Agent 选 向量 / 图谱 / 混合 检索：图谱路沿知识图谱实体逐跳点亮，每个答案都带 char_interval 原文引用。',
+    },
+    localNote: {
+      en: 'The knowledge graph (a Python dict of entities + relations), the three tools, and the char_interval citations are the real pipeline behavior on a sample private-loan contract. No live DeepSeek / Chroma — the routing and multi-hop traversal are what matter.',
+      zh: '知识图谱（实体 + 关系的 Python dict）、三个工具、char_interval 引用都是在一份民间借贷合同样例上的真实 pipeline 行为。不调真实 DeepSeek / Chroma——重点是工具路由和多跳遍历。',
+    },
+    whatToTry: {
+      en: [
+        'Run the fact question and watch it route to vector_search_tool only.',
+        'Run the relational question and watch graph_search_tool traverse the KG hop by hop.',
+        'Run the compound question and watch hybrid_search_tool fuse vector hits + graph hops.',
+      ],
+      zh: [
+        '跑事实型问题，看它只路由到 vector_search_tool。',
+        '跑关系型问题，看 graph_search_tool 沿知识图谱逐跳遍历。',
+        '跑复合型问题，看 hybrid_search_tool 融合向量命中 + 图谱多跳。',
+      ],
+    },
+    whatItProves: {
+      en: [
+        'You know when a graph is needed (relations / multi-hop) and when Neo4j is over-engineering — here the graph is a Python dict.',
+        'You design agentic retrieval routing: the agent picks vector / graph / hybrid per question, not a hard-coded path.',
+        'You keep source grounding (char_interval) end-to-end, so every claim is auditable.',
+      ],
+      zh: [
+        '你知道什么时候需要图（关系 / 多跳），什么时候 Neo4j 是过度工程——这里的图就是一个 Python dict。',
+        '你设计 agentic 检索路由：Agent 按问题选 向量 / 图谱 / 混合，而不是写死一条路。',
+        '你把 source grounding（char_interval）贯穿到底，每条断言都可审计。',
+      ],
+    },
+    highlights: [
+      {
+        label: { en: 'Extraction', zh: '抽取' },
+        value: { en: 'LangExtract 1.1.1 + DeepSeek deepseek-chat · classes 实体 / 数据指标 / 关系描述', zh: 'LangExtract 1.1.1 + DeepSeek deepseek-chat · 类别 实体 / 数据指标 / 关系描述' },
+      },
+      {
+        label: { en: 'Stores', zh: '存储' },
+        value: { en: 'Chroma (text-embedding-v4, 1024-dim) + a Python-dict knowledge graph', zh: 'Chroma（text-embedding-v4, 1024 维）+ Python dict 知识图谱' },
+      },
+      {
+        label: { en: 'Agent', zh: 'Agent' },
+        value: { en: 'LangChain create_agent · 3 tools: vector / graph (1–2 hop) / hybrid', zh: 'LangChain create_agent · 3 工具：向量 / 图谱（1–2 跳）/ 混合' },
       },
     ],
   },

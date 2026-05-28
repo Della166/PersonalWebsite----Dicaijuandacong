@@ -136,10 +136,27 @@ echo "✓ all services started. health-check: ./status_services.sh"
 2. **检索可视化**：先展示 top-k 命中的 chunk + score（让用户**看到证据**再读 AI 回答）
 3. **流式答案 + 引用脚注**：用户读完答案，每段后面有 `[1] [2]` 脚注链回原始 chunk
 
+## V2.0：OCR 路线的三个可选引擎
+
+OCR 路线（`Multimodal_RAG_OCR`）在 V2.0 把「解析」这一层做厚——不再是单一 OCR，而是三个可切换引擎，按版式和精度需求选：
+
+| 引擎 | 形态 | 适合 |
+|---|---|---|
+| **MinerU** | Docker 镜像 `mineru-vllm:2.5.4`（vLLM 后端 0.10.1.1） | 复杂版式 PDF，输出 markdown + bbox |
+| **DeepSeek-OCR** | VLM OCR | 表格 / 公式密集的页面 |
+| **PaddleOCR-VL** | 0.9B 小 VLM（RT-DETR 版式检测 + ERNIE-4.5-0.3B） | 轻量、吞吐高（厂商称 A100 上约 1.22 页/s）\* |
+
+\* PaddleOCR-VL 的吞吐是厂商数据，非本项目实测。生成模型用 Qwen `qwen3-vl-plus`（DashScope），embedding 用 `text-embedding-v4`。解析方法在前端按版本暴露：V1 = `fast`（PyMuPDF4LLM）+ `vlm`，V2 = `mineru` / `paddleocr` / `deepseek`。
+
+### 前端版本隔离：一套代码，两个版本
+
+V1 / V2 不是两个独立站点，而是**同一个 React + Vite 前端**用 `src/api/config.ts` 的 `API_CONFIG.v1` / `API_CONFIG.v2` 切换后端地址，配合共享组件 + 条件渲染 + localStorage 记住选择。V2 的 chunk 元数据比 V1 多了 `layout_info` / `has_images` / `has_page_images`——把版面结构一起带进检索，而不是只留纯文本。
+
 ## 价值点
 
 - **微服务 RAG**：不是单服务塞所有，按能力切分，各自可演化
 - **VLM + OCR 双路线**：按文档类型选最合适的解析路线，不是「VLM 大锤打蚊子」
+- **OCR 引擎可插拔**：MinerU / DeepSeek-OCR / PaddleOCR-VL 三选一，按版式和吞吐取舍
 - **生产可部署**：Docker Compose、独立 pid/log、健康检查脚本、shutdown 顺序——不是「能跑就行」级别
 - **检索可见化**：让用户看到 RAG 命中了什么 chunk 再读答案，**减少 LLM 编造的容忍度**
 

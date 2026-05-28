@@ -1,0 +1,131 @@
+---
+title: "垂直领域 Agentic-GraphRAG"
+title_en: "Agentic GraphRAG (Vertical Domain)"
+date: "2026-05-22"
+category: project
+tags: ["LangChain", "LangExtract", "GraphRAG", "DeepSeek", "Chroma", "Knowledge Graph"]
+lang: both
+cover: "/projects/agentic-graphrag-agent/cover.svg"
+excerpt: "不堆 Neo4j、不上 Microsoft GraphRAG，用「够用」的图：LangExtract 抽实体+关系建成一个 Python dict 知识图谱，配 Chroma 向量库，让一个 3 工具 Agent 自己选 向量 / 图谱 / 混合 检索——还能沿关系多跳。"
+excerpt_en: "Pragmatic GraphRAG with no Neo4j and no Microsoft GraphRAG: LangExtract pulls entities + relations into a plain Python-dict knowledge graph, paired with a Chroma vector store, and a 3-tool agent chooses vector / graph / hybrid retrieval — with multi-hop relation traversal."
+platforms: [website]
+github: ""
+demo: "/demo/agentic-graphrag-agent"
+published: true
+---
+
+<Callout type="info">
+  普通 RAG 在「关系型 / 多跳」问题上会翻车——「A 关联了谁，那个人又欠了多少」这种，纯向量检索答不好。这个项目用 <strong>Agentic-GraphRAG</strong> 补上：抽实体 + 关系建知识图谱，但**不上 Neo4j / Microsoft GraphRAG**，而是用一个 Python dict 当图，再让 Agent 自己决定走 向量 / 图谱 / 混合 哪条路。
+</Callout>
+
+## 设计哲学：用「够用」的图，别过度工程
+
+Microsoft GraphRAG、Neo4j 都很强，但对一个垂直领域文档库往往是大锤打蚊子——要起图数据库、要学 Cypher、要维护 schema。这个项目反过来：
+
+- **图就是一个 Python dict**：`{entities: [...], relations: [...]}`，没有图数据库
+- **检索路由交给 Agent**：不预设「always graph」或「always vector」，让 LLM 看问题自己挑工具
+- **抽取带 source grounding**：每个抽取保留 `char_interval` 指回原文，答案可溯源
+
+## 四阶段 pipeline
+
+```
+PDF/长文
+  │
+  ├─[1] MinerU 解析 → Markdown
+  │
+  ├─[2] LangExtract 抽取 → 实体 + 数据指标 + 关系（带 char_interval）
+  │
+  ├─[3] 双写入库
+  │       ├─▶ Chroma（向量）          ← text-embedding-v4, 1024 维, chunk_size=10
+  │       └─▶ 知识图谱（Python dict）  ← {entities, relations}
+  │
+  └─[4] LangChain create_agent（3 工具）
+          vector_search_tool / graph_search_tool / hybrid_search_tool
+```
+
+## LangExtract：带 char_interval 的抽取
+
+用 Google 开源的 **`langextract==1.1.1`**，LLM 用 DeepSeek `deepseek-chat`：
+
+```python
+import langextract as lx
+
+result = lx.extract(
+    text_or_documents=markdown_text,
+    prompt_description=prompt,            # 抽 实体 / 数据指标 / 关系描述
+    examples=few_shot_examples,
+    model=deepseek_model,                 # api.deepseek.com / deepseek-chat
+    fence_output=True,
+    use_schema_constraints=False,
+    prompt_validation_level=lx.PromptValidationLevel.OFF,
+)
+```
+
+抽取分三类：
+
+| extraction_class | 抽什么 | 例 |
+|---|---|---|
+| `实体` | 主体对象 | 出借人 / 借款人 / 合同 |
+| `数据指标` | 数值型事实 | 借款金额 / 利率 / 还款期限 |
+| `关系描述` | 关系三元组 | `{主体1, 主体2, 关系}` |
+
+每个抽取都带 `char_interval`（起止字符偏移），这是后面答案能「引用原文第几个字」的基础——医疗 / 法律 / 合规场景的硬需求。课程在一份民间借贷合同样例（涉及《民法典》第六百七十五条）上抽出约 21 条：11 个实体、1 条关系。
+
+> `罗密欧与朱丽叶.txt` 在项目里是 LangExtract 的 few-shot 教学样例，不是主语料——别被它误导。
+
+## 知识图谱就是一个 Python dict
+
+```python
+knowledge_graph = {
+    "entities": [
+        {"name": "出借人", "type": "实体", "attributes": {...}},
+        {"name": "借款金额", "type": "数据指标", "value": "..."},
+        # ...
+    ],
+    "relations": [
+        {"主体1": "出借人", "主体2": "借款人", "关系": "出借给"},
+        # ...
+    ],
+}
+```
+
+`graph_search` 不做花哨的图算法：**子串模糊匹配**定位起点实体，再沿 `relations` 做 **1–2 跳遍历**，把关联实体捞回来。够用，而且任何人都看得懂。
+
+## 三个工具的 Agent
+
+```python
+agent = create_agent(            # LangChain 1.0
+    model=ChatOpenAI(..., temperature=0.3),   # DeepSeek
+    tools=[vector_search_tool, graph_search_tool, hybrid_search_tool],
+)
+```
+
+- **`vector_search_tool`**：Chroma 语义检索——适合「这份文档说了什么」式事实查询
+- **`graph_search_tool`**：实体模糊匹配 + 1–2 跳关系遍历——适合「A 和 B 什么关系 / A 还关联了谁」
+- **`hybrid_search_tool`**：两者都跑，融合证据——适合既要事实又要关系的复合问题
+
+关键不是「有图」，而是 **Agent 自己看问题选工具**——这才是「Agentic」GraphRAG 的那个 *Agentic*。
+
+## 一次 agentic 查询
+
+```
+问：「出借人和借款人是什么关系？借款人要还多少？」
+  └─> agent_query() 起 ReAct 循环
+        ├─ LLM 判断：这是关系 + 数值的复合问题 → 选 hybrid_search_tool
+        ├─ vector 路：召回含「借款金额 / 利率」的 chunk
+        ├─ graph 路：定位「出借人」→ 沿关系跳到「借款人」→ 再跳到「借款金额」
+        └─ 融合 → 带 char_interval 引用的答案
+  └─> 返回：answer + 工具调用证据（走了哪条路、命中哪些实体）
+```
+
+## 价值点
+
+- **GraphRAG 落地判断力**：知道什么时候需要图（关系/多跳），也知道什么时候 Neo4j 是过度工程
+- **Agentic 检索路由**：让 Agent 按问题选 向量 / 图谱 / 混合，而不是写死一条路
+- **Source grounding**：char_interval 让每条断言可溯源——审计性需求
+- **跟 LangExtractApp 同源但更进一步**：抽取 + 向量那层和结构化抽取平台共享，这里多了知识图谱 + 多跳 Agent
+
+<DemoStatus
+  title="Demo 真实材料对应"
+  description="互动 Demo 复演 Agent 的工具路由：换不同问题，看 Agent 选 向量 / 图谱 / 混合 哪个工具，图谱路会画出实体沿关系的多跳遍历，最终答案带 char_interval 原文引用。知识图谱、3 个工具、char_interval 都是真实 pipeline 行为；不调真实 DeepSeek / Chroma。"
+/>

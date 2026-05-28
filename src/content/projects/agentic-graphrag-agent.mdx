@@ -1,0 +1,131 @@
+---
+title: "垂直领域 Agentic-GraphRAG"
+title_en: "Agentic GraphRAG (Vertical Domain)"
+date: "2026-05-22"
+category: project
+tags: ["LangChain", "LangExtract", "GraphRAG", "DeepSeek", "Chroma", "Knowledge Graph"]
+lang: both
+cover: "/projects/agentic-graphrag-agent/cover.svg"
+excerpt: "不堆 Neo4j、不上 Microsoft GraphRAG，用「够用」的图：LangExtract 抽实体+关系建成一个 Python dict 知识图谱，配 Chroma 向量库，让一个 3 工具 Agent 自己选 向量 / 图谱 / 混合 检索——还能沿关系多跳。"
+excerpt_en: "Pragmatic GraphRAG with no Neo4j and no Microsoft GraphRAG: LangExtract pulls entities + relations into a plain Python-dict knowledge graph, paired with a Chroma vector store, and a 3-tool agent chooses vector / graph / hybrid retrieval — with multi-hop relation traversal."
+platforms: [website]
+github: ""
+demo: "/demo/agentic-graphrag-agent"
+published: true
+---
+
+<Callout type="info">
+  Plain RAG breaks on relational / multi-hop questions — "who is A connected to, and how much does that person owe" is not something vector search answers well. This project closes that gap with <strong>Agentic-GraphRAG</strong>: it extracts entities + relations into a knowledge graph, but with <strong>no Neo4j / Microsoft GraphRAG</strong> — a Python dict is the graph — and lets the agent decide whether to go vector / graph / hybrid.
+</Callout>
+
+## Design philosophy: a "good-enough" graph, no over-engineering
+
+Microsoft GraphRAG and Neo4j are powerful, but for a single vertical document base they are often a sledgehammer — you stand up a graph database, learn Cypher, maintain a schema. This project goes the other way:
+
+- **the graph is a Python dict**: `{entities: [...], relations: [...]}`, no graph database
+- **retrieval routing is the agent's job**: not hard-coded "always graph" or "always vector" — the LLM looks at the question and picks the tool
+- **extraction carries source grounding**: every extraction keeps a `char_interval` back to the source text, so answers are traceable
+
+## Four-stage pipeline
+
+```
+PDF / long doc
+  │
+  ├─[1] MinerU parse → Markdown
+  │
+  ├─[2] LangExtract → entities + data metrics + relations (with char_interval)
+  │
+  ├─[3] dual write
+  │       ├─▶ Chroma (vectors)          ← text-embedding-v4, 1024-dim, chunk_size=10
+  │       └─▶ knowledge graph (Python dict)  ← {entities, relations}
+  │
+  └─[4] LangChain create_agent (3 tools)
+          vector_search_tool / graph_search_tool / hybrid_search_tool
+```
+
+## LangExtract: extraction with char_interval
+
+It uses Google's open-source **`langextract==1.1.1`**, with DeepSeek `deepseek-chat` as the LLM:
+
+```python
+import langextract as lx
+
+result = lx.extract(
+    text_or_documents=markdown_text,
+    prompt_description=prompt,            # extract entities / data metrics / relations
+    examples=few_shot_examples,
+    model=deepseek_model,                 # api.deepseek.com / deepseek-chat
+    fence_output=True,
+    use_schema_constraints=False,
+    prompt_validation_level=lx.PromptValidationLevel.OFF,
+)
+```
+
+Extractions fall into three classes:
+
+| extraction_class | what it captures | example |
+|---|---|---|
+| `实体` (entity) | subject objects | lender / borrower / contract |
+| `数据指标` (data metric) | numeric facts | loan amount / interest rate / term |
+| `关系描述` (relation) | relation triples | `{subject1, subject2, relation}` |
+
+Each extraction carries a `char_interval` (start/end offset) — the basis for answers that cite "which characters of the source" they come from, a hard requirement in medical / legal / compliance work. The course extracts ~21 items on a sample private-loan contract (referencing Civil Code Article 675): 11 entities and 1 relation.
+
+> `罗密欧与朱丽叶.txt` is LangExtract's few-shot tutorial example in this project, not the main corpus — don't be misled by it.
+
+## The knowledge graph is just a Python dict
+
+```python
+knowledge_graph = {
+    "entities": [
+        {"name": "lender", "type": "实体", "attributes": {...}},
+        {"name": "loan_amount", "type": "数据指标", "value": "..."},
+        # ...
+    ],
+    "relations": [
+        {"主体1": "lender", "主体2": "borrower", "关系": "lends_to"},
+        # ...
+    ],
+}
+```
+
+`graph_search` does no fancy graph algorithms: **substring fuzzy match** to locate the starting entity, then a **1–2 hop traversal** over `relations` to pull in connected entities. Good enough — and anyone can read it.
+
+## A three-tool agent
+
+```python
+agent = create_agent(            # LangChain 1.0
+    model=ChatOpenAI(..., temperature=0.3),   # DeepSeek
+    tools=[vector_search_tool, graph_search_tool, hybrid_search_tool],
+)
+```
+
+- **`vector_search_tool`**: Chroma semantic search — good for "what does this document say" fact lookups
+- **`graph_search_tool`**: entity fuzzy match + 1–2 hop relation traversal — good for "how are A and B related / who else is A connected to"
+- **`hybrid_search_tool`**: runs both and fuses the evidence — good for compound questions needing facts *and* relations
+
+The point is not "having a graph" — it is that the **agent picks the tool from the question**. That is the *Agentic* in Agentic-GraphRAG.
+
+## A single agentic query
+
+```
+Q: "How are the lender and borrower related, and how much must the borrower repay?"
+  └─> agent_query() runs a ReAct loop
+        ├─ LLM judges: compound relation + numeric question → picks hybrid_search_tool
+        ├─ vector path: recalls chunks with "loan amount / interest rate"
+        ├─ graph path: locates "lender" → hops to "borrower" → hops to "loan amount"
+        └─ fuses → answer with char_interval citations
+  └─> returns: answer + tool-call evidence (which path, which entities hit)
+```
+
+## What this signals
+
+- **Judgment on landing GraphRAG**: knowing when you need a graph (relations / multi-hop) and when Neo4j is over-engineering
+- **Agentic retrieval routing**: letting the agent pick vector / graph / hybrid per question instead of hard-coding one path
+- **Source grounding**: char_interval makes every claim traceable — an auditability requirement
+- **Same roots as LangExtractApp, one step further**: the extraction + vector layer is shared with the structured-extraction platform; this adds the knowledge graph + multi-hop agent
+
+<DemoStatus
+  title="What the demo replays"
+  description="The interactive demo replays the agent's tool routing: switch questions and watch the agent pick vector / graph / hybrid; the graph path draws the entity-by-relation multi-hop traversal, and the final answer carries char_interval source citations. The knowledge graph, the 3 tools, and char_interval are real pipeline behavior — no live DeepSeek / Chroma calls."
+/>

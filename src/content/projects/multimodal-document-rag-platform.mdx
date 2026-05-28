@@ -53,6 +53,16 @@ The backend combines several layers:
 That architecture matters because most RAG demos stop at retrieval quality.
 This project goes one step further and treats deployability and usability as part of the system.
 
+## V2.0: Three Selectable OCR Engines
+
+The OCR branch (`Multimodal_RAG_OCR`) deepens the parsing layer in V2.0 — instead of a single OCR, it offers three swappable engines chosen by layout complexity and accuracy needs:
+
+- **MinerU** — run as the Docker image `mineru-vllm:2.5.4` (vLLM backend 0.10.1.1); outputs markdown + bounding boxes for complex-layout PDFs.
+- **DeepSeek-OCR** — a VLM-based OCR for table- and formula-dense pages.
+- **PaddleOCR-VL** — a 0.9B small VLM (RT-DETR layout detection + ERNIE-4.5-0.3B), lightweight and high-throughput (the vendor quotes ~1.22 pages/s on an A100; not measured here).
+
+Generation uses Qwen `qwen3-vl-plus` (DashScope) and embeddings use `text-embedding-v4`. Crucially, V1 and V2 are **one React + Vite frontend**, not two sites: `src/api/config.ts` switches between `API_CONFIG.v1` and `API_CONFIG.v2` (shared components + conditional render + localStorage), and V2 chunks carry extra metadata (`layout_info`, `has_images`, `has_page_images`) so layout structure enters retrieval.
+
 ## Why This Project Is Strong
 
 This is one of the best portfolio projects for applied AI roles because it shows:
