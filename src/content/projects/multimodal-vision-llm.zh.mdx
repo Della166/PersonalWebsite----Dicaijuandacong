@@ -1,0 +1,67 @@
+---
+title: "多模态视觉大模型实战（PandaGPT）"
+title_en: "Multimodal Vision LLM (PandaGPT)"
+date: "2026-05-14"
+category: project
+tags: ["Multimodal", "ImageBind", "PandaGPT", "Vicuna", "VPT", "Visual Prompt"]
+lang: both
+cover: "/projects/multimodal-vision-llm/cover.svg"
+excerpt: "用 ImageBind 把 6 种模态(图/文/音/深度/热成像/IMU)绑进同一向量空间，再用一个线性投影接到 Vicuna —— PandaGPT 只训图文对却能涌现地理解音频/深度。配套 VPT 视觉提示微调做病理图像下游迁移。"
+excerpt_en: "ImageBind binds 6 modalities (image/text/audio/depth/thermal/IMU) into one embedding space; a single linear projection feeds Vicuna — PandaGPT trains only on image-text yet emergently understands audio/depth. Plus VPT visual-prompt tuning for pathology downstream transfer."
+platforms: [website]
+github: "https://github.com/yxuansu/PandaGPT"
+demo: "/demo/multimodal-vision-llm"
+published: true
+---
+
+<Callout type="info">
+  来自智魔「LLM 多模态视觉大模型」课。两条主线：① 怎么把一个语言模型变成**能看、能听、能感知**的多模态模型（<strong>PandaGPT</strong> = ImageBind + Vicuna）；② 怎么用**视觉提示微调**（VPT）几乎不动主干就迁移到垂直领域（病理图像）。
+</Callout>
+
+## PandaGPT：用 1 个线性层把 6 模态接进 LLM
+
+PandaGPT 的巧思是**站在两个巨人肩膀上**，自己只训一个投影层：
+
+```
+6 模态输入 → ImageBind(冻结) → 同一向量空间 → 1 个线性投影 → Vicuna(LLM) → 文本回答
+```
+
+- **ImageBind**（Meta FAIR，CVPR 2023）把 **图像 / 文本 / 音频 / 深度 / 热成像 / IMU** 6 种模态对齐到**同一个嵌入空间**——这是「emergent zero-shot」的基础
+- **Vicuna**（LLaMA 衍生的对话模型）当语言大脑
+- 中间只训一个**线性投影**，把 ImageBind 的视觉嵌入对齐到 Vicuna 的词嵌入空间
+
+## 最反直觉的一点：涌现的跨模态能力
+
+PandaGPT **只在图文指令对上训练**，但因为 ImageBind 已经把 6 模态绑在一个空间里，模型能**涌现地**处理音频、深度等它从没见过的模态——把一段海浪音频丢进去，它能「听懂」。这就是「One Embedding Space To Bind Them All」的威力。
+
+## 课程的多模态谱系（资料里的论文）
+
+课程串了多模态视觉大模型的演进，配套精读三篇：
+
+| 论文 | 关键贡献 |
+|---|---|
+| **ImageBind** (Meta) | 6 模态绑进一个空间，emergent zero-shot |
+| **InternVL** | scaling 视觉基础大模型 + 对齐视觉-语言任务 |
+| **Gemini** | 原生多模态大模型家族 |
+
+上游还讲了自监督学习、视觉基础大模型架构、下游迁移与视觉提示——PandaGPT 是这条线的实战落点。
+
+## 配套：VPT 视觉提示微调（病理图像迁移）
+
+第二个实战是 **VPT（Visual Prompt Tuning）**：冻结整个 ViT 主干，只在输入端**插入少量可学习的 prompt token**，就能迁移到下游任务。课程把它用在**病理图像**（BCI 数据集）下游迁移：
+
+- **VPT-Shallow / VPT-Deep**：prompt 只插第一层 vs 每层都插
+- 基准：FGVC（细粒度分类）/ VTAB
+- 价值：主干不动、可训参数极少 → 垂直领域（医学影像）低成本迁移，跟全量微调效果接近
+
+## 价值点
+
+- **多模态对齐的工程直觉**：知道「绑模态」（ImageBind）+「接 LLM」（投影层）就能造多模态模型，不必从头训
+- **理解涌现**：为什么只训图文却能处理音频——共享嵌入空间
+- **高效迁移**：VPT 只调 prompt token，垂直领域（病理）低成本上手
+- **读得懂前沿**：ImageBind / InternVL / Gemini 的脉络
+
+<DemoStatus
+  title="Demo 真实材料对应"
+  description="互动 Demo 复演 PandaGPT 推理：选若干模态(图文必选,音频/深度可选)→ ImageBind 编码进同一向量空间 → 线性投影 → Vicuna 生成回答；用到非图文模态时标注「涌现」。6 模态、ImageBind+Vicuna+1 线性投影的架构、涌现能力都来自智魔课程 PandaGPT 实战源码与 ImageBind 论文;浏览器里不真跑模型。"
+/>

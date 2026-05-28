@@ -1,0 +1,67 @@
+---
+title: "多模态视觉大模型实战（PandaGPT）"
+title_en: "Multimodal Vision LLM (PandaGPT)"
+date: "2026-05-14"
+category: project
+tags: ["Multimodal", "ImageBind", "PandaGPT", "Vicuna", "VPT", "Visual Prompt"]
+lang: both
+cover: "/projects/multimodal-vision-llm/cover.svg"
+excerpt: "用 ImageBind 把 6 种模态(图/文/音/深度/热成像/IMU)绑进同一向量空间，再用一个线性投影接到 Vicuna —— PandaGPT 只训图文对却能涌现地理解音频/深度。配套 VPT 视觉提示微调做病理图像下游迁移。"
+excerpt_en: "ImageBind binds 6 modalities (image/text/audio/depth/thermal/IMU) into one embedding space; a single linear projection feeds Vicuna — PandaGPT trains only on image-text yet emergently understands audio/depth. Plus VPT visual-prompt tuning for pathology downstream transfer."
+platforms: [website]
+github: "https://github.com/yxuansu/PandaGPT"
+demo: "/demo/multimodal-vision-llm"
+published: true
+---
+
+<Callout type="info">
+  From Zhimo's "Multimodal Vision LLM" course. Two threads: ① how to turn a language model into one that can <strong>see, hear, and sense</strong> (<strong>PandaGPT</strong> = ImageBind + Vicuna); ② how to transfer to a vertical domain (pathology images) with almost no backbone changes via <strong>visual prompt tuning (VPT)</strong>.
+</Callout>
+
+## PandaGPT: one linear layer connects 6 modalities to an LLM
+
+PandaGPT's trick is to **stand on two giants** and train only a projection layer:
+
+```
+6 modalities → ImageBind (frozen) → one shared space → 1 linear projection → Vicuna (LLM) → text
+```
+
+- **ImageBind** (Meta FAIR, CVPR 2023) aligns **image / text / audio / depth / thermal / IMU** into **one embedding space** — the basis of "emergent zero-shot"
+- **Vicuna** (a LLaMA-derived chat model) is the language brain
+- Only a single **linear projection** is trained, aligning ImageBind's visual embedding into Vicuna's token-embedding space
+
+## The most counterintuitive part: emergent cross-modal ability
+
+PandaGPT is **trained only on image-text instruction pairs**, but because ImageBind already binds 6 modalities into one space, the model can **emergently** handle audio, depth, etc. it never saw in training — drop in a clip of ocean waves and it "hears" them. That's the power of "One Embedding Space To Bind Them All."
+
+## The course's multimodal lineage (papers in the materials)
+
+The course traces the evolution of multimodal vision LLMs, with three close-read papers:
+
+| Paper | Key contribution |
+|---|---|
+| **ImageBind** (Meta) | binds 6 modalities into one space, emergent zero-shot |
+| **InternVL** | scaling vision foundation models + aligning for visual-linguistic tasks |
+| **Gemini** | a natively multimodal model family |
+
+Upstream it also covers self-supervised learning, vision-foundation-model architectures, and downstream transfer / visual prompting — PandaGPT is where that line lands in practice.
+
+## Companion: VPT visual prompt tuning (pathology transfer)
+
+The second hands-on project is **VPT (Visual Prompt Tuning)**: freeze the entire ViT backbone, **insert a few learnable prompt tokens** at the input, and transfer to a downstream task. The course applies it to **pathology images** (the BCI dataset):
+
+- **VPT-Shallow / VPT-Deep**: prompts inserted at the first layer only vs at every layer
+- Benchmarks: FGVC (fine-grained classification) / VTAB
+- Value: backbone untouched, very few trainable params → low-cost transfer to a vertical domain (medical imaging), competitive with full fine-tuning
+
+## What this signals
+
+- **Engineering intuition for multimodal alignment**: knowing that "bind modalities" (ImageBind) + "attach an LLM" (a projection) builds a multimodal model — no need to train from scratch
+- **Understanding emergence**: why training only on image-text still handles audio — the shared embedding space
+- **Efficient transfer**: VPT tunes only prompt tokens for cheap vertical-domain (pathology) onboarding
+- **Reading the frontier**: the ImageBind / InternVL / Gemini lineage
+
+<DemoStatus
+  title="What the demo replays"
+  description="The demo replays PandaGPT inference: pick modalities (image+text required, audio/depth optional) → ImageBind encodes them into one shared space → linear projection → Vicuna generates the answer; using a non-image-text modality is flagged as 'emergent.' The 6 modalities, the ImageBind+Vicuna+1-linear-projection architecture, and the emergent ability all come from Zhimo's PandaGPT hands-on code and the ImageBind paper; no model runs in the browser."
+/>

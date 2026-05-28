@@ -21,6 +21,7 @@ import VeRLPpoPreview from '@/components/mdx/VeRLPpoPreview';
 import ClipCrossModalPreview from '@/components/mdx/ClipCrossModalPreview';
 import OpenClawMultiAgentPreview from '@/components/mdx/OpenClawMultiAgentPreview';
 import LlamaFromScratchPreview from '@/components/mdx/LlamaFromScratchPreview';
+import MultimodalVisionLlmPreview from '@/components/mdx/MultimodalVisionLlmPreview';
 
 interface LocalizedText {
   en: string;
@@ -1211,6 +1212,59 @@ export const projectDemos = {
       {
         label: { en: 'Best signal', zh: '最强信号' },
         value: { en: 'Foundational depth that underpins fine-tuning, RL, and agents', zh: '支撑微调/RL/Agent 的地基级深度' },
+      },
+    ],
+  },
+  'multimodal-vision-llm': {
+    component: MultimodalVisionLlmPreview,
+    eyebrow: {
+      en: 'Multimodal inference replay',
+      zh: '多模态推理复演',
+    },
+    summary: {
+      en: 'Pick modalities, then watch PandaGPT infer: ImageBind encodes them into one shared embedding space, a linear projection feeds Vicuna, and the answer comes back — using a non-image-text modality is flagged as emergent.',
+      zh: '选若干模态，看 PandaGPT 推理：ImageBind 编码进同一向量空间，线性投影接到 Vicuna，吐回答——用到非图文模态时标注「涌现」。',
+    },
+    localNote: {
+      en: 'The 6 modalities, the ImageBind(frozen)+1-linear-projection+Vicuna architecture, and the emergent cross-modal ability come from Zhimo\'s PandaGPT hands-on code and the ImageBind paper (Meta, CVPR 2023). No model runs in the browser.',
+      zh: '6 模态、ImageBind(冻结)+1 线性投影+Vicuna 架构、涌现的跨模态能力都来自智魔课程 PandaGPT 实战源码与 ImageBind 论文（Meta, CVPR 2023）。浏览器里不真跑模型。',
+    },
+    whatToTry: {
+      en: [
+        'Toggle audio/depth/thermal/IMU on or off, then run inference.',
+        'Watch ImageBind bind the selected modalities into one shared space → projection → Vicuna.',
+        'Note: using audio (which PandaGPT never trained on) still works — flagged as emergent.',
+      ],
+      zh: [
+        '开关 音频/深度/热成像/IMU，再运行推理。',
+        '看 ImageBind 把选中模态绑进同一空间 → 投影 → Vicuna。',
+        '注意：用音频（PandaGPT 没训过）也能work——标注为「涌现」。',
+      ],
+    },
+    whatItProves: {
+      en: [
+        'You can build a multimodal model by composition (ImageBind + a projection + an LLM) instead of training from scratch.',
+        'You understand emergence: one shared embedding space lets image-text training generalize to audio/depth.',
+        'You know efficient transfer (VPT visual prompt tuning) for vertical domains like pathology.',
+      ],
+      zh: [
+        '你能用「组合」造多模态模型（ImageBind + 投影 + LLM），而不是从头训。',
+        '你理解涌现：一个共享嵌入空间让图文训练泛化到音频/深度。',
+        '你掌握高效迁移（VPT 视觉提示微调）用于病理等垂直领域。',
+      ],
+    },
+    highlights: [
+      {
+        label: { en: 'Backbone', zh: '骨架' },
+        value: { en: 'ImageBind (6 modalities, frozen) + Vicuna + 1 linear projection', zh: 'ImageBind（6 模态，冻结）+ Vicuna + 1 个线性投影' },
+      },
+      {
+        label: { en: 'Lineage', zh: '脉络' },
+        value: { en: 'ImageBind · InternVL · Gemini (papers read in the course)', zh: 'ImageBind · InternVL · Gemini（课程精读论文）' },
+      },
+      {
+        label: { en: 'Efficient transfer', zh: '高效迁移' },
+        value: { en: 'VPT (visual prompt tuning) on a frozen ViT → pathology downstream', zh: 'VPT（视觉提示微调）在冻结 ViT 上 → 病理下游迁移' },
       },
     ],
   },
