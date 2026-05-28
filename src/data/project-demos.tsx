@@ -14,6 +14,12 @@ import DeepSeekOcrAnalysisPreview from '@/components/mdx/DeepSeekOcrAnalysisPrev
 import ChartVqaFinetunePreview from '@/components/mdx/ChartVqaFinetunePreview';
 import CozeVideoPipelinePreview from '@/components/mdx/CozeVideoPipelinePreview';
 import AgenticGraphRagPreview from '@/components/mdx/AgenticGraphRagPreview';
+import HarnessEngineeringPreview from '@/components/mdx/HarnessEngineeringPreview';
+import AgentMemoryPreview from '@/components/mdx/AgentMemoryPreview';
+import ContextEngineeringPreview from '@/components/mdx/ContextEngineeringPreview';
+import VeRLPpoPreview from '@/components/mdx/VeRLPpoPreview';
+import ClipCrossModalPreview from '@/components/mdx/ClipCrossModalPreview';
+import OpenClawMultiAgentPreview from '@/components/mdx/OpenClawMultiAgentPreview';
 
 interface LocalizedText {
   en: string;
@@ -833,6 +839,324 @@ export const projectDemos = {
       {
         label: { en: 'Agent', zh: 'Agent' },
         value: { en: 'LangChain create_agent · 3 tools: vector / graph (1–2 hop) / hybrid', zh: 'LangChain create_agent · 3 工具：向量 / 图谱（1–2 跳）/ 混合' },
+      },
+    ],
+  },
+  'harness-engineering': {
+    component: HarnessEngineeringPreview,
+    eyebrow: {
+      en: 'The model × design formula',
+      zh: '模型 × 设计公式',
+    },
+    summary: {
+      en: 'Install the four Harness pillars one by one and watch the benchmark climb from a bare model (52.8%) to a full Harness (66.5%) — with the model held constant.',
+      zh: '依次装上 Harness 四大支柱，看 benchmark 从裸模型 52.8% 爬到满 Harness 66.5%——模型保持不变。',
+    },
+    localNote: {
+      en: 'The 52.8% / 66.5% endpoints are the real LangChain measurements on Terminal Bench 2.0 (same GPT-5.2-Codex, harness-only change) cited in the course; the climb between is illustrative. Pillar names come from the Harness Engineering deck.',
+      zh: '52.8% / 66.5% 是课程引用的 LangChain 实测端点（同一个 GPT-5.2-Codex，只改 Harness）；中间过程为示意。支柱名称来自《Harness Engineering 技术实战》课件。',
+    },
+    whatToTry: {
+      en: [
+        'Install the Harness and watch the four pillars light up in sequence.',
+        'Note the endpoints: 52.8% bare → 66.5% with the full Harness, model unchanged.',
+        'Compare against a model upgrade (+6.8pp) — the Harness is ~2× that gain.',
+      ],
+      zh: [
+        '装配 Harness，看四大支柱依次点亮。',
+        '注意端点：裸模型 52.8% → 满 Harness 66.5%，模型不变。',
+        '对比换模型只 +6.8pp —— Harness 的收益约是其 2 倍。',
+      ],
+    },
+    whatItProves: {
+      en: [
+        'You internalize the "output quality = model capability × design level" multiplier.',
+        'You can name and apply the four pillars: codebase-as-truth, mechanized constraints (Hooks), feedback loops, entropy management.',
+        'You argue from measured benchmark data, not vibes — and can pick deep vs light Harness platforms by scenario.',
+      ],
+      zh: [
+        '你内化了「产出质量 = 模型能力 × 设计水平」这个乘法。',
+        '你能说清并落地四大支柱：代码库即真相源、机械化约束(Hooks)、反馈循环、熵管理。',
+        '你用实测 benchmark 说话，而不是「感觉」——并能按场景选深/轻 Harness 平台。',
+      ],
+    },
+    highlights: [
+      {
+        label: { en: 'Headline result', zh: '核心数据' },
+        value: { en: 'Terminal Bench 2.0: 52.8% → 66.5% (+13.7pp) from the Harness alone', zh: 'Terminal Bench 2.0：52.8% → 66.5%（+13.7pp），全来自 Harness' },
+      },
+      {
+        label: { en: 'Four pillars', zh: '四大支柱' },
+        value: { en: 'Codebase-as-truth · mechanized constraints (Hooks) · feedback loops · entropy mgmt', zh: '代码库即真相源 · 机械化约束(Hooks) · 反馈循环 · 熵管理' },
+      },
+      {
+        label: { en: 'Best signal', zh: '最强信号' },
+        value: { en: 'Agent-runtime engineering judgment, measured not vibed', zh: 'Agent 运行时工程的判断力，用实测说话' },
+      },
+    ],
+  },
+  'agent-memory-system': {
+    component: AgentMemoryPreview,
+    eyebrow: {
+      en: 'Memory scheduling replay',
+      zh: '记忆调度复演',
+    },
+    summary: {
+      en: 'A replay of the MemoryManager hub: short-term messages compress at MAX_HISTORY=20, a candidate fact passes a three-trigger write gate, MEMORY.md flips Direct→RAG past 2000 tokens, and the mem0 LLM judge resolves a conflict.',
+      zh: '复演 MemoryManager 调度中枢：短期消息在 MAX_HISTORY=20 处压缩，候选事实过三要素写入闸，MEMORY.md 超 2000 token 切 Direct→RAG，mem0 LLM 裁判解决冲突。',
+    },
+    localNote: {
+      en: 'All parameters (MAX_HISTORY=20, 2000-token threshold, the three write-triggers, the four mem0 ops) come from the Part 8 courseware (mini-OpenClaw + mem0). No live LLM/Milvus runs in the browser.',
+      zh: '所有参数（MAX_HISTORY=20、2000 token 阈值、三要素、mem0 四操作）均来自 Part 8 课件（mini-OpenClaw + mem0）。浏览器里不调真实 LLM/Milvus。',
+    },
+    whatToTry: {
+      en: [
+        'Run the flow and watch short-term hit MAX_HISTORY=20, then fold the front 50% into a summary.',
+        'See the candidate fact pass the factuality / stability / cross-session gate before it writes long-term.',
+        'Watch MEMORY.md cross 2000 tokens and flip Direct→RAG, then the mem0 judge pick UPDATE.',
+      ],
+      zh: [
+        '运行记忆流，看短期在 MAX_HISTORY=20 处把前 50% 折叠成摘要。',
+        '看候选事实先过「事实性 / 稳定性 / 跨会话」三要素闸，再写长期。',
+        '看 MEMORY.md 超 2000 token 切 Direct→RAG，mem0 裁判选 UPDATE。',
+      ],
+    },
+    whatItProves: {
+      en: [
+        'You treat memory as a system: short-term (truncate/compress) + long-term (Direct/RAG) + a scheduling hub.',
+        'You gate writes with explicit criteria, instead of dumping everything into a vector store.',
+        'You can go from a hand-rolled version to production mem0 and reason about its namespace / judge / backend trade-offs.',
+      ],
+      zh: [
+        '你把记忆当系统：短期(截断/压缩) + 长期(Direct/RAG) + 调度中枢。',
+        '你用明确标准把写入闸住，而不是把一切塞进向量库。',
+        '你能从手搓版平滑切到生产 mem0，并懂它的命名空间 / 裁判 / 后端取舍。',
+      ],
+    },
+    highlights: [
+      {
+        label: { en: 'Short-term', zh: '短期' },
+        value: { en: 'SessionManager · MAX_HISTORY=20 · rolling summary of the front 50%', zh: 'SessionManager · MAX_HISTORY=20 · 前 50% 滚动摘要' },
+      },
+      {
+        label: { en: 'Long-term', zh: '长期' },
+        value: { en: 'MEMORY.md, Direct→RAG at 2000 tokens (LlamaIndex VectorStoreIndex)', zh: 'MEMORY.md，2000 token 切 RAG（LlamaIndex VectorStoreIndex）' },
+      },
+      {
+        label: { en: 'Production', zh: '生产层' },
+        value: { en: 'mem0 LLM judge (ADD/UPDATE/DELETE/NONE) · Milvus · LangChain @tool', zh: 'mem0 LLM 裁判（ADD/UPDATE/DELETE/NONE）· Milvus · LangChain @tool' },
+      },
+    ],
+  },
+  'context-engineering-middleware': {
+    component: ContextEngineeringPreview,
+    eyebrow: {
+      en: 'Context-budget replay',
+      zh: '上下文预算复演',
+    },
+    summary: {
+      en: 'Six modules fill the context window; stack the five strategies in the course\'s "Cache-first, Isolate-later" priority and watch both window tokens and relative cost drop.',
+      zh: '六大模块占满上下文窗口；按课程的「先 Cache 后 Isolate」优先级叠加五大策略，看窗口 token 和相对成本一起降。',
+    },
+    localNote: {
+      en: 'The decision priority, the five strategies (Write/Select/Compress/Isolate/Cache), the Compress sub-techniques, and the 90%-off prompt cache come from the Part 9 courseware. The token/cost numbers are illustrative.',
+      zh: '决策优先级、五大策略（Write/Select/Compress/Isolate/Cache）、Compress 子技术、Cache 省 90% 等都来自 Part 9 课件。token / 成本数值为示意。',
+    },
+    whatToTry: {
+      en: [
+        'Stack the strategies and watch the window shrink module by module.',
+        'Note Cache goes first (90% off, day one) and the system-prompt prefix turns "cached".',
+        'See Isolate spin external-knowledge work into a sub-agent context only when needed.',
+      ],
+      zh: [
+        '叠加策略，看窗口逐模块缩小。',
+        '注意 Cache 最先用（省 90%，首日），系统提示前缀变成 cached。',
+        '看 Isolate 只在按需时把外部知识检索丢进子 Agent 上下文。',
+      ],
+    },
+    whatItProves: {
+      en: [
+        'You understand Context Rot — bigger window ≠ better — and manage it deliberately.',
+        'You can name each module and pick the right strategy, realized as stackable LangChain middleware.',
+        'You order savings: zero-cost (Cache / tool-result clearing) first, complex (Isolate / Write) on demand.',
+      ],
+      zh: [
+        '你理解 Context Rot——更大窗口 ≠ 更好——并主动管理。',
+        '你能说清每个模块、选对策略，并落成可叠加的 LangChain middleware。',
+        '你按成本排序：零成本（Cache / 工具结果清除）先上，复杂（Isolate / Write）按需。',
+      ],
+    },
+    highlights: [
+      {
+        label: { en: 'Framework', zh: '框架' },
+        value: { en: 'Six modules × five strategies (Write/Select/Compress/Isolate/Cache)', zh: '六大模块 × 五大策略（Write/Select/Compress/Isolate/Cache）' },
+      },
+      {
+        label: { en: 'As middleware', zh: '中间件' },
+        value: { en: 'trim_messages · SummarizationMiddleware · SubAgentMiddleware (deepagents)', zh: 'trim_messages · SummarizationMiddleware · SubAgentMiddleware（deepagents）' },
+      },
+      {
+        label: { en: 'Cost lever', zh: '成本杠杆' },
+        value: { en: 'Prompt cache: read at 10% (90% off), prefix byte-stable', zh: 'Prompt cache：cache-read 仅 10%（省 90%），前缀逐字节稳定' },
+      },
+    ],
+  },
+  'verl-ppo-training': {
+    component: VeRLPpoPreview,
+    eyebrow: {
+      en: 'PPO loop replay',
+      zh: 'PPO 闭环复演',
+    },
+    summary: {
+      en: 'Replays one PPO iteration on a GSM8K problem: the Actor rolls out a CoT (#### 72), the rule reward scores 1.0, the Critic values it, advantage = reward − value, then Actor/Critic update — four model roles lighting up around the loop.',
+      zh: '复演一次 PPO 迭代：Actor 在一道 GSM8K 题上生成 CoT(#### 72)，规则奖励给 1.0，Critic 估 value，A=reward−value，Actor/Critic 更新——四个模型角色绕闭环依次点亮。',
+    },
+    localNote: {
+      en: 'The four model roles, the seven-step loop, the reward regex (#### …), and the step:42 metrics (0.296 / 1702 tok/s) are from the veRL course ("LLM RL 强化学习训练入门"). No real training runs in the browser.',
+      zh: '四个模型角色、七步闭环、reward 正则(#### …)、step:42 指标(0.296 / 1702 tok/s) 都来自 veRL 课件《LLM RL 强化学习训练入门》。浏览器里不真跑训练。',
+    },
+    whatToTry: {
+      en: [
+        'Run one PPO step and watch Actor → Reward → Critic → Advantage → updates in sequence.',
+        'Note the rule reward: a regex on the #### answer gives a clean 1.0 / 0.0.',
+        'See the four roles (Actor/Reference/Reward/Critic) light up at the right stage.',
+      ],
+      zh: [
+        '跑一步 PPO，看 Actor → Reward → Critic → Advantage → 更新 依次执行。',
+        '注意规则奖励：对 #### 答案做正则，干净地给 1.0 / 0.0。',
+        '看四个角色（Actor/Reference/Reward/Critic）在对应阶段点亮。',
+      ],
+    },
+    whatItProves: {
+      en: [
+        'You can run classic RLHF PPO end-to-end on an industrial framework (veRL + Ray), on a single GPU.',
+        'You understand reward design: verifiable tasks (math) use a rule reward, not a trained RM.',
+        'You can place PPO within RLHF (SFT → RM → PPO) and read the InstructGPT source.',
+      ],
+      zh: [
+        '你能在工业级框架（veRL + Ray）上单卡端到端跑经典 RLHF PPO。',
+        '你理解奖励设计：可验证任务（数学）用规则奖励，而不是训 RM。',
+        '你能把 PPO 放进 RLHF（SFT → RM → PPO），读懂 InstructGPT 源头。',
+      ],
+    },
+    highlights: [
+      {
+        label: { en: 'Framework', zh: '框架' },
+        value: { en: 'veRL (HybridFlow) · Ray · FSDP + vLLM · Qwen2.5-0.5B on GSM8K', zh: 'veRL（HybridFlow）· Ray · FSDP + vLLM · Qwen2.5-0.5B on GSM8K' },
+      },
+      {
+        label: { en: 'Four roles', zh: '四角色' },
+        value: { en: 'Actor (policy) · Critic (value) · Reference (KL) · Reward (rule)', zh: 'Actor(策略) · Critic(价值) · Reference(KL) · Reward(规则)' },
+      },
+      {
+        label: { en: 'RLHF origin', zh: 'RLHF 源头' },
+        value: { en: 'InstructGPT: SFT → RM → PPO; 1.3B beat 175B GPT-3 on preference', zh: 'InstructGPT：SFT → RM → PPO；1.3B 在偏好上打败 175B GPT-3' },
+      },
+    ],
+  },
+  'clip-cross-modal-rag': {
+    component: ClipCrossModalPreview,
+    eyebrow: {
+      en: 'Shared-space retrieval',
+      zh: '同一空间检索',
+    },
+    summary: {
+      en: 'Switch between text→image, image→image, and hybrid: a query is encoded to 512-dim and lands in one shared space, pulling the nearest images by cosine — with the real low cross-modal scores and a self-hit filter.',
+      zh: '在 文搜图 / 图搜图 / 混合 间切换：query 编码成 512 维落进同一空间，按 cosine 拉出最近的图——含真实偏低的跨模态分数和自身命中过滤。',
+    },
+    localNote: {
+      en: 'The 512-dim shared space, the ~0.24 text→image scores, the image→image self-hit (1.0) filter, RRF (k=60), and the 1536-dim VLM-caption index are all from the LlamaIndex multimodal notebook. The 2D plot is a projection for intuition.',
+      zh: '512 维共享空间、文搜图约 0.24 的分数、图搜图自身命中(1.0)过滤、RRF(k=60)、VLM 描述 1536 维都来自 LlamaIndex 多模态 notebook。2D 图是为直觉做的投影。',
+    },
+    whatToTry: {
+      en: [
+        'Run text→image and watch a text query pull the nearest image diagrams.',
+        'Switch to image→image and see the self-hit (1.0) get filtered out.',
+        'Try hybrid and note BM25 + vector fused by RRF (k=60).',
+      ],
+      zh: [
+        '跑文搜图，看文本 query 拉出最近的图。',
+        '切图搜图，看自身命中(1.0)被过滤掉。',
+        '试混合，注意 BM25 + 向量经 RRF(k=60) 融合。',
+      ],
+    },
+    whatItProves: {
+      en: [
+        'You can land cross-modal retrieval (text↔image), not just chat-over-text.',
+        'You know CLIP\'s limits (in-image text / Chinese) and patch them with VLM captions.',
+        'You engineer hybrid retrieval (vector + BM25 via RRF) on the LlamaIndex multimodal stack.',
+      ],
+      zh: [
+        '你能落地跨模态检索（文↔图），不只是「Chat with text」。',
+        '你知道 CLIP 的边界（图内文字 / 中文），用 VLM 描述补。',
+        '你在 LlamaIndex 多模态栈上做混合检索（向量 + BM25 经 RRF）。',
+      ],
+    },
+    highlights: [
+      {
+        label: { en: 'Shared space', zh: '共享空间' },
+        value: { en: 'CLIP (OpenAI) · get_text/image_embedding both 512-dim', zh: 'CLIP（OpenAI）· get_text/image_embedding 都是 512 维' },
+      },
+      {
+        label: { en: 'Beyond CLIP', zh: '超越 CLIP' },
+        value: { en: 'VLM caption (GPT-4o / Qwen-VL-Max) → text-embedding-3-small 1536-dim', zh: 'VLM 描述（GPT-4o / Qwen-VL-Max）→ text-embedding-3-small 1536 维' },
+      },
+      {
+        label: { en: 'Hybrid', zh: '混合' },
+        value: { en: 'BM25 + vector → QueryFusionRetriever, RRF k=60 · Milvus', zh: 'BM25 + 向量 → QueryFusionRetriever，RRF k=60 · Milvus' },
+      },
+    ],
+  },
+  'openclaw-multi-agent': {
+    component: OpenClawMultiAgentPreview,
+    eyebrow: {
+      en: 'Hub-Spoke replay',
+      zh: 'Hub-Spoke 复演',
+    },
+    summary: {
+      en: 'A Hub-Spoke code review: the lead spawns three review subagents, an upward sessions_send is shown bouncing off the subagent boundary (blocked), and results flow back only via sessions_history.',
+      zh: 'Hub-Spoke 代码评审：lead 派生三个评审子 Agent，一条上行 sessions_send 撞到子 Agent 边界被禁，结果只能经 sessions_history 流回。',
+    },
+    localNote: {
+      en: 'The three MCP primitives (spawn/send/history), the six modes\' token multipliers, and the subagent-layer sessions_send ban (Issue #23359, the root of P2P\'s zero cases) come from the "OpenClaw 多Agent系统入门" course. No live OpenClaw runs here.',
+      zh: '三个 MCP 原语（spawn/send/history）、6 模式 token 倍数、子层 sessions_send 禁用（Issue #23359，P2P 零案例根因）都来自《OpenClaw 多Agent系统入门》课件。这里不真跑 OpenClaw。',
+    },
+    whatToTry: {
+      en: [
+        'Run the orchestration and watch the lead spawn three subagents in parallel.',
+        'Watch the upward sessions_send arrow turn red and bounce — banned at the subagent layer.',
+        'See results flow back only via sessions_history before the lead synthesizes.',
+      ],
+      zh: [
+        '运行编排，看 lead 并行派生三个子 Agent。',
+        '看上行的 sessions_send 箭头变红弹回——子 Agent 层被禁。',
+        '看结果只经 sessions_history 流回，lead 再综合。',
+      ],
+    },
+    whatItProves: {
+      en: [
+        'You design multi-agent systems by topology and token cost (3–15×), not by piling on agents.',
+        'You understand the Hub one-directional architecture and why P2P has zero production cases.',
+        'You know the real engineering pitfalls (misplaced allowAgents, rate-limited polling, lost completion).',
+      ],
+      zh: [
+        '你按拓扑和 token 成本（3–15×）设计多智能体，而不是堆 Agent。',
+        '你理解 Hub 单向架构，知道 P2P 为什么生产零案例。',
+        '你清楚真实工程坑（allowAgents 写错位、轮询被限流、completion 丢失）。',
+      ],
+    },
+    highlights: [
+      {
+        label: { en: 'Primitives', zh: '原语' },
+        value: { en: 'sessions_spawn (INSERT) · sessions_send (UPDATE, lead-only) · sessions_history (SELECT)', zh: 'sessions_spawn(INSERT) · sessions_send(UPDATE, 仅 lead) · sessions_history(SELECT)' },
+      },
+      {
+        label: { en: 'Modes', zh: '模式' },
+        value: { en: 'Hub-Spoke / Pipeline / Hierarchical / Routing / P2P / Fleet (1.5–20× tokens)', zh: 'Hub-Spoke / Pipeline / Hierarchical / Routing / P2P / Fleet（1.5–20× token）' },
+      },
+      {
+        label: { en: 'Best signal', zh: '最强信号' },
+        value: { en: 'Evidence-driven orchestration design — knows what doesn\'t work too', zh: '用证据驱动的编排设计——也知道什么不 work' },
       },
     ],
   },

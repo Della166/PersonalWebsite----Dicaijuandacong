@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0e1a14"/>
+      <stop offset="100%" stop-color="#1a2a22"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#g)"/>
+  <g font-family="system-ui, -apple-system, sans-serif" fill="#f0e8d9">
+    <text x="80" y="170" font-size="32" font-weight="700" fill="#7fbc8c" letter-spacing="4">HARNESS ENGINEERING</text>
+    <text x="80" y="300" font-size="98" font-weight="900">驾驭工程实战</text>
+    <text x="80" y="400" font-size="52" font-weight="700" fill="#d4a574">产出质量 = 模型能力 × 设计水平</text>
+    <text x="80" y="520" font-size="34" fill="#c6d2cb">同模型，光靠 Harness：Terminal Bench 52.8% → 66.5%</text>
+    <text x="80" y="572" font-size="34" fill="#c6d2cb">四大支柱：真相源 · 机械化约束 · 反馈循环 · 熵管理</text>
+    <g transform="translate(80, 660)" font-size="26" fill="#d4a574" font-weight="600">
+      <rect x="0" y="0" rx="999" ry="999" width="230" height="56" fill="none" stroke="#d4a574" stroke-width="3"/>
+      <text x="115" y="37" text-anchor="middle">代码库即真相源</text>
+      <rect x="250" y="0" rx="999" ry="999" width="230" height="56" fill="none" stroke="#d4a574" stroke-width="3"/>
+      <text x="365" y="37" text-anchor="middle">机械化约束</text>
+      <rect x="500" y="0" rx="999" ry="999" width="180" height="56" fill="none" stroke="#7fbc8c" stroke-width="3"/>
+      <text x="590" y="37" text-anchor="middle" fill="#7fbc8c">反馈循环</text>
+      <rect x="700" y="0" rx="999" ry="999" width="160" height="56" fill="none" stroke="#7fbc8c" stroke-width="3"/>
+      <text x="780" y="37" text-anchor="middle" fill="#7fbc8c">熵管理</text>
+    </g>
+  </g>
+</svg>

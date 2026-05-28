@@ -1,0 +1,91 @@
+---
+title: "Agent 长短期记忆系统"
+title_en: "Agent Long/Short-Term Memory System"
+date: "2026-05-25"
+category: project
+tags: ["Memory", "mem0", "Milvus", "LangChain", "LlamaIndex", "RAG"]
+lang: both
+cover: "/projects/agent-memory-system/cover.svg"
+excerpt: "Agent 的记忆不是一个向量库就完事：短期靠 SessionManager 截断+滚动摘要，长期靠 MEMORY.md（超阈值切 RAG），一个 MemoryManager 调度中枢统一两者；生产层换成 mem0（LLM 裁判 ADD/UPDATE/DELETE/NONE）。"
+excerpt_en: "Agent memory isn't just one vector store: short-term is a SessionManager (truncation + rolling summary), long-term is MEMORY.md (flips to RAG past a threshold), unified by a MemoryManager hub; production swaps in mem0 (an LLM judge picking ADD/UPDATE/DELETE/NONE)."
+platforms: [website]
+github: ""
+demo: "/demo/agent-memory-system"
+published: true
+---
+
+<Callout type="info">
+  «把对话塞进一个向量库» 不是记忆系统。真实的 Agent 记忆是<strong>短期 + 长期两层</strong>，由一个 <strong>MemoryManager 调度中枢</strong>协调。参考实现是 mini-OpenClaw，生产层引入开源中间件 <strong>mem0</strong>。
+</Callout>
+
+## 短期记忆：SessionManager 三机制
+
+短期 = 当前会话窗口。`SessionManager`（`load` / `save` / `add_message` / `get_messages_for_llm`）做三件事：
+
+1. **存储**：JSON session 文件落盘
+2. **截断**：`MAX_HISTORY = 20` 条消息（deepseek-chat 上下文 128K，但不能全塞）
+3. **压缩摘要**：滚动摘要——取**前 50%** 的旧消息，把「旧摘要 + 新消息」折叠成一份新摘要，存进 `compressed_context`，作为独立 `system` 消息注入
+
+## 长期记忆：MEMORY.md，Direct → RAG
+
+长期 = 跨会话。默认整份 `MEMORY.md` 直接注入 system prompt（**Direct 模式**，配 MD5 缓存跳过重复 IO）。但文件会越长越大，所以：
+
+```python
+# should_use_rag()
+MEMORY_TOKEN_THRESHOLD = 2000      # token 估算 ≈ len / 1.5
+# < 2000 → Direct（整份注入）
+# ≥ 2000 → RAG（LlamaIndex VectorStoreIndex + SentenceSplitter, top-K）
+```
+
+> 注意分工：对话用 LangChain `ChatDeepSeek`，长期检索用 LlamaIndex，embedding 用 `OpenAIEmbedding(text-embedding-3-small)`。
+
+四种长期存储类型按需选：**向量库**（FAISS/Chroma/Pinecone，语义）/ **KV**（Redis/JSON，精确键）/ **图库**（Neo4j，多跳）/ **关系型**（PostgreSQL，聚合）。mini-OpenClaw 用「向量 + KV」。
+
+## 写入长期的「三要素」
+
+不是什么都往长期记忆塞。mini-OpenClaw 让 LLM 主动判断（`is_worth_memorizing`, temperature=0.1），过三道闸：
+
+| 要素 | 含义 |
+|---|---|
+| **事实性** | 是客观事实，不是临时情绪/闲聊 |
+| **稳定性** | 短期内不会变（「我叫小明」稳，「我现在饿了」不稳） |
+| **跨会话复用性** | 下次对话还用得上 |
+
+## MemoryManager 调度中枢
+
+```python
+# 三个设计原则
+# 1. 单一入口    所有记忆操作走 MemoryManager
+# 2. 对 LLM 透明  对外只输出一个 messages 列表
+# 3. 可降级      长期写入用 try/except 包住，失败不影响主流程
+
+# 三段式主链
+messages = manager.load(session_id)
+llm_input = manager.get_messages_for_llm(...)   # 拼短期 + 压缩 + 长期
+manager.update(session_id, new_messages)        # 触发写入判断
+```
+
+system prompt 由 6 层拼装（`prompt_builder.py`，`MAX_COMPONENT_LENGTH=20000`，固定顺序）：技能快照 → 人格(SOUL) → 身份(IDENTITY) → 用户画像(USER) → 操作协议(AGENTS) → 长期记忆(MEMORY)。
+
+## 生产层：换成 mem0
+
+手搓够用，但生产层引入 **mem0** 中间件：
+
+- **LLM 裁判两阶段**：提取阶段（抽候选记忆）→ 更新阶段（和已有记忆比，选一个操作）
+- **四种操作**：`ADD / UPDATE / DELETE / NONE`——新事实和旧记忆冲突时，裁判可能 UPDATE 或 DELETE 旧的
+- 单次 `add()` 延迟 **500–2000ms**；操作日志进 SQLite，`memory.history()` 可查
+- **三维命名空间**（逻辑隔离，非物理）：`user_id`（永久）/ `agent_id`（按 agent）/ `run_id`（按会话），共用一个向量库靠 metadata 过滤
+- **12 种向量后端**：默认 Qdrant（注意默认存 `/tmp` 重启即丢），生产用 **Milvus**（`milvusdb/milvus:v2.5.11`，`localhost:19530`，挂卷持久化）
+- 接入 LangChain：`@tool` 装饰 `search_memories` / `save_memory`，`llm.bind_tools()` 绑定——Agent 自己决定何时调
+
+## 价值点
+
+- **记忆是系统不是 API**：短期(截断/压缩) + 长期(Direct/RAG) + 调度中枢，三者协同
+- **写入有判断**：三要素闸门，不是「全记」也不是「不记」
+- **手搓 → 生产**：理解原理后能平滑切到 mem0，并懂它的命名空间 / 裁判 / 后端取舍
+- **多框架协作**：LangChain 跑对话、LlamaIndex 跑检索、mem0 管记忆、Milvus 存向量
+
+<DemoStatus
+  title="Demo 真实材料对应"
+  description="互动 Demo 复演 MemoryManager 全链：短期消息累积到 MAX_HISTORY=20 → 前 50% 折叠成 compressed_context → 候选事实过「事实性/稳定性/跨会话」三要素闸 → MEMORY.md 超 2000 token 切 Direct→RAG → mem0 LLM 裁判在 ADD/UPDATE/DELETE/NONE 里选 UPDATE 解决冲突。所有参数(20 / 2000 / 三要素 / 四操作)均来自 Part 8 课件，浏览器里不调真实 LLM/Milvus。"
+/>

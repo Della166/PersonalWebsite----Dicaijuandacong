@@ -1,0 +1,90 @@
+---
+title: "CLIP 跨模态检索 RAG"
+title_en: "CLIP Cross-Modal Retrieval RAG"
+date: "2026-05-19"
+category: project
+tags: ["CLIP", "LlamaIndex", "Multimodal", "Milvus", "BM25", "RRF"]
+lang: both
+cover: "/projects/clip-cross-modal-rag/cover.svg"
+excerpt: "CLIP 把文本和图片编码进同一个 512 维空间，于是「文搜图 / 图搜图」成立。基于 LlamaIndex 从 CLIP MVP 一路做到 VLM 图片描述 + BM25 混合检索(RRF 融合)，Milvus 持久化。"
+excerpt_en: "CLIP encodes text and images into one 512-dim space, so text→image / image→image retrieval works. Built on LlamaIndex, from a CLIP MVP all the way to VLM captioning + BM25 hybrid retrieval (RRF fusion), persisted in Milvus."
+platforms: [website]
+github: ""
+demo: "/demo/clip-cross-modal-rag"
+published: true
+---
+
+<Callout type="info">
+  Plain RAG retrieves over text. This project does <strong>cross-modal</strong> retrieval: search images with text, search images with images. The key is <strong>CLIP</strong> (OpenAI, 2021, a contrastive dual-encoder) mapping text and images into <strong>one 512-dim vector space</strong>, so cross-modal cosine similarity is meaningful. Built on LlamaIndex.
+</Callout>
+
+## CLIP MVP: text & images in one space
+
+```python
+from llama_index.embeddings.clip import ClipEmbedding
+
+embed = ClipEmbedding()                       # auto-downloads ~400MB weights
+t = embed.get_text_embedding("architecture diagram")   # len = 512
+i = embed.get_image_embedding("diagram.png")           # len = 512  ← same space!
+```
+
+Both `get_text_embedding` and `get_image_embedding` return **512-dim** vectors (verified in the notebook), so you can compute text ↔ image cosine directly. CLIP encodes at ~**10ms/image**.
+
+**CLIP's limits** (stated in the course): can't read in-image text, weak fine-grained discrimination, weak Chinese (suggests Chinese-CLIP).
+
+## text→image / image→image
+
+```python
+index = MultiModalVectorStoreIndex.from_documents(docs, image_embed_model=embed)
+retriever = index.as_retriever(similarity_top_k=3, image_similarity_top_k=3)
+
+# text→image
+retriever.text_to_image_retrieve("system architecture diagram")
+# image→image
+retriever.image_to_image_retrieve("query.png")
+```
+
+Two practical details:
+
+- **Low text→image scores are normal**: "架构图" hits ~0.24; the English query (`architecture diagram` 0.28) scores slightly higher. **The absolute value doesn't matter — ranking does**; precision comes from a downstream reranker
+- **image→image hits itself**: the query image has 1.0 self-similarity, filtered in practice via a `Path.resolve()` path comparison
+
+Persistence: `MilvusVectorStore(uri, collection_name, dim=512, overwrite=True)` (Milvus v2.3.21, `localhost:19530`), separate text/image collections.
+
+## Beyond: VLM captioning + hybrid retrieval
+
+CLIP's weaknesses (in-image text, Chinese) are patched with **VLM-generated captions**:
+
+```python
+# VLMSelector: < 50 images → GPT-4o ($0.003/img), ≥ 50 → Qwen-VL-Max (¥0.01/img)
+# captions cached in ./caption_cache
+# caption index uses OpenAIEmbedding(text-embedding-3-small), 1536-dim
+# ImageNode(text=caption, image_path=...) → Milvus collection (dim=1536)
+```
+
+At query time, layer in **BM25 (keyword) + vector (semantic) hybrid**:
+
+```python
+fusion = QueryFusionRetriever(
+    retrievers=[vector_retriever, bm25_retriever],
+    mode="reciprocal_rerank",     # RRF
+    num_queries=1,
+)
+# RRF: score = Σ 1/(k + rank_i),  k = 60
+```
+
+## Evolution path
+
+The notebook also points to an evolution path (a Qwen3-VL "golden architecture," Agentic RAG), but the **load-bearing, runnable scope is CLIP + VLM captioning + hybrid retrieval**.
+
+## What this signals
+
+- **Landing cross-modal retrieval**: not "chat with text" but text ↔ image search, understanding the shared vector space
+- **Knowing CLIP's limits**: weak on in-image text / Chinese, and patching with VLM captions
+- **Hybrid-retrieval engineering**: vector + BM25 fused via RRF, not a single lane
+- **LlamaIndex multimodal stack**: MultiModalVectorStoreIndex + Milvus + QueryFusionRetriever wired together
+
+<DemoStatus
+  title="What the demo replays"
+  description="The demo visualizes CLIP's 'same space': a text/image query is encoded to 512-dim and lands in one 2D plot, pulling the nearest images by cosine (text→image ~0.24, image→image self 1.0 filtered); hybrid mode adds BM25 + RRF (k=60). The 512-dim space, the ~0.24 scores, RRF k=60, and the 1536-dim VLM-caption index all come from the 'LlamaIndex 多模态文搜图图搜图 RAG 实战' notebook."
+/>

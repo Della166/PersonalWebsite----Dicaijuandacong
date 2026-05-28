@@ -1,0 +1,103 @@
+---
+title: "veRL PPO 强化学习训练实战"
+title_en: "veRL PPO Training in Practice"
+date: "2026-05-20"
+category: project
+tags: ["veRL", "PPO", "RLHF", "Ray", "GSM8K", "vLLM"]
+lang: both
+cover: "/projects/verl-ppo-training/cover.svg"
+excerpt: "用字节开源的 veRL(HybridFlow) 在单卡上对 Qwen2.5-0.5B 跑完整 PPO：Actor/Critic/Reference/Reward 四模型角色 + Ray 编排，在 GSM8K 上用规则奖励(正则匹配 ####)训出会推理的模型。补全 RLHF 经典训练这块拼图。"
+excerpt_en: "Full PPO on a single GPU with ByteDance's open-source veRL (HybridFlow): four model roles (Actor/Critic/Reference/Reward) + Ray, training Qwen2.5-0.5B on GSM8K with a rule reward (regex on ####). The classic RLHF training piece of the puzzle."
+platforms: [website]
+github: "https://github.com/volcengine/verl"
+demo: "/demo/verl-ppo-training"
+published: true
+---
+
+<Callout type="info">
+  GRPO/GSPO 那几个项目讲的是「新兴 RL」，这个补的是<strong>经典 RLHF 的 PPO 训练</strong>。用字节开源的 <strong>veRL</strong>（实现自 <em>HybridFlow</em> 论文）在<strong>单张 GPU</strong> 上对 Qwen2.5-0.5B 跑完整 PPO，配套 InstructGPT 的 RLHF 三阶段原理精读。
+</Callout>
+
+## veRL 是什么
+
+veRL（Volcengine Reinforcement Learning，`github.com/volcengine/verl`）是字节火山引擎开源的**企业级高吞吐 LLM RL 后训练框架**，实现自论文《HybridFlow: A Flexible and Efficient RLHF Framework (2024)》。三个定位：High Performance / Scalability / High Flexibility。底层栈：vLLM、SGLang、Megatron-LM、FSDP、FlashAttention。
+
+**HybridFlow** 的核心是把训练拆成可重叠的异步流：Generation Flow（vLLM）/ Reference Flow（KL、logprob）/ Value Flow（critic）/ Update Flow（PPO/GRPO 反传）。可插拔：奖励（规则 / LLM-as-judge / 代码执行器）、rollout 引擎（vLLM/SGLang）、优化器（PPO/GRPO/ReMax）。
+
+## PPO 的四个模型角色
+
+PPO 训 LLM 同时要四个模型协同（Ray 分布式编排）：
+
+| 角色 | 职责 |
+|---|---|
+| **Actor** | 策略模型，要训的那个 |
+| **Critic** | 价值模型，估计 value |
+| **Reference** | 参考策略，算 KL 惩罚防跑偏 |
+| **Reward** | 奖励模型 / 奖励函数，打分 |
+
+## PPO 七步闭环
+
+```
+Rollout → Reward → Critic → Advantage → Actor Update → Critic Update → Next Step
+```
+
+- **Rollout**：Actor 生成 response（CoT）
+- **Reward**：奖励函数打分
+- **Critic**：估 value
+- **Advantage**：`A = reward − value`（或 GAE）
+- **Actor Update**：Clipped Objective
+- **Critic Update**：`(value − reward)²`
+
+## GSM8K 上的规则奖励
+
+数学题有标准答案，所以**用规则奖励，不用训练奖励模型**：
+
+```python
+# verl/utils/reward_score/gsm8k.py（要点）
+# 1. extract_solution() 截取最后 300 字符（_SOLUTION_CLIP_CHARS=300）
+# 2. strict 模式正则：#### (\-?[0-9\.\,]+)
+# 3. compute_score(): 答对 1.0，答错 0.0，没答案 0
+```
+
+数据预处理（`examples/data_preprocess/gsm8k.py`）把 GSM8K 转成 Parquet，`reward_model = {"style":"rule","ground_truth": solution}`，并追加 CoT 指令：`Let's think step by step and output the final answer after "####".`
+
+## 单卡训练配置
+
+入口 `verl/trainer/main_ppo.py` → Hydra（`ppo_trainer.yaml`）→ 起 Ray → `TaskRunner` 注册四个 Worker + `ResourcePoolManager` → `RayPPOTrainer.fit()`。单张 H800 的真实超参：
+
+```yaml
+train_batch_size: 64
+max_prompt_length: 512
+max_response_length: 512
+actor.optim.lr: 1e-6
+actor.ppo_mini_batch_size: 32
+actor.ppo_micro_batch_size_per_gpu: 4
+critic.optim.lr: 1e-5
+algorithm.kl_ctrl.kl_coef: 0.001
+rollout.gpu_memory_utilization: 0.75
+total_epochs: 1
+```
+
+step:42 的实测指标：`actor/entropy 0.475`、`critic/score/mean 0.296`（约 29% 正确率）、`throughput 1702 tokens/sec`、`step 13.30s`。训完用 `verl.model_merger merge --backend fsdp` 合并成 HF 格式。
+
+## RLHF 的源头：InstructGPT 三阶段
+
+配套精读 OpenAI InstructGPT 论文，PPO 在 RLHF 里的位置：
+
+1. **SFT**：~40 个标注员的示范数据微调
+2. **Reward Model**：6B RM，在 K=4–9 个排序输出上训（175B RM 不稳）
+3. **PPO**：奖励来自 RM，逐 token KL 惩罚 vs SFT 防奖励作弊；**PPO-ptx**（混入预训练梯度）才是叫 InstructGPT 的那个
+
+惊人结论：**1.3B 的 InstructGPT 在人类偏好上打败 175B 的 GPT-3**——对齐比堆参数更重要。
+
+## 价值点
+
+- **补全 RL 拼图**：和 GRPO / GSPO / 视觉 RL 几个项目组成完整 RL 谱系（经典 PPO ↔ 新兴 GRPO）
+- **会用工业级框架**：veRL 源码部署 + Ray 四模型编排 + 单卡跑通
+- **理解奖励设计**：可验证任务（数学）用规则奖励，不可验证才训 RM
+- **读得懂源头论文**：InstructGPT 三阶段 + 为什么对齐 > 参数
+
+<DemoStatus
+  title="Demo 真实材料对应"
+  description="互动 Demo 复演一次 PPO 迭代：Actor 在一道 GSM8K 题上生成 CoT(#### 72) → 规则奖励正则匹配给 1.0 → Critic 估 value → A=reward−value → Actor/Critic 更新 → 闭环。四个模型角色、七步闭环、reward 正则、step:42 指标(0.296 / 1702 tok/s)都来自《LLM RL 强化学习训练入门》课件，浏览器里不真跑训练。"
+/>

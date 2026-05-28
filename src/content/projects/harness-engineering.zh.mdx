@@ -1,0 +1,88 @@
+---
+title: "Harness Engineering 实战"
+title_en: "Harness Engineering in Practice"
+date: "2026-05-24"
+category: project
+tags: ["Harness Engineering", "Claude Code", "Hooks", "Agent Runtime", "AGENTS.md"]
+lang: both
+cover: "/projects/harness-engineering/cover.svg"
+excerpt: "Agent 产出质量 = 模型能力 × 设计水平。这门课讲的是怎么设计 Agent 的「运行时环境」——四大支柱(代码库即真相源 / 机械化约束 / 反馈循环 / 熵管理)。实测：模型不变，光靠 Harness 把 Terminal Bench 从 52.8% 拉到 66.5%。"
+excerpt_en: "Output quality = model capability × design level. This is about engineering an agent's runtime environment — four pillars (codebase as truth / mechanized constraints / feedback loops / entropy management). Measured: model unchanged, the Harness alone lifts Terminal Bench from 52.8% to 66.5%."
+platforms: [website]
+github: ""
+demo: "/demo/harness-engineering"
+published: true
+---
+
+<Callout type="info">
+  大家都在比模型，但同一个模型在不同人手里产出差很远——差在 <strong>Harness</strong>（驾驭工程）。一句话定义：<strong>设计、构建和持续优化 AI Agent 运行时环境的工程学科</strong>。类比：「Harness 之于 AI Agent，如同操作系统之于 CPU」。
+</Callout>
+
+## 核心公式
+
+> **Agent 产出质量 = 模型能力 × 设计水平**
+
+模型能力你左右不了（用现成的 SOTA），但**设计水平**完全是工程问题。这门课最有冲击力的一个数据：
+
+| 配置 | Terminal Bench 2.0 | 备注 |
+|---|---|---|
+| 裸模型（GPT-5.2-Codex） | 52.8% | 排名 30+ |
+| **同模型 + 完整 Harness** | **66.5%** | **进 Top 5** |
+
+只改 Harness（system prompt + 工具 + middleware Hooks），**模型一行没动**，+13.7pp。作为对比，换一个更强的模型只 +6.8pp——**Harness 工程的收益是换模型的约 2 倍**。（课程还提到「Reasoning Sandwich」：xhigh 推理因超时反而掉到 53.9%，high 才是 63.6%——推理强度不是越高越好。）
+
+## 四大支柱
+
+```
+                Agent 运行时环境（Harness）
+    ┌──────────────┬──────────────┬──────────────┬──────────────┐
+    ① 代码库即真相源   ② 机械化架构约束   ③ 反馈循环        ④ 熵管理
+   声明式知识注入     自动化行为约束     多层反馈循环      系统熵管理
+```
+
+### ① 代码库即真相源（声明式知识注入）
+
+知识不写在 prompt 里，写在**配置文件**里：Anthropic 的 `CLAUDE.md`、OpenAI 的 `AGENTS.md`。关键不是写得多，而是写成 **~100 行的「行军指南」**，不是百科全书——Agent 启动就「知道这个项目长什么样」。
+
+### ② 机械化架构约束（自动化行为约束）
+
+一句话点透：**「CLAUDE.md 是建议，Hooks 是法律」**。
+
+- `CLAUDE.md` 是软约束，模型可以不听
+- **Hooks** 是硬约束：`PreToolUse` / `PostToolUse` 生命周期钩子在工具调用前后强制拦截——比如 `rm -rf /` 直接拦死
+- OpenAI Codex 用的是「六层分级约束体系」
+
+### ③ 反馈循环（多层反馈）
+
+「轮班工程师没有交接记录」就是没有反馈循环。四层反馈：
+
+- **即时反馈**：Hooks 在工具调用前后立刻给结果
+- **构建反馈**：CI/CD 在 PR 上跑
+- 再加两层跨会话反馈
+
+### ④ 熵管理（系统熵管理）
+
+AI 协作有四类特有的「熵增」要对抗：**文档漂移 / 架构侵蚀 / 风格不一致 / 重复代码**。
+
+## 五大平台的 Harness 深浅
+
+课程横向对比了 5 个平台的 Harness 设计：
+
+| 平台 | Harness 风格 | 特征 |
+|---|---|---|
+| **Claude Code** | 深 Harness | 24 个 Hook 事件 × 4 种 handler、YAML frontmatter 定义 Sub-agent、持久记忆 |
+| OpenAI Codex | 深 Harness | 六层分级约束 |
+| Cursor / Zed | 中 | IDE 集成 |
+| **OpenClaw** | 轻 Harness + 广覆盖 | 200+ 插件、IM 平台接入、33 万+ stars |
+
+## 价值点
+
+- **理解「模型 × 设计」这个乘法**：知道为什么同模型不同人产出差一个量级
+- **四大支柱可落地**：CLAUDE.md/AGENTS.md（知识）+ Hooks（约束）+ CI（反馈）+ 反熵实践
+- **平台选型判断力**：深 Harness（Claude Code/Codex）vs 轻 Harness 广覆盖（OpenClaw），按场景选
+- **数据驱动**：拿 Terminal Bench 52.8%→66.5% 这种实测说话，而不是「感觉变好了」
+
+<DemoStatus
+  title="Demo 真实材料对应"
+  description="互动 Demo 复演核心公式：基线裸模型 52.8% → 依次装上四大支柱 → 满 Harness 66.5%，模型不变。52.8% / 66.5% 是课程引用的 LangChain 实测端点，中间过程为示意。四大支柱的名称和「CLAUDE.md 是建议，Hooks 是法律」都来自《Harness Engineering 技术实战》课件。"
+/>

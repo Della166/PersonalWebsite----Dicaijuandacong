@@ -1,0 +1,90 @@
+---
+title: "CLIP 跨模态检索 RAG"
+title_en: "CLIP Cross-Modal Retrieval RAG"
+date: "2026-05-19"
+category: project
+tags: ["CLIP", "LlamaIndex", "Multimodal", "Milvus", "BM25", "RRF"]
+lang: both
+cover: "/projects/clip-cross-modal-rag/cover.svg"
+excerpt: "CLIP 把文本和图片编码进同一个 512 维空间，于是「文搜图 / 图搜图」成立。基于 LlamaIndex 从 CLIP MVP 一路做到 VLM 图片描述 + BM25 混合检索(RRF 融合)，Milvus 持久化。"
+excerpt_en: "CLIP encodes text and images into one 512-dim space, so text→image / image→image retrieval works. Built on LlamaIndex, from a CLIP MVP all the way to VLM captioning + BM25 hybrid retrieval (RRF fusion), persisted in Milvus."
+platforms: [website]
+github: ""
+demo: "/demo/clip-cross-modal-rag"
+published: true
+---
+
+<Callout type="info">
+  普通 RAG 在文本里检索。这个项目做的是<strong>跨模态</strong>：用文字搜图片、用图片搜图片。关键是 <strong>CLIP</strong>（OpenAI, 2021，对比学习双编码器）把文本和图片映进<strong>同一个 512 维向量空间</strong>，所以跨模态 cosine 相似度才有意义。基于 LlamaIndex 实现。
+</Callout>
+
+## CLIP MVP：文图同一空间
+
+```python
+from llama_index.embeddings.clip import ClipEmbedding
+
+embed = ClipEmbedding()                       # 自动下载 ~400MB 权重
+t = embed.get_text_embedding("架构图")         # len = 512
+i = embed.get_image_embedding("diagram.png")  # len = 512  ← 同一空间！
+```
+
+`get_text_embedding` 和 `get_image_embedding` 都返回 **512 维**向量（notebook 里实测验证），所以可以直接算文 ↔ 图的 cosine。CLIP 编码约 **10ms/图**。
+
+**CLIP 的边界**（课程明说）：读不了图内文字、细粒度区分弱、中文弱（建议换 Chinese-CLIP）。
+
+## 文搜图 / 图搜图
+
+```python
+index = MultiModalVectorStoreIndex.from_documents(docs, image_embed_model=embed)
+retriever = index.as_retriever(similarity_top_k=3, image_similarity_top_k=3)
+
+# 文搜图
+retriever.text_to_image_retrieve("system architecture diagram")
+# 图搜图
+retriever.image_to_image_retrieve("query.png")
+```
+
+两个实战细节：
+
+- **文搜图分数偏低很正常**：实测「架构图」命中约 0.24，英文 query（`architecture diagram` 0.28）还高一点。**绝对值低不重要，看排序**，精度靠后接 Reranker
+- **图搜图会命中自己**：query 图自身相似度 1.0，工程上用 `Path.resolve()` 比对路径过滤掉自身
+
+持久化：`MilvusVectorStore(uri, collection_name, dim=512, overwrite=True)`（Milvus v2.3.21，`localhost:19530`），文本/图片各一个 collection。
+
+## 进阶：VLM 描述 + 混合检索
+
+CLIP 的弱点（图内文字、中文）用 **VLM 生成图片描述**补：
+
+```python
+# VLMSelector：< 50 张图用 GPT-4o（$0.003/张），≥ 50 张用 Qwen-VL-Max（¥0.01/张）
+# 描述缓存在 ./caption_cache
+# 描述入库用 OpenAIEmbedding(text-embedding-3-small)，1536 维
+# ImageNode(text=caption, image_path=...) → Milvus collection (dim=1536)
+```
+
+检索时再叠加 **BM25（关键词）+ 向量（语义）混合**：
+
+```python
+fusion = QueryFusionRetriever(
+    retrievers=[vector_retriever, bm25_retriever],
+    mode="reciprocal_rerank",     # RRF
+    num_queries=1,
+)
+# RRF: score = Σ 1/(k + rank_i),  k = 60
+```
+
+## 演进路线
+
+notebook 还指出了演进方向（Qwen3-VL 黄金架构、Agentic RAG），但**可跑通的承重部分是 CLIP + VLM 描述 + 混合检索**这条线。
+
+## 价值点
+
+- **跨模态检索落地**：不是「Chat with text」，而是文 ↔ 图互搜，理解共享向量空间
+- **知道 CLIP 的边界**：图内文字 / 中文弱，并知道用 VLM 描述补
+- **混合检索工程**：向量 + BM25 经 RRF 融合，而不是只靠单路
+- **LlamaIndex 多模态栈**：MultiModalVectorStoreIndex + Milvus + QueryFusionRetriever 串起来
+
+<DemoStatus
+  title="Demo 真实材料对应"
+  description="互动 Demo 把 CLIP 的「同一空间」可视化：文本 / 图片 query 编码成 512 维后落进同一张 2D 图，沿 cosine 拉出最近的图（文搜图约 0.24、图搜图自身 1.0 被过滤）；混合模式叠加 BM25 + RRF(k=60)。512 维、~0.24 分数、RRF k=60、VLM 描述 1536 维等都来自《LlamaIndex 多模态文搜图图搜图 RAG 实战》notebook。"
+/>

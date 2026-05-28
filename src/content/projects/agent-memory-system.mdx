@@ -1,0 +1,91 @@
+---
+title: "Agent 长短期记忆系统"
+title_en: "Agent Long/Short-Term Memory System"
+date: "2026-05-25"
+category: project
+tags: ["Memory", "mem0", "Milvus", "LangChain", "LlamaIndex", "RAG"]
+lang: both
+cover: "/projects/agent-memory-system/cover.svg"
+excerpt: "Agent 的记忆不是一个向量库就完事：短期靠 SessionManager 截断+滚动摘要，长期靠 MEMORY.md（超阈值切 RAG），一个 MemoryManager 调度中枢统一两者；生产层换成 mem0（LLM 裁判 ADD/UPDATE/DELETE/NONE）。"
+excerpt_en: "Agent memory isn't just one vector store: short-term is a SessionManager (truncation + rolling summary), long-term is MEMORY.md (flips to RAG past a threshold), unified by a MemoryManager hub; production swaps in mem0 (an LLM judge picking ADD/UPDATE/DELETE/NONE)."
+platforms: [website]
+github: ""
+demo: "/demo/agent-memory-system"
+published: true
+---
+
+<Callout type="info">
+  "Dump the conversation into a vector store" is not a memory system. Real agent memory is <strong>two layers — short-term + long-term</strong> — coordinated by a <strong>MemoryManager hub</strong>. The reference implementation is mini-OpenClaw; production introduces the open-source middleware <strong>mem0</strong>.
+</Callout>
+
+## Short-term: SessionManager, three mechanisms
+
+Short-term = the current session window. `SessionManager` (`load` / `save` / `add_message` / `get_messages_for_llm`) does three things:
+
+1. **Storage**: JSON session files on disk
+2. **Truncation**: `MAX_HISTORY = 20` messages (deepseek-chat has a 128K context, but you don't dump it all)
+3. **Compression**: a rolling summary — take the **front 50%** of old messages, fold "old summary + new messages" into one new summary, store it in `compressed_context`, and inject it as a separate `system` message
+
+## Long-term: MEMORY.md, Direct → RAG
+
+Long-term = across sessions. By default the whole `MEMORY.md` is injected into the system prompt (**Direct mode**, with an MD5 cache to skip repeated IO). But the file keeps growing, so:
+
+```python
+# should_use_rag()
+MEMORY_TOKEN_THRESHOLD = 2000      # token estimate ≈ len / 1.5
+# < 2000 → Direct (inject whole file)
+# ≥ 2000 → RAG (LlamaIndex VectorStoreIndex + SentenceSplitter, top-K)
+```
+
+> Note the division of labor: chat uses LangChain `ChatDeepSeek`, long-term retrieval uses LlamaIndex, embeddings use `OpenAIEmbedding(text-embedding-3-small)`.
+
+Four long-term storage types, chosen by need: **vector** (FAISS/Chroma/Pinecone — semantic) / **KV** (Redis/JSON — exact key) / **graph** (Neo4j — multi-hop) / **relational** (PostgreSQL — aggregation). mini-OpenClaw uses "vector + KV."
+
+## The three write-triggers
+
+Not everything gets pushed to long-term. mini-OpenClaw lets the LLM judge (`is_worth_memorizing`, temperature=0.1) through three gates:
+
+| Trigger | Meaning |
+|---|---|
+| **factuality** | an objective fact, not a transient mood / small talk |
+| **stability** | won't change soon ("my name is Xiaoming" is stable; "I'm hungry now" isn't) |
+| **cross-session reuse** | still useful next conversation |
+
+## The MemoryManager hub
+
+```python
+# Three design principles
+# 1. single entry      all memory ops go through MemoryManager
+# 2. transparent       it only ever outputs one messages list to the LLM
+# 3. degradable        long-term writes are wrapped in try/except — failure doesn't break the main flow
+
+# Three-phase main chain
+messages = manager.load(session_id)
+llm_input = manager.get_messages_for_llm(...)   # short-term + compression + long-term
+manager.update(session_id, new_messages)        # triggers the write gate
+```
+
+The system prompt is assembled from 6 layers (`prompt_builder.py`, `MAX_COMPONENT_LENGTH=20000`, fixed order): skills snapshot → persona (SOUL) → identity (IDENTITY) → user profile (USER) → operating protocol (AGENTS) → long-term memory (MEMORY).
+
+## Production: swap in mem0
+
+The hand-rolled version is enough to learn on, but production introduces the **mem0** middleware:
+
+- **LLM judge, two phases**: extract (pull candidate memories) → update (compare against existing memories, pick one op)
+- **Four ops**: `ADD / UPDATE / DELETE / NONE` — when a new fact conflicts with an old memory, the judge may UPDATE or DELETE the old one
+- ~**500–2000ms** per `add()`; the op log goes to SQLite, queryable via `memory.history()`
+- **Three-dimensional namespace** (logical, not physical isolation): `user_id` (permanent) / `agent_id` (per-agent) / `run_id` (per-session), all sharing one vector DB via metadata filtering
+- **12 vector backends**: default Qdrant (note: defaults to `/tmp`, wiped on restart), production uses **Milvus** (`milvusdb/milvus:v2.5.11`, `localhost:19530`, volume-mounted)
+- LangChain wiring: `@tool`-decorated `search_memories` / `save_memory`, bound via `llm.bind_tools()` — the agent decides when to call
+
+## What this signals
+
+- **Memory is a system, not an API**: short-term (truncation/compression) + long-term (Direct/RAG) + a scheduling hub, working together
+- **Writes are judged**: a three-trigger gate, not "remember everything" nor "remember nothing"
+- **Hand-rolled → production**: understanding the internals lets you switch cleanly to mem0 and reason about its namespace / judge / backend trade-offs
+- **Multi-framework**: LangChain for chat, LlamaIndex for retrieval, mem0 for memory, Milvus for vectors
+
+<DemoStatus
+  title="What the demo replays"
+  description="The demo replays the full MemoryManager chain: short-term messages accumulate to MAX_HISTORY=20 → front 50% folds into compressed_context → a candidate fact passes the factuality/stability/cross-session gate → MEMORY.md crosses 2000 tokens and flips Direct→RAG → the mem0 LLM judge picks UPDATE among ADD/UPDATE/DELETE/NONE to resolve a conflict. All parameters (20 / 2000 / three triggers / four ops) come from the Part 8 courseware; no live LLM/Milvus calls."
+/>

@@ -1,0 +1,95 @@
+---
+title: "上下文工程中间件"
+title_en: "Context Engineering Middleware"
+date: "2026-05-26"
+category: project
+tags: ["Context Engineering", "LangChain", "Middleware", "Prompt Cache", "Sub-Agent"]
+lang: both
+cover: "/projects/context-engineering-middleware/cover.svg"
+excerpt: "上下文窗口越大≠效果越好（Context Rot）。这套方案用「六大模块 × 五大策略(Write/Select/Compress/Isolate/Cache)」管理上下文，且全部落成可叠加的 LangChain middleware，按「先 Cache 后 Isolate」的优先级用。"
+excerpt_en: "A bigger context window ≠ better output (Context Rot). This manages context via 'six modules × five strategies (Write/Select/Compress/Isolate/Cache)', all realized as stackable LangChain middleware, applied in a 'Cache-first, Isolate-later' priority."
+platforms: [website]
+github: ""
+demo: "/demo/context-engineering-middleware"
+published: true
+---
+
+<Callout type="info">
+  «把所有东西塞进 200K 窗口» 是反模式——<strong>Context Rot</strong>：窗口越满，模型越容易忽略中间信息（「鱼缸模型」）。上下文工程就是有纪律地管理这块窗口：<strong>六大功能模块 × 五大策略</strong>，全部实现成可叠加的 LangChain middleware。
+</Callout>
+
+## 六大上下文模块
+
+Agent 的上下文窗口可以拆成 6 个功能模块——知道每块多大，才知道该优化谁：
+
+1. **系统提示层** System Prompt Assembly
+2. **对话历史管理层** Conversation History
+3. **记忆检索注入层** Memory Retrieval & Injection
+4. **工具上下文管理层** Tool Context
+5. **任务状态层** Task State / Scratchpad
+6. **外部知识层** External Knowledge / RAG
+
+其中**对话历史 + 工具上下文** 合计常占 >50%，是两个最大的「水龙头」——优化要先盯它俩。
+
+## 五大策略
+
+| 策略 | 做什么 |
+|---|---|
+| **Write** 写入持久化 | 把信息 offload 到 Scratchpad / CLAUDE.md / todo.md / 文件，不占窗口 |
+| **Select** 运行时检索 | JIT 按需加载：RAG / glob / grep / 动态工具装配 |
+| **Compress** 上下文压缩 | 留「决策 + 为什么」，丢执行细节 |
+| **Isolate** 上下文隔离 | 子 Agent 独立上下文分区 |
+| **Cache** 提示缓存 | 复用静态前缀，省钱不省窗口 |
+
+### Compress 不是一招，是一个家族
+
+最丰富的策略家族，四个子技术：
+
+- **Compaction**：整体压缩重启
+- **硬截断 / LLM 摘要**
+- **工具结果清除** Tool Result Clearing：清掉冗长原始工具输出
+- **观察遮蔽** Observation Masking：遮蔽旧观察
+
+核心原则：**保留「做了什么决策、为什么」，丢掉原始执行细节**。
+
+## 全部落成 LangChain middleware
+
+策略不是手搓 if-else，而是可叠加的中间件：
+
+```python
+# trim_messages           硬截断，零成本
+# SummarizationMiddleware  LLM 摘要（放进 messages 而不是 system，保住缓存前缀）
+# SubAgentMiddleware       来自 deepagents 包，自动注入 task 工具做委派
+```
+
+注意 `SummarizationMiddleware` 把摘要放进 `messages` 而不是 `system`——因为改 `system` 会**击穿前缀缓存**。
+
+## 决策优先级：先 Cache 后 Isolate
+
+哪个策略先用？按「**零成本先用，复杂的按需叠加**」：
+
+```
+1. Cache              省 45–90%，首日就能上
+2. Compress/工具结果清除  零成本，首日
+3. Compress/观察遮蔽 + trim   首周
+4. Isolate/子 Agent      按需（有架构成本）
+5. Write + Select        按需
+```
+
+### Prompt Caching 细节
+
+- **Anthropic**：cache-read 只收标准价的 **10%（省 90%）**；最小缓存单元 1024 token（Sonnet 4.5/4、Opus 4.1/4）/ 2048（Sonnet 4.6）/ 4096（Opus 4.5/4.6、Haiku 4.5）；TTL 默认 5 分钟（部分 1 小时）；可缓存 `system` / `messages` / `tools`
+- **DeepSeek**：prefix caching 服务端自动（`prompt_cache_hit_tokens` / `miss_tokens`），大约第 4–6 次请求预热
+- 三条缓存铁律：system prompt 放最前、前缀逐字节稳定、零代码改动
+
+## 价值点
+
+- **理解 Context Rot**：知道「更大窗口 ≠ 更好」，主动管理而不是硬塞
+- **六模块 × 五策略 的体系**：能说清每块多大、该用哪个策略
+- **工程化落地**：策略 = 可叠加 middleware，不是临时脚本
+- **省钱有序**：Cache 优先（省 90%）→ Isolate 按需，先零成本后复杂
+
+<DemoStatus
+  title="Demo 真实材料对应"
+  description="互动 Demo 复演决策优先级：六大模块占满窗口 → 按「Cache → 工具结果清除 → 观察遮蔽+trim → Isolate → Write/Select」依次叠加，窗口 token 和相对成本一起降。优先级顺序、五大策略、Cache 省 90% 等机制均来自 Part 9 课件；具体数值为示意。"
+/>

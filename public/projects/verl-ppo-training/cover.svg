@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0e1a14"/>
+      <stop offset="100%" stop-color="#1a2a22"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#g)"/>
+  <g font-family="system-ui, -apple-system, sans-serif" fill="#f0e8d9">
+    <text x="80" y="180" font-size="32" font-weight="700" fill="#7fbc8c" letter-spacing="4">veRL · HYBRIDFLOW · PPO</text>
+    <text x="80" y="320" font-size="96" font-weight="900">PPO 强化学习训练</text>
+    <text x="80" y="430" font-size="56" font-weight="700" fill="#d4a574">Actor · Critic · Reference · Reward</text>
+    <text x="80" y="600" font-size="36" fill="#c6d2cb">Qwen2.5-0.5B · GSM8K · 规则奖励(####) · 单卡</text>
+    <text x="80" y="654" font-size="36" fill="#c6d2cb">Rollout → Reward → Advantage → Update（七步闭环）</text>
+    <g transform="translate(80, 745)">
+      <rect x="0" y="0" rx="999" ry="999" width="150" height="60" fill="none" stroke="#d4a574" stroke-width="3"/>
+      <text x="75" y="40" font-size="28" fill="#d4a574" text-anchor="middle" font-weight="600">veRL</text>
+      <rect x="170" y="0" rx="999" ry="999" width="130" height="60" fill="none" stroke="#7fbc8c" stroke-width="3"/>
+      <text x="235" y="40" font-size="28" fill="#7fbc8c" text-anchor="middle" font-weight="600">Ray</text>
+      <rect x="320" y="0" rx="999" ry="999" width="150" height="60" fill="none" stroke="#7fbc8c" stroke-width="3"/>
+      <text x="395" y="40" font-size="28" fill="#7fbc8c" text-anchor="middle" font-weight="600">vLLM</text>
+    </g>
+  </g>
+</svg>

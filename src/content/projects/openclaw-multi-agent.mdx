@@ -1,0 +1,87 @@
+---
+title: "OpenClaw 多智能体编排"
+title_en: "OpenClaw Multi-Agent Orchestration"
+date: "2026-05-21"
+category: project
+tags: ["OpenClaw", "Multi-Agent", "Orchestration", "MCP", "Hub-Spoke"]
+lang: both
+cover: "/projects/openclaw-multi-agent/cover.svg"
+excerpt: "多智能体 = ≥2 个各有独立 LLM 会话上下文的 Agent，在预设拓扑里协作。OpenClaw 把一切归约到三个 MCP 原语(spawn/send/history)，上面长出 6 种协作模式——而且课程连「P2P 生产零案例」都讲清了根因。"
+excerpt_en: "Multi-agent = ≥2 agents each with an independent LLM session context, cooperating over a predefined topology. OpenClaw reduces it all to three MCP primitives (spawn/send/history), on which six collaboration modes are built — and the course even explains why P2P has zero production cases."
+platforms: [website]
+github: ""
+demo: "/demo/openclaw-multi-agent"
+published: true
+---
+
+<Callout type="info">
+  A multi-agent system = <strong>≥2 agents, each with an independent LLM session context</strong> (its own system prompt, tool whitelist, history), cooperating over a <strong>predefined topology</strong> toward one delivered result. OpenClaw reduces all orchestration to three MCP tool primitives, on which six collaboration modes are built. What's rare about this course: it's <strong>evidence-driven and even documents what doesn't work</strong>.
+</Callout>
+
+## Three MCP primitives (database analogy)
+
+Every topology reduces to these three things:
+
+| Primitive | Analogy | Role |
+|---|---|---|
+| `sessions_spawn` | INSERT | create a sub-agent session node |
+| `sessions_send` | UPDATE | inter-node message (**lead-only**) |
+| `sessions_history` | SELECT | collect sub-agent results |
+
+## Six collaboration modes (with token cost)
+
+| Mode | Topology | Token × | Note |
+|---|---|---|---|
+| **Hub-Spoke** | star | 3–15× | most common: Opus 4 lead, Sonnet 4 spokes |
+| **Pipeline** | chain | 1.5–2× | the only sub-4× mode |
+| **Hierarchical** | tree | 10–15× | needs `maxSpawnDepth≥2` |
+| **Routing** | router→specialist | 3–8× | |
+| **P2P** | arbitrary graph | 4–7× | **zero production cases** |
+| **Fleet** | star + per-worker VM | 15–20× | |
+
+Anthropic data: multi-agent is ~**15× tokens** (single-agent is just 4×), but research-eval relative improvement is **90.2%**. The selection rule: **the task value must be high enough to pay for the overhead**.
+
+## Three-layer "agent" abstraction
+
+"agent" in OpenClaw is layered:
+
+1. **agents**: a persistent workspace, created by `openclaw agents add <id>`
+2. **subagents**: an ephemeral child session from `sessions_spawn`, sharing the parent workspace, `childSessionKey = agent:<parent>:subagent:<uuid>`
+3. **Workflow layer**: a stateless Lobster step (`llm.invoke` / `openclaw.invoke`)
+
+`subagents` has four core fields: `allowAgents` (who it can spawn) / `maxSpawnDepth` (default 1, range 1–5) / `maxChildrenPerAgent` (default 5) / `runTimeoutSeconds` (default 900).
+
+> **Pitfall (Issue #11982)**: writing `allowAgents` only under `agents.defaults.subagents` is schema-valid but **ignored at runtime** — it must go under `agents.list[].subagents`.
+
+## Core architecture: Hub single-directional dispatch
+
+Why can't subagents talk directly? Because **`sessions_send` is never registered into a subagent's tool registry** (Issue #23359) — stronger than returning a DENY, zero token waste, and `alsoAllow` can't bring it back. This is the root cause of **P2P's zero production cases**.
+
+So a standard Hub-Spoke is one-directional:
+
+```
+# Path A (standard)
+lead sessions_spawn(agent, task)
+   → wait for the announce event (don't poll — you'll be rate-limited)
+   → on session ended
+   → sessions_history(childSessionKey) to fetch results
+   → lead synthesizes
+
+# Path B (production-recommended, ClawTeam 7-agent template)
+spoke writes its result to ./shared/signals/<agent>.md
+   → lead reads from disk — bypassing the subagent send ban
+```
+
+`sessions_spawn` is non-blocking; completion is judged only by `sessions_history` showing `status:"ended"`; high-frequency polling is rate-limited, so use the announce event with a ≥10s fallback.
+
+## What this signals
+
+- **Multi-agent isn't just piling on agents**: you know the six modes' topologies and token costs (3–15×) and pick by task value
+- **Understanding the Hub one-directional architecture**: why `sessions_send` is banned at the subagent layer, why P2P has zero cases
+- **Engineering pitfalls**: misplaced `allowAgents`, rate-limited polling, lost completion signals — the real traps
+- **Grounded selection**: parallelism ≥3 & independent → multi-agent; strict-sequential / state-dependent → single-agent
+
+<DemoStatus
+  title="What the demo replays"
+  description="The demo replays a Hub-Spoke code review: the lead sessions_spawns three review subagents (security/performance/readability) → subagents work in isolation → an upward sessions_send arrow hits the subagent boundary and turns red 'blocked' → the lead collects via sessions_history → synthesizes. The three primitives, the six modes' token multipliers, and the subagent-layer sessions_send ban all come from the 'OpenClaw 多Agent系统入门' courseware."
+/>

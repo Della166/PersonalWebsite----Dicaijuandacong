@@ -1,0 +1,95 @@
+---
+title: "上下文工程中间件"
+title_en: "Context Engineering Middleware"
+date: "2026-05-26"
+category: project
+tags: ["Context Engineering", "LangChain", "Middleware", "Prompt Cache", "Sub-Agent"]
+lang: both
+cover: "/projects/context-engineering-middleware/cover.svg"
+excerpt: "上下文窗口越大≠效果越好（Context Rot）。这套方案用「六大模块 × 五大策略(Write/Select/Compress/Isolate/Cache)」管理上下文，且全部落成可叠加的 LangChain middleware，按「先 Cache 后 Isolate」的优先级用。"
+excerpt_en: "A bigger context window ≠ better output (Context Rot). This manages context via 'six modules × five strategies (Write/Select/Compress/Isolate/Cache)', all realized as stackable LangChain middleware, applied in a 'Cache-first, Isolate-later' priority."
+platforms: [website]
+github: ""
+demo: "/demo/context-engineering-middleware"
+published: true
+---
+
+<Callout type="info">
+  "Stuff everything into a 200K window" is an anti-pattern — <strong>Context Rot</strong>: the fuller the window, the more the model ignores middle content (the "fishbowl model"). Context engineering is disciplined management of that window: <strong>six functional modules × five strategies</strong>, all implemented as stackable LangChain middleware.
+</Callout>
+
+## The six context modules
+
+An agent's context window decomposes into six functional modules — you can't optimize what you can't size:
+
+1. **System prompt assembly**
+2. **Conversation history**
+3. **Memory retrieval & injection**
+4. **Tool context**
+5. **Task state / scratchpad**
+6. **External knowledge / RAG**
+
+**Conversation history + tool context** together are often >50% — the two biggest "taps," so optimization targets them first.
+
+## The five strategies
+
+| Strategy | What it does |
+|---|---|
+| **Write** | Offload info to a scratchpad / CLAUDE.md / todo.md / files — out of the window |
+| **Select** | JIT load on demand: RAG / glob / grep / dynamic tool assembly |
+| **Compress** | Keep "decision + why," drop execution detail |
+| **Isolate** | Sub-agent context partitioning |
+| **Cache** | Reuse a static prefix — saves money, not window |
+
+### Compress isn't one trick — it's a family
+
+The richest family, four sub-techniques:
+
+- **Compaction**: whole-context compress & restart
+- **Hard truncation / LLM summary**
+- **Tool Result Clearing**: drop verbose raw tool output
+- **Observation Masking**: mask old observations
+
+Core principle: **keep "what decision and why," drop raw execution detail**.
+
+## All realized as LangChain middleware
+
+The strategies aren't hand-rolled if-else — they're stackable middleware:
+
+```python
+# trim_messages           hard truncation, zero cost
+# SummarizationMiddleware  LLM summary (placed in messages, not system, to preserve the cache prefix)
+# SubAgentMiddleware       from the deepagents package, auto-injects a task tool for delegation
+```
+
+Note `SummarizationMiddleware` puts the summary in `messages`, not `system` — editing `system` would **break the prefix cache**.
+
+## Decision priority: Cache first, Isolate later
+
+Which strategy first? "**Zero-cost first, complex on demand**":
+
+```
+1. Cache               saves 45–90%, day one
+2. Compress/tool-result clearing   zero cost, day one
+3. Compress/observation masking + trim   first week
+4. Isolate/sub-agent   on demand (has architecture cost)
+5. Write + Select      on demand
+```
+
+### Prompt-caching specifics
+
+- **Anthropic**: cache-read is only **10% of standard (90% savings)**; min cache unit 1024 tokens (Sonnet 4.5/4, Opus 4.1/4) / 2048 (Sonnet 4.6) / 4096 (Opus 4.5/4.6, Haiku 4.5); TTL default 5 min (some 1 hr); cacheable fields `system` / `messages` / `tools`
+- **DeepSeek**: prefix caching is server-side automatic (`prompt_cache_hit_tokens` / `miss_tokens`), warming up around the 4th–6th request
+- Three cache rules: system prompt first, prefix byte-stable, zero code changes
+
+## What this signals
+
+- **Understanding Context Rot**: "bigger window ≠ better," so manage actively instead of stuffing
+- **A six-modules × five-strategies framework**: you can size each module and name the right strategy
+- **Engineering it**: strategies = stackable middleware, not ad-hoc scripts
+- **Ordered savings**: Cache first (90% off) → Isolate on demand — zero-cost before complex
+
+<DemoStatus
+  title="What the demo replays"
+  description="The demo replays the decision priority: six modules fill the window → stack 'Cache → tool-result clearing → observation masking + trim → Isolate → Write/Select' in order, dropping both window tokens and relative cost. The priority order, the five strategies, and the 90%-off cache mechanics come from the Part 9 courseware; specific numbers are illustrative."
+/>

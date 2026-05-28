@@ -1,0 +1,103 @@
+---
+title: "veRL PPO 强化学习训练实战"
+title_en: "veRL PPO Training in Practice"
+date: "2026-05-20"
+category: project
+tags: ["veRL", "PPO", "RLHF", "Ray", "GSM8K", "vLLM"]
+lang: both
+cover: "/projects/verl-ppo-training/cover.svg"
+excerpt: "用字节开源的 veRL(HybridFlow) 在单卡上对 Qwen2.5-0.5B 跑完整 PPO：Actor/Critic/Reference/Reward 四模型角色 + Ray 编排，在 GSM8K 上用规则奖励(正则匹配 ####)训出会推理的模型。补全 RLHF 经典训练这块拼图。"
+excerpt_en: "Full PPO on a single GPU with ByteDance's open-source veRL (HybridFlow): four model roles (Actor/Critic/Reference/Reward) + Ray, training Qwen2.5-0.5B on GSM8K with a rule reward (regex on ####). The classic RLHF training piece of the puzzle."
+platforms: [website]
+github: "https://github.com/volcengine/verl"
+demo: "/demo/verl-ppo-training"
+published: true
+---
+
+<Callout type="info">
+  The GRPO/GSPO projects cover "emerging RL"; this one fills in <strong>classic RLHF's PPO training</strong>. Using ByteDance's open-source <strong>veRL</strong> (implementing the <em>HybridFlow</em> paper), it runs full PPO on Qwen2.5-0.5B on a <strong>single GPU</strong>, paired with a close reading of InstructGPT's three-stage RLHF.
+</Callout>
+
+## What veRL is
+
+veRL (Volcengine Reinforcement Learning, `github.com/volcengine/verl`) is ByteDance Volcengine's open-source **enterprise-grade, high-throughput LLM RL post-training framework**, implementing *HybridFlow: A Flexible and Efficient RLHF Framework (2024)*. Three pillars: High Performance / Scalability / High Flexibility. Stack: vLLM, SGLang, Megatron-LM, FSDP, FlashAttention.
+
+**HybridFlow** decomposes training into overlapping async flows: Generation Flow (vLLM) / Reference Flow (KL, logprob) / Value Flow (critic) / Update Flow (PPO/GRPO backprop). Pluggable: reward (rule / LLM-as-judge / code executor), rollout engine (vLLM/SGLang), optimizer (PPO/GRPO/ReMax).
+
+## The four model roles of PPO
+
+PPO for LLMs coordinates four models at once (Ray distributed orchestration):
+
+| Role | Job |
+|---|---|
+| **Actor** | the policy model being trained |
+| **Critic** | the value model, estimates value |
+| **Reference** | reference policy, computes the KL penalty to prevent drift |
+| **Reward** | reward model / reward function, scores |
+
+## The PPO seven-step loop
+
+```
+Rollout → Reward → Critic → Advantage → Actor Update → Critic Update → Next Step
+```
+
+- **Rollout**: Actor generates a response (CoT)
+- **Reward**: the reward function scores
+- **Critic**: estimates value
+- **Advantage**: `A = reward − value` (or GAE)
+- **Actor Update**: Clipped Objective
+- **Critic Update**: `(value − reward)²`
+
+## A rule reward on GSM8K
+
+Math problems have ground-truth answers, so **use a rule reward — no reward model to train**:
+
+```python
+# verl/utils/reward_score/gsm8k.py (key points)
+# 1. extract_solution() clips to the last 300 chars (_SOLUTION_CLIP_CHARS=300)
+# 2. strict-mode regex: #### (\-?[0-9\.\,]+)
+# 3. compute_score(): 1.0 correct, 0.0 wrong, 0 if no answer
+```
+
+Preprocessing (`examples/data_preprocess/gsm8k.py`) turns GSM8K into Parquet with `reward_model = {"style":"rule","ground_truth": solution}` and appends a CoT instruction: `Let's think step by step and output the final answer after "####".`
+
+## Single-GPU training config
+
+Entry `verl/trainer/main_ppo.py` → Hydra (`ppo_trainer.yaml`) → start Ray → `TaskRunner` registers the four Workers + `ResourcePoolManager` → `RayPPOTrainer.fit()`. Real hyperparameters on one H800:
+
+```yaml
+train_batch_size: 64
+max_prompt_length: 512
+max_response_length: 512
+actor.optim.lr: 1e-6
+actor.ppo_mini_batch_size: 32
+actor.ppo_micro_batch_size_per_gpu: 4
+critic.optim.lr: 1e-5
+algorithm.kl_ctrl.kl_coef: 0.001
+rollout.gpu_memory_utilization: 0.75
+total_epochs: 1
+```
+
+Measured at step:42: `actor/entropy 0.475`, `critic/score/mean 0.296` (~29% correct), `throughput 1702 tokens/sec`, `step 13.30s`. Merge to HF format with `verl.model_merger merge --backend fsdp`.
+
+## The origin: InstructGPT's three stages
+
+Paired with a close reading of OpenAI's InstructGPT paper — where PPO sits within RLHF:
+
+1. **SFT**: fine-tune on demos from ~40 labelers
+2. **Reward Model**: a 6B RM trained on K=4–9 ranked outputs (the 175B RM was unstable)
+3. **PPO**: reward from the RM, per-token KL penalty vs SFT to prevent reward hacking; **PPO-ptx** (mixing in pretraining gradients) is the model actually called InstructGPT
+
+The striking result: **a 1.3B InstructGPT beats the 175B GPT-3 on human preference** — alignment matters more than scaling parameters.
+
+## What this signals
+
+- **Completing the RL picture**: with GRPO / GSPO / visual RL, this forms a full RL lineage (classic PPO ↔ emerging GRPO)
+- **Industrial-framework fluency**: veRL source build + Ray four-model orchestration + single-GPU run
+- **Reward-design judgment**: verifiable tasks (math) use a rule reward; only non-verifiable ones need a trained RM
+- **Reading the source papers**: InstructGPT's three stages + why alignment beats parameters
+
+<DemoStatus
+  title="What the demo replays"
+  description="The demo replays one PPO iteration: the Actor generates a CoT (#### 72) on a GSM8K problem → the rule reward regex-matches for 1.0 → the Critic estimates value → A=reward−value → Actor/Critic update → loop. The four model roles, the seven-step loop, the reward regex, and the step:42 metrics (0.296 / 1702 tok/s) come from the 'LLM RL 强化学习训练入门' courseware; no real training runs in the browser."
+/>

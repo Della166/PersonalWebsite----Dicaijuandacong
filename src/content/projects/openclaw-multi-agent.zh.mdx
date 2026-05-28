@@ -1,0 +1,87 @@
+---
+title: "OpenClaw 多智能体编排"
+title_en: "OpenClaw Multi-Agent Orchestration"
+date: "2026-05-21"
+category: project
+tags: ["OpenClaw", "Multi-Agent", "Orchestration", "MCP", "Hub-Spoke"]
+lang: both
+cover: "/projects/openclaw-multi-agent/cover.svg"
+excerpt: "多智能体 = ≥2 个各有独立 LLM 会话上下文的 Agent，在预设拓扑里协作。OpenClaw 把一切归约到三个 MCP 原语(spawn/send/history)，上面长出 6 种协作模式——而且课程连「P2P 生产零案例」都讲清了根因。"
+excerpt_en: "Multi-agent = ≥2 agents each with an independent LLM session context, cooperating over a predefined topology. OpenClaw reduces it all to three MCP primitives (spawn/send/history), on which six collaboration modes are built — and the course even explains why P2P has zero production cases."
+platforms: [website]
+github: ""
+demo: "/demo/openclaw-multi-agent"
+published: true
+---
+
+<Callout type="info">
+  多智能体系统 = <strong>≥2 个 Agent，每个有独立的 LLM 会话上下文</strong>（各自的 system prompt、工具白名单、历史），在<strong>预设拓扑</strong>下协作产出一个结果。OpenClaw 把所有编排归约到三个 MCP 工具原语，上面建出 6 种协作模式。这门课最难得的是<strong>用证据说话，连「哪些不 work」都标清楚</strong>。
+</Callout>
+
+## 三个 MCP 原语（数据库类比）
+
+所有拓扑都归约到这三件事：
+
+| 原语 | 类比 | 作用 |
+|---|---|---|
+| `sessions_spawn` | INSERT | 创建子 Agent 会话节点 |
+| `sessions_send` | UPDATE | 节点间消息（**仅 lead 可用**） |
+| `sessions_history` | SELECT | 收集子 Agent 结果 |
+
+## 6 种协作模式（含 token 成本）
+
+| 模式 | 拓扑 | token 倍数 | 备注 |
+|---|---|---|---|
+| **Hub-Spoke** | 星型 | 3–15× | 最常用：Opus 4 当 lead，Sonnet 4 当 spoke |
+| **Pipeline** | 链式 | 1.5–2× | 唯一 < 4× 的模式 |
+| **Hierarchical** | 树型 | 10–15× | 需 `maxSpawnDepth≥2` |
+| **Routing** | 路由→专家 | 3–8× | |
+| **P2P** | 任意图 | 4–7× | **生产零案例** |
+| **Fleet** | 星型 + 每 worker 独立 VM | 15–20× | |
+
+Anthropic 数据：多智能体约 **15× token**（单 Agent 才 4×），但研究类评测相对提升 **90.2%**。选型铁律：**任务价值要高到付得起这份开销**。
+
+## 三层「Agent」抽象
+
+OpenClaw 里「agent」是分层的：
+
+1. **agents**：持久工作区，`openclaw agents add <id>` 创建
+2. **subagents**：`sessions_spawn` 出来的临时子会话，共享父工作区，`childSessionKey = agent:<parent>:subagent:<uuid>`
+3. **Workflow 层**：无状态的 Lobster step（`llm.invoke` / `openclaw.invoke`）
+
+`subagents` 4 个核心字段：`allowAgents`（可派生哪些）/ `maxSpawnDepth`（默认 1，1–5）/ `maxChildrenPerAgent`（默认 5）/ `runTimeoutSeconds`（默认 900）。
+
+> **大坑（Issue #11982）**：`allowAgents` 只写在 `agents.defaults.subagents` 下 schema 合法但**运行时被忽略**——必须写在 `agents.list[].subagents`。
+
+## 核心架构：Hub 单向派发
+
+为什么子 Agent 之间不能直接通信？因为 **`sessions_send` 在子 Agent 层根本不注册进工具表**（Issue #23359）——比返回一个 DENY 更彻底，零 token 浪费，`alsoAllow` 也救不回来。这正是 **P2P 模式生产零案例**的根因。
+
+所以标准 Hub-Spoke 是单向的：
+
+```
+# Path A（标准）
+lead sessions_spawn(agent, task)
+   → 等 announce 事件（别轮询，会被限流）
+   → 收到 session ended
+   → sessions_history(childSessionKey) 取结果
+   → lead 综合
+
+# Path B（生产推荐，ClawTeam 7-agent 模板）
+spoke 把结果写到 ./shared/signals/<agent>.md
+   → lead 读盘 —— 绕开子层 send 禁令
+```
+
+`sessions_spawn` 是非阻塞的，完成与否只能靠 `sessions_history` 看 `status:"ended"`；高频轮询会被限流，建议用 announce 事件 + ≥10s 回退。
+
+## 价值点
+
+- **多智能体不是堆 Agent**：知道 6 种模式的拓扑和 token 成本（3–15×），按任务价值选
+- **理解 Hub 单向架构**：懂为什么 `sessions_send` 子层被禁、P2P 为什么零案例
+- **工程化避坑**：`allowAgents` 写错位置、轮询被限流、completion 信号丢失这些真实坑
+- **选型有据**：并行≥3 且独立 → 多 Agent；强顺序/状态依赖 → 单 Agent
+
+<DemoStatus
+  title="Demo 真实材料对应"
+  description="互动 Demo 复演 Hub-Spoke 代码评审：lead sessions_spawn 三个评审子 Agent(安全/性能/可读性) → 子 Agent 独立工作 → 一条 sessions_send 上行箭头撞到子 Agent 边界变红「被禁」→ lead 经 sessions_history 收结果 → 综合。三原语、6 模式 token 倍数、sessions_send 子层禁用都来自《OpenClaw 多Agent系统入门》课件。"
+/>

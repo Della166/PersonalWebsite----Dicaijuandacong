@@ -1,0 +1,90 @@
+---
+title: "Harness Engineering 实战"
+title_en: "Harness Engineering in Practice"
+date: "2026-05-24"
+category: project
+tags: ["Harness Engineering", "Claude Code", "Hooks", "Agent Runtime", "AGENTS.md"]
+lang: both
+cover: "/projects/harness-engineering/cover.svg"
+excerpt: "Agent 产出质量 = 模型能力 × 设计水平。这门课讲的是怎么设计 Agent 的「运行时环境」——四大支柱(代码库即真相源 / 机械化约束 / 反馈循环 / 熵管理)。实测：模型不变，光靠 Harness 把 Terminal Bench 从 52.8% 拉到 66.5%。"
+excerpt_en: "Output quality = model capability × design level. This is about engineering an agent's runtime environment — four pillars (codebase as truth / mechanized constraints / feedback loops / entropy management). Measured: model unchanged, the Harness alone lifts Terminal Bench from 52.8% to 66.5%."
+platforms: [website]
+github: ""
+demo: "/demo/harness-engineering"
+published: true
+---
+
+<Callout type="info">
+  Everyone benchmarks models, but the same model produces wildly different results in different hands — the difference is the <strong>Harness</strong>. One-line definition: <strong>the engineering discipline of designing, building, and continuously optimizing an AI agent's runtime environment</strong>. Analogy: "the Harness is to an AI agent what the operating system is to a CPU."
+</Callout>
+
+## The core formula
+
+> **Agent output quality = model capability × design level**
+
+You can't move model capability (just use the SOTA model), but **design level** is pure engineering. The course's most striking data point:
+
+| Configuration | Terminal Bench 2.0 | Note |
+|---|---|---|
+| Bare model (GPT-5.2-Codex) | 52.8% | rank 30+ |
+| **Same model + full Harness** | **66.5%** | **Top 5** |
+
+Only the Harness changed (system prompt + tools + middleware Hooks); **not one line of the model**, +13.7pp. For contrast, upgrading to a stronger model gives only +6.8pp — **the Harness is ~2× the gain of swapping models**. (The course also notes a "Reasoning Sandwich": xhigh reasoning actually dropped to 53.9% due to timeouts; high was the sweet spot at 63.6% — more reasoning isn't always better.)
+
+## The four pillars
+
+```
+                Agent runtime environment (Harness)
+    ┌──────────────┬──────────────┬──────────────┬──────────────┐
+    ① Codebase as     ② Mechanized      ③ Feedback        ④ Entropy
+       truth source      constraints        loops             management
+   declarative        automated          multi-level        system entropy
+   knowledge          behavior limits    feedback           control
+```
+
+### ① Codebase as source of truth (declarative knowledge injection)
+
+Knowledge lives in **config files**, not the prompt: Anthropic's `CLAUDE.md`, OpenAI's `AGENTS.md`. The point isn't volume — it's writing a **~100-line "marching guide"**, not an encyclopedia — so the agent boots "knowing what this project looks like."
+
+### ② Mechanized architectural constraints (automated behavior limits)
+
+The one-liner that nails it: **"CLAUDE.md is advice, Hooks are law."**
+
+- `CLAUDE.md` is a soft constraint — the model can ignore it
+- **Hooks** are hard constraints: `PreToolUse` / `PostToolUse` lifecycle hooks intercept around every tool call — e.g. a `rm -rf /` is blocked outright
+- OpenAI Codex uses a "six-layer graded constraint system"
+
+### ③ Feedback loops (multi-level)
+
+"A shift engineer with no handover notes" is what no feedback loop looks like. Four levels:
+
+- **Instant feedback**: Hooks return results immediately, before/after each tool call
+- **Build feedback**: CI/CD running on the PR
+- Plus two cross-session layers
+
+### ④ Entropy management
+
+AI collaboration has four characteristic forms of entropy to fight: **doc drift / architecture erosion / style inconsistency / duplicated code**.
+
+## Harness depth across five platforms
+
+The course compares the Harness design of five platforms:
+
+| Platform | Harness style | Traits |
+|---|---|---|
+| **Claude Code** | deep Harness | 24 Hook events × 4 handler types, sub-agents via YAML frontmatter, persistent memory |
+| OpenAI Codex | deep Harness | six-layer graded constraints |
+| Cursor / Zed | medium | IDE-integrated |
+| **OpenClaw** | light Harness + broad coverage | 200+ plugins, IM-platform integration, 330k+ stars |
+
+## What this signals
+
+- **Understanding the "model × design" multiplier**: why the same model is an order of magnitude apart in different hands
+- **The four pillars are actionable**: CLAUDE.md/AGENTS.md (knowledge) + Hooks (constraints) + CI (feedback) + anti-entropy practices
+- **Platform-selection judgment**: deep Harness (Claude Code/Codex) vs light-Harness-broad-coverage (OpenClaw), chosen by scenario
+- **Data-driven**: arguing from a measured 52.8%→66.5%, not "it feels better"
+
+<DemoStatus
+  title="What the demo replays"
+  description="The interactive demo replays the core formula: baseline bare model at 52.8% → install the four pillars one by one → full Harness at 66.5%, model unchanged. The 52.8% / 66.5% endpoints are the real LangChain measurements cited in the course; the climb between is illustrative. The pillar names and 'CLAUDE.md is advice, Hooks are law' come from the 'Harness Engineering 技术实战' deck."
+/>

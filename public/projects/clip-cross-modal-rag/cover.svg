@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0e1a14"/>
+      <stop offset="100%" stop-color="#1a2a22"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#g)"/>
+  <g opacity="0.55">
+    <circle cx="1200" cy="240" r="14" fill="#7fbc8c"/>
+    <circle cx="1320" cy="320" r="11" fill="#d4a574"/>
+    <circle cx="1180" cy="380" r="11" fill="#d4a574"/>
+    <circle cx="1380" cy="450" r="11" fill="#d4a574"/>
+    <line x1="1200" y1="240" x2="1320" y2="320" stroke="#7fbc8c" stroke-width="2" stroke-dasharray="6 4"/>
+    <line x1="1200" y1="240" x2="1180" y2="380" stroke="#7fbc8c" stroke-width="2" stroke-dasharray="6 4"/>
+  </g>
+  <g font-family="system-ui, -apple-system, sans-serif" fill="#f0e8d9">
+    <text x="80" y="180" font-size="32" font-weight="700" fill="#7fbc8c" letter-spacing="4">CLIP · LLAMAINDEX · MULTIMODAL</text>
+    <text x="80" y="320" font-size="92" font-weight="900">跨模态检索 RAG</text>
+    <text x="80" y="430" font-size="56" font-weight="700" fill="#d4a574">文搜图 · 图搜图 · 同一 512 维空间</text>
+    <text x="80" y="600" font-size="36" fill="#c6d2cb">CLIP(512d) + VLM 描述(1536d) + BM25 混合 RRF</text>
+    <text x="80" y="654" font-size="36" fill="#c6d2cb">MultiModalVectorStoreIndex · Milvus · QueryFusion</text>
+    <g transform="translate(80, 745)">
+      <rect x="0" y="0" rx="999" ry="999" width="150" height="60" fill="none" stroke="#7fbc8c" stroke-width="3"/>
+      <text x="75" y="40" font-size="28" fill="#7fbc8c" text-anchor="middle" font-weight="600">CLIP</text>
+      <rect x="170" y="0" rx="999" ry="999" width="220" height="60" fill="none" stroke="#d4a574" stroke-width="3"/>
+      <text x="280" y="40" font-size="28" fill="#d4a574" text-anchor="middle" font-weight="600">LlamaIndex</text>
+      <rect x="410" y="0" rx="999" ry="999" width="160" height="60" fill="none" stroke="#d4a574" stroke-width="3"/>
+      <text x="490" y="40" font-size="28" fill="#d4a574" text-anchor="middle" font-weight="600">Milvus</text>
+    </g>
+  </g>
+</svg>
