@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0e1a14"/>
+      <stop offset="100%" stop-color="#1a2a22"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#g)"/>
+  <g font-family="system-ui, -apple-system, sans-serif" fill="#f0e8d9">
+    <text x="80" y="180" font-size="32" font-weight="700" fill="#7fbc8c" letter-spacing="4">TENSORRT · INFERENCE · OPTIMIZATION</text>
+    <text x="80" y="320" font-size="96" font-weight="900">TensorRT 推理优化</text>
+    <text x="80" y="430" font-size="56" font-weight="700" fill="#d4a574">层融合 · INT8 量化 · 自定义 Plugin</text>
+    <text x="80" y="600" font-size="36" fill="#c6d2cb">ONNX → 引擎构建 · Conv+BN+ReLU → CBR · Winograd 卷积</text>
+    <text x="80" y="654" font-size="36" fill="#c6d2cb">NMS Plugin(IPluginV2) → SSD 目标检测推理</text>
+    <g transform="translate(80, 745)">
+      <rect x="0" y="0" rx="999" ry="999" width="180" height="60" fill="none" stroke="#d4a574" stroke-width="3"/>
+      <text x="90" y="40" font-size="28" fill="#d4a574" text-anchor="middle" font-weight="600">TensorRT</text>
+      <rect x="200" y="0" rx="999" ry="999" width="150" height="60" fill="none" stroke="#7fbc8c" stroke-width="3"/>
+      <text x="275" y="40" font-size="28" fill="#7fbc8c" text-anchor="middle" font-weight="600">INT8</text>
+      <rect x="370" y="0" rx="999" ry="999" width="180" height="60" fill="none" stroke="#7fbc8c" stroke-width="3"/>
+      <text x="460" y="40" font-size="28" fill="#7fbc8c" text-anchor="middle" font-weight="600">CUDA</text>
+    </g>
+  </g>
+</svg>

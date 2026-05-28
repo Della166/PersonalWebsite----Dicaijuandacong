@@ -49,6 +49,7 @@
     "filter_ml": "模型训练",
     "filter_rl": "强化学习",
     "filter_devtools": "开发工具",
+    "filter_spatial": "空间计算",
     "case_study": "案例拆解",
     "featured_case_study": "精选案例",
     "action_details": "查看",

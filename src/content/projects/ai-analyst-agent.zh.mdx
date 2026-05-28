@@ -1,0 +1,104 @@
+---
+title: "AI Analyst —— 会自己建模的数据分析 Agent"
+title_en: "AI Analyst — an LLM that builds its own models"
+date: "2026-05-28"
+category: project
+tags: ["Function Calling", "Text2SQL", "LangChain", "scikit-learn", "DecisionTree", "DeepSeek"]
+lang: both
+cover: "/projects/ai-analyst-agent/cover.svg"
+demo: "/demo/ai-analyst-agent"
+excerpt: "一个 LLM 当分析师：用 Function-Calling 编排工具——先用 Text2SQL（create_sql_agent）从 MySQL 拉特征，再现场拟合可解释模型（线性回归拆解客单 + 决策树找驱动因子），最后给出可执行建议。重点不是 NL→SQL→图表，而是「LLM 自己建模」。"
+excerpt_en: "An LLM acting as an analyst: it orchestrates tools via Function-Calling — Text2SQL (create_sql_agent) pulls features from MySQL, then it fits interpretable models on the fly (linear regression to decompose spend + a decision tree to find drivers), then gives an actionable recommendation. The point isn't NL→SQL→chart — it's an LLM that builds its own models."
+platforms: [website]
+github: ""
+published: true
+---
+
+<Callout type="info">
+  这个项目的<strong>净新角度</strong>不是「把一句话变成 SQL」，也不是「NL→SQL→图表」。本站已经有两个 NL2SQL 项目了。这里的 LLM 是个<strong>会自己建模的分析师</strong>：它用 Function-Calling 编排工具，先写 SQL 拉特征，<strong>再现场拟合可解释的小模型（线性回归 + 决策树），从系数和树规则里读出「什么在驱动业务」，最后给一条可执行建议</strong>。来源是极客「AI 数据分析训练营」里的餐饮/园区分析助手、Text2SQL 与建模 notebook 的真实代码。
+</Callout>
+
+## 跟本站另外两个 NL2SQL 项目的区别
+
+本站已有：
+
+- **企业私有化 NL2SQL 微调系统** —— 用 LlamaFactory LoRA *训* 一个 NL2SQL 模型（改的是权重）。
+- **NL2SQL 数据分析 Agent** —— fork 自 Vanna 的 RAG Agent，把一句话变 SQL → 查库 → 出图表（NL→SQL→chart）。
+
+| | 那两个 NL2SQL 项目 | 本项目（AI Analyst） |
+|---|---|---|
+| 终点 | SQL 结果 + 图表 | 拟合出的**可解释模型** + 建议 |
+| LLM 的角色 | 把问题翻译成 SQL | 当分析师：拉数据 → **自己建模** → 解释 |
+| 用的库 | LangChain / Vanna / LlamaFactory | LangChain + **scikit-learn** + deepseek |
+| 净新能力 | NL→SQL | **LLM 自动拟合回归/决策树，读出驱动因子并给建议** |
+
+一句话：前两个是「让模型替你写查询」，这个是「让模型替你做分析」。
+
+## 三个工具，LLM 自己编排
+
+Agent 用 Function-Calling（底座 `deepseek-chat` / Qwen-Agent），按需调用三类工具：
+
+```
+business question
+  └─> LLM agent (Function-Calling) 规划
+        ├─ tool: text2sql_tool       → 拉所需特征
+        ├─ tool: auto_model_tool     → 现场拟合可解释模型
+        └─ summarize                 → 图表 + 规则 + 建议
+```
+
+### 1. Text2SQL 工具（拉特征）
+
+用 LangChain 的 `create_sql_agent` + `SQLDatabaseToolkit` 接到一个 MySQL 业务库。Agent 先 introspect 表结构，再生成并执行 SQL，把建模需要的特征（活动/节假日/票价/促销/天气 + 客单）一次拉齐：
+
+```python
+from langchain_community.agent_toolkits import create_sql_agent, SQLDatabaseToolkit
+from langchain_community.utilities import SQLDatabase
+
+db = SQLDatabase.from_uri(MYSQL_URI)            # 业务库（连接串走环境变量，不入库）
+toolkit = SQLDatabaseToolkit(db=db, llm=llm)
+sql_agent = create_sql_agent(llm=llm, toolkit=toolkit, verbose=True)
+# sql_agent 自动 introspect schema → 生成 SELECT → 执行 → 返回结果
+```
+
+### 2. 自动建模工具（这是净新角度）
+
+拿到特征后，Agent 不是直接画图，而是**现场拟合一个可解释模型**，然后把系数/规则读成人话。两条路：
+
+**a) 线性回归拆解客单消费** —— 把人均餐饮消费拆成「正常 / 储值卡 / 促销」三块：
+
+```python
+from sklearn.linear_model import LinearRegression
+# Money_normal·N_normal + Money_card·N_card + Money_promo·N_promo ≈ revenue
+reg = LinearRegression().fit(X, y)
+# 读 reg.coef_ → 哪一块贡献最大
+```
+
+**b) 决策树找驱动因子** —— 哪些因素在驱动餐饮收入（活动 / 节假日 / 票价 / 促销 / 天气）：
+
+```python
+from sklearn.tree import DecisionTreeRegressor, export_text, plot_tree
+tree = DecisionTreeRegressor(max_depth=4).fit(X, y)
+print(export_text(tree, feature_names=cols))   # 人类可读的 if-else 规则
+plot_tree(tree)                                 # 树图
+# tree.feature_importances_ → 驱动因子排序
+```
+
+`max_depth=4` 是刻意的：树浅才好读成规则，才能解释给业务方听。可解释性优先于一点点拟合精度——这正是这个工具存在的意义。
+
+### 3. 返回：图表 + 规则 + 建议
+
+最后 Agent 把回归系数、决策树规则、特征重要度汇总成一段人话建议（比如「促销资源向无活动工作日倾斜，活动尽量覆盖节假日」），并附上图表。
+
+## Demo 里在演什么
+
+<DemoStatus
+  title="Demo 是真实工具编排的复演（示意数据）"
+  description="互动 Demo 复演一次真实的 Agent 编排：给一个园区餐饮的业务问题，看 LLM 逐步调用工具——先 Text2SQL（create_sql_agent）拉特征，再用 LinearRegression 拆解客单、用 DecisionTreeRegressor(max_depth=4) + export_text 找驱动因子，最后给建议。SQL、系数和决策树规则用的是说明性数值（标注为示意），但工具、库与模型（create_sql_agent + SQLDatabaseToolkit + LinearRegression / DecisionTreeRegressor + deepseek）都来自课程的真实代码。课程有 58 节视频、没有字幕，所以这里以真实代码为锚、不编造任何指标。"
+/>
+
+## 价值点
+
+- **LLM 当分析师，不只当翻译器**：从「把问题变 SQL」升级到「拉数据 → 自己建模 → 读出驱动因子 → 给建议」。
+- **可解释优先**：选线性回归 + 浅决策树（max_depth=4），是因为系数和 if-else 规则能直接讲给业务方，而不是黑盒。
+- **工具编排**：Function-Calling 把 Text2SQL 和自动建模拆成独立工具，LLM 按问题自己决定调用顺序。
+- **扎实落地**：基于真实课程代码（langchain / sklearn / deepseek），不是 PPT 概念。

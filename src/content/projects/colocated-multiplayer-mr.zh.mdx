@@ -1,0 +1,76 @@
+---
+title: "大空间多人联机 MR"
+title_en: "Colocated Large-Space Multiplayer MR"
+date: "2026-05-28"
+category: project
+tags: ["Spatial Anchors", "Colocation", "Spatial Alignment", "Pico", "Multiplayer", "Unity"]
+lang: both
+cover: "/projects/colocated-multiplayer-mr/cover.svg"
+excerpt: "从 SpatialXR 视频课程整理的研究型案例：共址（colocation）多人 MR 的核心难题——多台头显各自的本地坐标系如何经空间锚 + 空间对齐收敛到同一个共享 origin，再叠加玩家 / 物体状态同步。联机 Netcode SDK 来自视频、未核实。非已上线 Unity 应用。"
+excerpt_en: "A study-derived case from the SpatialXR video courses: the core hard problem of colocated multiplayer MR — how multiple headsets' independent local frames converge to ONE shared origin via spatial anchors + spatial alignment, plus player/object state sync. The networking Netcode SDK is unverified (video-only). Not a shipped Unity app."
+platforms: [website]
+github: ""
+demo: "/demo/colocated-multiplayer-mr"
+published: true
+---
+
+<Callout type="info">
+  这是一篇<strong>研究型案例</strong>，材料来自 SpatialXR（广州虚境起源）的「VR-MR 大空间多人联机」Unity 视频课程。课程是<strong>纯视频（.sz 即改名 MP4、无字幕）+ 加密 RAR 素材</strong>，因此这里梳理的是文档化的<strong>共址联机管线</strong>，<strong>不是一个跑得起来的 Unity 应用</strong>。<strong>联机所用的 Netcode SDK 在可读材料里没有点名（视频课程，未核实）。</strong>
+</Callout>
+
+## 共址 MR 最难的一步：让多台头显认同同一个坐标系
+
+单机 VR 不存在这个问题，但只要两个人在<strong>同一个物理空间</strong>里看同一份虚拟内容，立刻就要解决：每台头显开机时都建立<strong>自己的本地坐标系</strong>，两个 origin 不重合、朝向也不一致。如果不对齐，A 看到的桌子在左边，B 看到的就在右边——共享体验直接崩。
+
+课程文档化的管线把这件事拆成清晰的几步：
+
+```
+空间锚（spatial anchors）
+  └─> 空间对齐（spatial alignment）  ← 多台头显收敛到同一个共享 origin
+        └─> 联机房间（networked room）
+              └─> 玩家 + 可交互物体 状态同步（state sync）
+                    └─> 公网中继（public-internet relay）
+```
+
+目标平台是 **Pico**（含企业级大空间场景）。
+
+## 13 课时序列（来自课程结构）
+
+| # | 课时 | 在管线里的位置 |
+|---|---|---|
+| 1 | 环境搭建 | 工程基线 |
+| 2 | 房间 | 联机房间 |
+| 3 | 玩家数据同步 | state sync（玩家） |
+| 4 | 可交互物体同步 | state sync（物体） |
+| 5 | 复杂交互同步 | state sync（复杂） |
+| 6 | 锚 + 对齐原理 | colocation 原理 |
+| 7 | 对齐实现 | spatial alignment |
+| 8 | 公网联机 | public-net relay |
+| 9 | Pico MR | 平台适配 |
+| 10 | 手势适配 | 输入适配 |
+| 11 | Pico 锚 | 平台空间锚 |
+
+> 课程把"原理"（第 6 课）和"实现"（第 7 课）分开讲——先讲清为什么需要把多个本地系吸附到一个共享 origin，再讲怎么落地。这正是共址 MR 的认知重点。
+
+## 对齐前 vs 对齐后（Demo 复演的核心）
+
+- **对齐前**：两台头显各在自己的本地系。同一个被抓物体，A 算出来在一个位置，B 算出来在另一个位置（Demo 里画成虚线"幽灵框"）。
+- **对齐后**：空间对齐把两个本地系吸附到<strong>同一个共享 origin</strong>。此后所有 avatar 和共享物体都在同一坐标系里——A、B 对位置达成一致，状态同步才有意义。
+
+互动 Demo 用<strong>俯视平面图</strong>复演这一步：两台头显先各有独立坐标轴 → 扫描放置空间锚 → "对齐"一步把 B 的坐标轴<strong>吸附</strong>到 A 的共享 origin → avatar 和共享被抓物体跨端位置随之一致。
+
+## 关于 Netcode：诚实标注未核实
+
+共址 MR 一旦对齐完成，剩下的就是经典的网络状态同步（玩家位姿、物体 transform、复杂交互），并走公网中继让不在同一局域网的人也能联机。**但具体用的是哪个 Netcode SDK，在我能读到的材料（3 份 PDF）里没有点名**——其余都是无字幕视频和加密 RAR。所以这里只把它标成"未核实，来自视频"，不臆测具体框架名。
+
+## 价值点
+
+- **共址 / 共享坐标系**：理解为什么"多台头显认同同一个 origin"是 XR 最难的问题之一，以及空间锚 → 空间对齐这条收敛路径
+- **状态同步分层**：玩家数据 / 可交互物体 / 复杂交互逐级同步，而不是一锅端
+- **平台落地**：Pico 大空间（含企业级）+ 手势适配 + Pico 空间锚的具体适配点
+- **资深信号 + 诚实边界**：共址是高级 XR 工程问题；同时明确这是从纯视频课程整理的研究复演，且 Netcode SDK 未核实——不编造
+
+<DemoStatus
+  title="Demo 真实材料对应"
+  description="互动 Demo 用俯视平面图复演课程文档里的共址管线：两台头显独立本地系 → 空间锚扫描 → 空间对齐把两个系吸附到同一共享 origin → avatar 和共享被抓物体跨端位置一致。管线步骤（spatial anchors / spatial alignment / state sync / public-net relay）和 Pico 大空间目标取自课程结构。这是从纯视频课程（无可运行 Unity 工程）整理的研究复演，不是已上线应用；联机 Netcode SDK 来自视频、未核实。"
+/>

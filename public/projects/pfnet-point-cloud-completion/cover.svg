@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0e1a14"/>
+      <stop offset="100%" stop-color="#1a2a22"/>
+    </linearGradient>
+    <radialGradient id="hole" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#7fbc8c" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#7fbc8c" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#g)"/>
+  <g transform="translate(1140, 250)">
+    <circle cx="0" cy="0" r="190" fill="url(#hole)"/>
+    <g fill="#c6d2cb">
+      <circle cx="-150" cy="-40" r="3.5"/><circle cx="-120" cy="10" r="3.5"/><circle cx="-95" cy="-70" r="3.5"/>
+      <circle cx="-80" cy="40" r="3.5"/><circle cx="-60" cy="-20" r="3.5"/><circle cx="-40" cy="60" r="3.5"/>
+      <circle cx="-170" cy="30" r="3.5"/><circle cx="-130" cy="-90" r="3.5"/><circle cx="-50" cy="-90" r="3.5"/>
+      <circle cx="-20" cy="-50" r="3.5"/><circle cx="-110" cy="80" r="3.5"/><circle cx="-160" cy="-10" r="3.5"/>
+    </g>
+    <g fill="#7fbc8c">
+      <circle cx="30" cy="-30" r="4"/><circle cx="60" cy="10" r="4"/><circle cx="90" cy="-50" r="4"/>
+      <circle cx="110" cy="40" r="4"/><circle cx="50" cy="-70" r="4"/><circle cx="130" cy="-10" r="4"/>
+      <circle cx="80" cy="70" r="4"/><circle cx="20" cy="40" r="4"/><circle cx="150" cy="20" r="4"/>
+      <circle cx="40" cy="0" r="4"/><circle cx="100" cy="-30" r="4"/><circle cx="70" cy="-20" r="4"/>
+    </g>
+    <circle cx="0" cy="0" r="180" fill="none" stroke="#d4a574" stroke-width="2" stroke-dasharray="8 8" opacity="0.6"/>
+  </g>
+  <g font-family="system-ui, -apple-system, sans-serif" fill="#f0e8d9">
+    <text x="80" y="180" font-size="32" font-weight="700" fill="#7fbc8c" letter-spacing="4">PF-Net · POINT FRACTAL NETWORK · GAN</text>
+    <text x="80" y="320" font-size="92" font-weight="900">3D 点云补全</text>
+    <text x="80" y="430" font-size="56" font-weight="700" fill="#d4a574">裁掉一块 · 再生成回来</text>
+    <text x="80" y="600" font-size="36" fill="#c6d2cb">ShapeNet-Part · FPS 多尺度编码 · 分层残差解码</text>
+    <text x="80" y="654" font-size="36" fill="#c6d2cb">coarse(64) → center2(128) → fine(512) · Chamfer Distance</text>
+    <g transform="translate(80, 745)">
+      <rect x="0" y="0" rx="999" ry="999" width="170" height="60" fill="none" stroke="#d4a574" stroke-width="3"/>
+      <text x="85" y="40" font-size="28" fill="#d4a574" text-anchor="middle" font-weight="600">PF-Net</text>
+      <rect x="190" y="0" rx="999" ry="999" width="130" height="60" fill="none" stroke="#7fbc8c" stroke-width="3"/>
+      <text x="255" y="40" font-size="28" fill="#7fbc8c" text-anchor="middle" font-weight="600">FPS</text>
+      <rect x="340" y="0" rx="999" ry="999" width="200" height="60" fill="none" stroke="#7fbc8c" stroke-width="3"/>
+      <text x="440" y="40" font-size="28" fill="#7fbc8c" text-anchor="middle" font-weight="600">Chamfer</text>
+    </g>
+  </g>
+</svg>

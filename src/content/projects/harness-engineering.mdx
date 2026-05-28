@@ -77,6 +77,16 @@ The course compares the Harness design of five platforms:
 | Cursor / Zed | medium | IDE-integrated |
 | **OpenClaw** | light Harness + broad coverage | 200+ plugins, IM-platform integration, 330k+ stars |
 
+## Production deployment & data sovereignty (the "AI business-flow architect" view)
+
+The Harness isn't only about writing code — running an agent in production is "harness engineering" too. An "AI business-flow architect" lens adds an ops layer:
+
+- **Local-First is an architecture decision, not a preference**: data sovereignty / avoiding vendor lock-in / compliance (GDPR, data-security law, air-gapped/信创) — self-hosting the agent gateway is a key 2026 call
+- **Security boundary**: a self-hosted OpenClaw control port (e.g. 18789) is an extension of the "Hooks are law" rule — **never expose it to the public internet** (the field has seen localhost-auth-bypass CVE-class issues with tens of thousands of instances scanned). The right posture: daemonize (systemd/launchd) + **zero-public-IP secure tunneling** + a secure Dashboard direct-connect
+- **Role elevation**: the architect shifts from "tool executor" to "business orchestrator" — wiring 130+ siloed SaaS into one layer via an agent's API / browser-automation / filesystem access
+
+> The specific cloud-provider/tunneling commands come from a video-only course and aren't in the materials; this states the architecture principles only, without repeating unverified commands.
+
 ## What this signals
 
 - **Understanding the "model × design" multiplier**: why the same model is an order of magnitude apart in different hands

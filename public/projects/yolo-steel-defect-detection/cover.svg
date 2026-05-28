@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0e1a14"/>
+      <stop offset="100%" stop-color="#1a2620"/>
+    </linearGradient>
+    <pattern id="steel" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(115)">
+      <rect width="14" height="14" fill="#2a3631"/>
+      <rect width="1.5" height="14" fill="#ffffff" opacity="0.06"/>
+    </pattern>
+  </defs>
+  <rect width="1600" height="900" fill="url(#g)"/>
+  <g font-family="system-ui, -apple-system, sans-serif" fill="#f0e8d9">
+    <text x="80" y="180" font-size="32" font-weight="700" fill="#7fbc8c" letter-spacing="4">ULTRALYTICS YOLOv12 · NEU-DET</text>
+    <text x="80" y="320" font-size="100" font-weight="900">钢材表面缺陷检测</text>
+    <text x="80" y="425" font-size="56" font-weight="700" fill="#d4a574">工业视觉 · 目标检测</text>
+    <text x="80" y="600" font-size="34" fill="#c6d2cb">train → val → predict · imgsz 640 · mosaic + mixup + copy-paste</text>
+    <text x="80" y="655" font-size="34" fill="#c6d2cb">6 类缺陷 · crazing / inclusion / pitted / scratches / patches / scale</text>
+  </g>
+  <g transform="translate(1010, 200)">
+    <rect x="0" y="0" width="500" height="440" rx="18" fill="url(#steel)" stroke="#3a4a42" stroke-width="2"/>
+    <rect x="55" y="70" width="270" height="60" fill="none" stroke="#7fbc8c" stroke-width="4"/>
+    <text x="55" y="58" font-size="24" fill="#7fbc8c" font-family="system-ui, sans-serif" font-weight="700">scratches 0.91</text>
+    <rect x="300" y="250" width="130" height="120" fill="none" stroke="#d4a574" stroke-width="4"/>
+    <text x="300" y="238" font-size="24" fill="#d4a574" font-family="system-ui, sans-serif" font-weight="700">inclusion 0.84</text>
+    <rect x="90" y="290" width="150" height="100" fill="none" stroke="#9bd0ff" stroke-width="4"/>
+    <text x="90" y="278" font-size="24" fill="#9bd0ff" font-family="system-ui, sans-serif" font-weight="700">pitted 0.88</text>
+  </g>
+  <g font-family="system-ui, -apple-system, sans-serif" transform="translate(80, 730)">
+    <rect x="0" y="0" rx="999" ry="999" width="240" height="60" fill="none" stroke="#d4a574" stroke-width="3"/>
+    <text x="120" y="40" font-size="28" fill="#d4a574" text-anchor="middle" font-weight="600">Ultralytics</text>
+    <rect x="260" y="0" rx="999" ry="999" width="160" height="60" fill="none" stroke="#d4a574" stroke-width="3"/>
+    <text x="340" y="40" font-size="28" fill="#d4a574" text-anchor="middle" font-weight="600">NEU-DET</text>
+    <rect x="440" y="0" rx="999" ry="999" width="210" height="60" fill="none" stroke="#7fbc8c" stroke-width="3"/>
+    <text x="545" y="40" font-size="28" fill="#7fbc8c" text-anchor="middle" font-weight="600">mAP@0.5</text>
+  </g>
+</svg>

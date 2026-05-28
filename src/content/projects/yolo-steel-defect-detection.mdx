@@ -1,0 +1,123 @@
+---
+title: "YOLOv12 钢材表面缺陷检测"
+title_en: "YOLOv12 Steel Surface Defect Detection"
+date: "2026-05-28"
+category: project
+tags: ["YOLOv12", "Ultralytics", "Object Detection", "NEU-DET", "Industrial CV"]
+lang: both
+cover: "/projects/yolo-steel-defect-detection/cover.svg"
+github: ""
+demo: "/demo/yolo-steel-defect-detection"
+published: true
+excerpt: "用 Ultralytics YOLOv12 在 NEU-DET 上训练一个钢材表面缺陷检测器：6 类缺陷、~5000 张图、train → val → predict 全流程，落地到自动化钢材质检。可复现的训练配方 + 一个示意推理 Demo。"
+excerpt_en: "Train an Ultralytics YOLOv12 steel-surface defect detector on NEU-DET: 6 defect classes, ~5000 images, full train → val → predict pipeline for automated steel quality inspection. A reproducible recipe + an illustrative inference demo."
+---
+
+<Callout type="info">
+  A mill inspector staring at moving steel coils for scratches, inclusions, and pits gets tired and
+  misses things. This project automates that with <strong>Ultralytics YOLOv12</strong>, training an
+  object detector on the public <strong>NEU-DET</strong> dataset: a steel-surface image goes in, the
+  model draws boxes over defects with a class label and confidence.
+</Callout>
+
+## The task
+
+NEU-DET (Northeastern University surface-defect database for hot-rolled steel strip) is a classic
+industrial-vision benchmark with **6 defect classes**:
+
+| Class | Meaning |
+|---|---|
+| `crazing` | fine crack network — the hardest class to detect |
+| `inclusion` | foreign-material inclusions |
+| `pitted_surface` | pitting / point corrosion |
+| `scratches` | scratches |
+| `patches` | surface patches |
+| `rolled-in_scale` | rolled-in oxide scale |
+
+About **~5000** grayscale steel-surface images, each with YOLO-format labels (class + normalized
+xywh). This is **object detection**, not just "defect / no defect" classification — the model has to
+locate *where* the defect is and decide *which* class.
+
+## Data config (dataset.yaml)
+
+Ultralytics describes a dataset with a single `dataset.yaml` declaring the train/val paths and the
+class-name order:
+
+```yaml
+path: ./NEU-DET
+train: images/train
+val: images/val
+
+names:
+  0: crazing
+  1: inclusion
+  2: pitted_surface
+  3: patches
+  4: scratches
+  5: rolled-in_scale
+```
+
+The order in `names` *is* the class index used in the label files — get it wrong and the whole run
+is silently mislabeled, so this is the first thing to verify.
+
+## Training recipe (3-yolo-steel.py)
+
+The pipeline is three stages — **train → val → predict** — all on Ultralytics' high-level API:
+
+```python
+from ultralytics import YOLO
+
+# 1. Load YOLOv12 pretrained weights for transfer learning
+model = YOLO("yolov12n.pt")
+
+# 2. Train on NEU-DET
+model.train(
+    data="dataset.yaml",
+    epochs=100,
+    imgsz=640,
+    mosaic=1.0,        # stitch 4 images — boosts small-object + context variety
+    mixup=0.1,         # linear image blending
+    copy_paste=0.1,    # cut instances out and paste them onto other images
+)
+
+# 3. Evaluate on the val split → mAP / per-class AP
+metrics = model.val()
+
+# 4. Inference on held-out steel images
+results = model.predict("samples/steel_held_out.jpg", conf=0.25)
+results[0].show()      # overlay boxes
+```
+
+Key settings:
+
+- **`imgsz=640`** — bigger images make small defects clearer; 640 is the usual speed/accuracy balance
+- **`mosaic + mixup + copy-paste`** — defect samples are naturally imbalanced (many scratches, few
+  crazing), so augmentation pads the minority classes and improves generalization
+- **`epochs≈100`** — starting from pretrained weights, a single domain like steel converges fast
+- **`conf=0.25`** — inference threshold: raise it and you miss defects (recall ↓), lower it and you
+  over-flag (precision ↓); QC scenarios usually favor recall
+
+Training ran on an **AutoDL GPU**, producing `best.pt` (the highest-val-mAP checkpoint), which
+inference then loads.
+
+## Why YOLO instead of a two-stage detector
+
+| Dimension | Why YOLO |
+|---|---|
+| **Speed** | single-stage, end-to-end — coils move fast on the line, so detection must be real-time |
+| **Sufficient** | for regular surface defects like NEU-DET, YOLO accuracy is enough; no Faster R-CNN two-stage overhead needed |
+| **Ecosystem** | Ultralytics wraps train/val/predict/export, so it's one line from training to ONNX/TensorRT deployment |
+
+## What this signals
+
+- You can run **end-to-end industrial CV**: data config → training → evaluation → inference, not just
+  calling a classification API
+- It's a **real deployment scenario** — automated steel-surface QC with 6 named defect classes and a
+  clear production motivation
+- It complements the VLM / RAG projects in the portfolio: this is the first **object-detection /
+  industrial-CV** project, filling in the classical-CV lane
+
+<DemoStatus
+  title="What the demo maps to"
+  description="The training data (NEU-DET, ~5000 images) and the training code (3-yolo-steel.py / dataset.yaml) are real, from the course; but the trained best.pt weights are NOT shipped with the site, and no model runs in the browser. So this is framed as a reproducible training recipe + an illustrative inference demo: the defect boxes, confidence scores, and per-class AP in the interactive demo are representative of a typical NEU-DET YOLO run (labeled illustrative), not a measured benchmark from shipped weights."
+/>

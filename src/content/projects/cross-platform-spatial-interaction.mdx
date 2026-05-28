@@ -1,0 +1,94 @@
+---
+title: "跨平台空间交互层（Quest + Vision Pro）"
+title_en: "Cross-Platform Spatial Interaction Layer (Quest + Vision Pro)"
+date: "2026-05-28"
+category: project
+tags: ["OpenXR", "XR Interaction Toolkit", "Meta XR SDK", "PolySpatial", "Unity", "Vision Pro"]
+lang: both
+cover: "/projects/cross-platform-spatial-interaction/cover.svg"
+excerpt: "从 SpatialXR Unity 视频课程整理的研究型案例：把 Quest 和 Vision Pro 的 XR 交互归到一条统一链路——底层 OpenXR，设备层分叉（Meta XR SDK vs PolySpatial/Metal），但上面的 XR Interaction Toolkit 保持一致。非已上线 Unity 应用。"
+excerpt_en: "A study-derived case from the SpatialXR Unity video courses: unify XR interaction across Quest and Vision Pro — OpenXR at the base, a forking device layer (Meta XR SDK vs PolySpatial/Metal), but a constant XR Interaction Toolkit on top. Not a shipped Unity app."
+platforms: [website]
+github: ""
+demo: "/demo/cross-platform-spatial-interaction"
+published: true
+---
+
+<Callout type="info">
+  This is a <strong>study-derived case</strong>, built from the SpatialXR (广州虚境起源) Unity spatial-computing video courses (the Meta Quest and Apple Vision Pro tracks). The courses are <strong>video-only (.sz = renamed MP4, no subtitles) + password-locked RAR materials</strong>; only 3 PDFs were readable, which supplied the real SDK / component vocabulary. So what follows is the documented <strong>interaction flow and layered architecture</strong> — <strong>not a runnable Unity app</strong>.
+</Callout>
+
+## The core judgment: the device layer forks, the interaction layer should not
+
+The easy trap when targeting both Quest and Vision Pro is writing a separate interaction stack per platform. The cleaner approach the course documents is to layer it:
+
+- **Base: OpenXR** — the cross-vendor standard, the foundation of portability
+- **Device / render layer (the fork)**:
+  - Quest uses the **Meta XR SDK** (the course spans v72 → v76+, layered on top of OpenXR)
+  - Vision Pro uses **Unity PolySpatial (RealityKit)** or **Metal** — the two visionOS render modes
+- **Interaction layer: XR Interaction Toolkit (XRI)** — kept constant; grab / ray / poke-UI interactions are not rewritten per platform
+
+```
+                       ┌─────────────────────────────┐
+app / interaction logic │  XR Interaction Toolkit (XRI) │  ← constant across platforms
+                       └─────────────────────────────┘
+                                ▲           ▲
+          ┌─────────────────────┘           └─────────────────────┐
+device/render │ Meta XR SDK (v72→v76+) │   │ PolySpatial (RealityKit) · Metal │  ← the fork
+          └────────────────────────┘   └──────────────────────────────────┘
+                                ▲           ▲
+base                     └──────── OpenXR ────────┘  ← portability foundation
+```
+
+## Real XRI components (from the course PDFs)
+
+| Category | Component | Notes |
+|---|---|---|
+| Grabbable | `XRGrabInteractable` | Movement Type: Instantaneous / Kinematic / **Velocity-Tracking**; `Throw On Detach` controls release-to-throw |
+| Two-hand transform | `XRGeneralGrabTransformer` | two hands on one object → scale / rotate |
+| Interactor | `XRSpatialPointerInteractor` | was `XRTouchSpaceInteractor` before PolySpatial 2.0.4 |
+| Interactor | Near-Far Interactor / **XR Poke Interactor** | near-field poke / far-field ray |
+| visionOS feedback | `VisionOSHoverEffect` / `VisionOSGroundingShadow` | hover highlight / grounding shadow |
+| Render container | `Volume Camera` | PolySpatial's volume camera |
+| World-Space UI | `Tracked Device Graphic Raycaster` + `InputSystemUIInputModule` | makes 3D-space UI ray- and poke-interactable |
+
+The `XRGrabInteractable` Movement Type is a nice contrast: **Kinematic** keeps the object glued to the hand (good for precise manipulation); **Velocity-Tracking** tracks hand velocity and, with `Throw On Detach`, lets you actually throw the object. The demo toggles between these two per platform.
+
+## The hand-tracking chain
+
+The hand tracking the course documents is a progressive chain:
+
+```
+hand skeleton (26 joints) → joint rendering → drive virtual hand → bind objects to joints → gesture recognition
+                                                                                          │
+                                                          thumb + index pinch → treated as a button
+```
+
+Once the pinch gesture is normalized into "button" semantics, it reuses XRI's select event — no separate input stack just for gestures.
+
+## A full interaction (the flow the demo replays)
+
+```
+raw hand joints
+  └─> pinch detection (thumb + index)
+        └─> ray hits a distant XRGrabInteractable
+              └─> grab
+                    ├─ Quest: Kinematic (follows the hand)
+                    └─ Vision Pro: Velocity-Tracking (Throw On Detach)
+              └─> World-Space UI: XR Poke Interactor pokes a button
+                    (via Tracked Device Graphic Raycaster + InputSystemUIInputModule)
+```
+
+The interactive demo makes this chain a clickable replay with a **Quest ⟷ Vision Pro toggle**: toggling swaps only the "device / render layer" cell's SDK name; the "OpenXR" and "XRI" cells stay green (constant) — making it obvious where the fork is and where portability comes from.
+
+## What this signals
+
+- **Cross-platform XR architecture judgment**: knowing what should converge (OpenXR + XRI) and what must fork (Meta XR SDK vs PolySpatial/Metal)
+- **OpenXR portability**: building on the standard instead of locking to a single vendor
+- **Depth on Apple spatial computing**: understanding visionOS's **PolySpatial (RealityKit) vs Metal** render-mode split, plus Apple-specific feedback components like `Volume Camera` / `VisionOSHoverEffect` / `VisionOSGroundingShadow`
+- **Honest scoping**: clear that this is a study-derived replay from a video-only course, not a pretend shipped Unity app
+
+<DemoStatus
+  title="What the demo replays"
+  description="The interactive demo replays the documented XRI interaction chain (hand-skeleton → pinch → ray → grab → poke World-Space UI), with a Quest ⟷ Vision Pro toggle showing where the device/render layer forks and why the XRI layer stays constant. Component names (XRGrabInteractable / XR Poke Interactor / PolySpatial / Volume Camera, etc.) are taken from the course PDFs. This is a study-derived replay from a video-only course (no runnable Unity project), not a shipped app."
+/>

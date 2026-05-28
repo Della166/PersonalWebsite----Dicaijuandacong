@@ -1,0 +1,109 @@
+---
+title: "YOLOv12 钢材表面缺陷检测"
+title_en: "YOLOv12 Steel Surface Defect Detection"
+date: "2026-05-28"
+category: project
+tags: ["YOLOv12", "Ultralytics", "Object Detection", "NEU-DET", "Industrial CV"]
+lang: both
+cover: "/projects/yolo-steel-defect-detection/cover.svg"
+github: ""
+demo: "/demo/yolo-steel-defect-detection"
+published: true
+excerpt: "用 Ultralytics YOLOv12 在 NEU-DET 上训练一个钢材表面缺陷检测器：6 类缺陷、~5000 张图、train → val → predict 全流程，落地到自动化钢材质检。可复现的训练配方 + 一个示意推理 Demo。"
+excerpt_en: "Train an Ultralytics YOLOv12 steel-surface defect detector on NEU-DET: 6 defect classes, ~5000 images, full train → val → predict pipeline for automated steel quality inspection. A reproducible recipe + an illustrative inference demo."
+---
+
+<Callout type="info">
+  钢厂质检员盯着钢卷找划痕、夹杂、麻点，眼睛会累、会漏。这个项目用 <strong>Ultralytics YOLOv12</strong> 在公开的 <strong>NEU-DET</strong> 数据集上训练一个目标检测器，把这件事自动化：一张钢材表面图进来，模型框出缺陷、标出类别和置信度。
+</Callout>
+
+## 任务定义
+
+NEU-DET（东北大学热轧钢带表面缺陷库）是工业视觉里的经典基准，**6 个缺陷类别**：
+
+| 类别 | 含义 |
+|---|---|
+| `crazing` | 裂纹（细密网状，最难检） |
+| `inclusion` | 夹杂物 |
+| `pitted_surface` | 麻点 / 点蚀 |
+| `scratches` | 划痕 |
+| `patches` | 斑块 |
+| `rolled-in_scale` | 轧入氧化铁皮 |
+
+数据约 **~5000 张**灰度钢材表面图，每张配 YOLO 格式标注（class + 归一化 xywh）。这是一个**目标检测**任务——不只是分类「有没有缺陷」，而是要框出缺陷**在哪**、是**哪一类**。
+
+## 数据配置（dataset.yaml）
+
+Ultralytics 用一个 `dataset.yaml` 描述数据集，约定 train/val 路径和类名顺序：
+
+```yaml
+path: ./NEU-DET
+train: images/train
+val: images/val
+
+names:
+  0: crazing
+  1: inclusion
+  2: pitted_surface
+  3: patches
+  4: scratches
+  5: rolled-in_scale
+```
+
+`names` 的顺序就是标签文件里的类别索引——顺序错了整套训练就全错位，这是第一个要核对的地方。
+
+## 训练配方（3-yolo-steel.py）
+
+整条流水线是 **train → val → predict** 三段，全在 Ultralytics 的高层 API 上：
+
+```python
+from ultralytics import YOLO
+
+# 1. 加载 YOLOv12 预训练权重做迁移学习
+model = YOLO("yolov12n.pt")
+
+# 2. 在 NEU-DET 上训练
+model.train(
+    data="dataset.yaml",
+    epochs=100,
+    imgsz=640,
+    mosaic=1.0,        # 拼接 4 张图，增强小目标 + 上下文多样性
+    mixup=0.1,         # 图像线性混合
+    copy_paste=0.1,    # 把实例抠出来贴到别的图上
+)
+
+# 3. 在验证集上评估 → 输出 mAP / 每类 AP
+metrics = model.val()
+
+# 4. 在留出钢材图上推理
+results = model.predict("samples/steel_held_out.jpg", conf=0.25)
+results[0].show()      # 叠框可视化
+```
+
+关键设置：
+
+- **`imgsz=640`**：检测里图越大小目标越清楚，640 是速度/精度的常用平衡点
+- **三种增强 `mosaic + mixup + copy-paste`**：缺陷样本天然不均衡（划痕多、裂纹少），靠增强补少数类、提泛化
+- **`epochs≈100`**：从预训练权重起步，钢材这种单一域收敛不需要太久
+- **`conf=0.25`**：推理阈值——调高漏检（recall↓），调低误检（precision↓），质检场景通常宁可多框（高 recall）
+
+训练在 **AutoDL 的 GPU** 上跑，产出 `best.pt`（验证 mAP 最高的那个 checkpoint），推理就加载它。
+
+## 为什么是 YOLO 而不是两阶段检测器
+
+| 维度 | 选 YOLO 的理由 |
+|---|---|
+| **速度** | 单阶段、端到端，产线上钢卷高速通过，必须实时 |
+| **够用** | NEU-DET 这种规整的表面缺陷，YOLO 精度已经足够，不需要 Faster R-CNN 的两阶段开销 |
+| **生态** | Ultralytics 把 train/val/predict/export 全封好了，从训练到 ONNX/TensorRT 部署一条线 |
+
+## 价值点
+
+- 能跑通**端到端工业 CV**：数据配置 → 训练 → 评估 → 推理，不是只调一个分类 API
+- 是个**真实落地场景**——自动化钢材表面质检，缺陷分 6 类、有明确的产线动机
+- 和作品集里的 VLM / RAG 项目互补：这是第一个**目标检测 / 工业视觉**项目，补上了 CV 这条线
+
+<DemoStatus
+  title="Demo 与真实材料的对应关系"
+  description="训练数据（NEU-DET ~5000 张）和训练代码（3-yolo-steel.py / dataset.yaml）都是课程里真实的；但训练出的 best.pt 权重没有随站点发布，浏览器里也跑不了真模型。所以这个项目定位成「可复现的训练配方 + 一个示意推理 Demo」：互动 Demo 里的缺陷框、置信度、每类 AP 都是 NEU-DET 上 YOLO 典型量级的示意值（已标注为 illustrative），不是本站权重的实测 benchmark。"
+/>

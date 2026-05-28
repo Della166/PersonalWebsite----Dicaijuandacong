@@ -1,0 +1,105 @@
+---
+title: "PF-Net 3D 点云补全实战"
+title_en: "PF-Net 3D Point-Cloud Completion in Practice"
+date: "2026-05-28"
+category: project
+tags: ["PF-Net", "Point Cloud", "GAN", "Chamfer Distance", "ShapeNet", "PointNet"]
+lang: both
+cover: "/projects/pfnet-point-cloud-completion/cover.svg"
+excerpt: "把一块点云挖空再生成回来：基于 PF-Net(Point Fractal Network) 的 GAN 点云补全。ShapeNet-Part 上自监督裁剪 512 点当 GT，多尺度 FPS 编码 + 分层残差解码 coarse→fine 填洞，Chamfer Distance + 对抗损失双约束。补上作品集里 3D 无序集合数据这块。"
+excerpt_en: "Carve a hole in a point cloud and regenerate it: GAN-based completion with PF-Net (Point Fractal Network). On ShapeNet-Part, self-supervised crop of 512 points as GT, multi-scale FPS encoder + residual pyramid decoder fill the hole coarse→fine, constrained by Chamfer Distance + an adversarial loss. The 3D unordered-set piece of the portfolio."
+platforms: [website]
+demo: "/demo/pfnet-point-cloud-completion"
+published: true
+---
+
+<Callout type="info">
+  作品集里前面都是 2D 图像 / 文本 / 多模态。这个项目换一种数据：<strong>3D 无序点集</strong>。任务是<strong>点云补全</strong>——给一个缺了一块的部分点云，把缺失区域生成回来。用的是 <strong>PF-Net（Point Fractal Network）</strong>，一个 GAN 结构。来自咕泡 DL 系统班 ch.14 3D 点云，代码端到端读过。
+</Callout>
+
+## 任务：点云补全
+
+点云是 N 个无序 3D 点的集合，没有像素网格、没有固定邻居关系。**补全**任务：输入一个被遮挡 / 扫描不全的部分点云，输出完整形状里缺失的那部分点。PF-Net 的巧思是**只生成缺失区域**，而不是重建整个形状——保留已知部分、专注补洞。
+
+## 数据与自监督裁剪
+
+数据集是 **ShapeNet-Part**（`shapenet_part_loader.py`），16 个类别。每个形状重采样到 `npoints=2048`，并归一化到单位球：减质心、除以最大半径。
+
+监督信号靠**自监督裁剪**（`Train_PFNet.py`）：
+
+1. 从 **5 个固定视角**里随机挑一个方向
+2. 按到该视角的平方距离对所有点排序
+3. 把最近的 `crop_point_num=512` 个点**置零挖掉**
+4. 这 512 个被挖掉的点就是要重新生成的 **`real_center` ground truth**
+
+挖洞 + 补洞，无需额外标注。
+
+## 多尺度 FPS 编码器（MRE 特征提取）
+
+部分点云在 **3 个分辨率**下喂进编码器，用 FPS 下采样：`point_scales_list = [2048, 1024, 512]`。每个尺度走 PointNet 风格的 `Convlayer`：
+
+```python
+# Convlayer：每个尺度独立
+Conv2d 1 → 64 → 64 → 128 → 256 → 512 → 1024  # 逐点 MLP
+max-pool                                        # 对称聚合（点序无关）
+# 三个尺度的全局特征 concat → 1920 维 latent
+```
+
+最大池化保证**置换不变性**（点的顺序无所谓），concat 三尺度得到 **1920 维** 全局隐向量。
+
+## 分层金字塔 / 分形解码器（分层预测输出）
+
+解码器 `_netG` 是 PF-Net 的核心——**coarse-to-fine 三级金字塔**，每级残差细化：
+
+| 级别 | 输出 | 方式 |
+|---|---|---|
+| **center1** | 64 点 | FC head 从 latent 直接预测粗骨架 |
+| **center2** | 128 点 | 在 center1 上加残差细化 |
+| **fine** | 512 点 | 在 center2 上再加残差 → 补全缺失区域 |
+
+这就是「Fractal」的含义：分层、自相似地把点云从粗到细生成出来。
+
+## 判别器
+
+`_netlocalD` 是个局部判别器：
+
+```python
+Conv2d 1 → 64 → 128 → 256
+max-pool
+FC 448 → 256 → 128 → 16 → 1
+```
+
+判别 fine 区域是真实点云还是生成的，逼着生成器产出更逼真的表面。
+
+## 损失：Chamfer Distance + 对抗
+
+重建质量用**对称 Chamfer Distance**（`PointLoss`，乘 100）。生成器总损失：
+
+```
+errG = (1 − wtl2)·BCE_adv + wtl2·errG_l2          # wtl2 = 0.95
+errG_l2 = CD(fine, gt) + α₁·CD(center1, key1) + α₂·CD(center2, key2)
+```
+
+`key1 / key2` 是 GT 缺失区域的 FPS 下采样版本，三级都监督。`wtl2=0.95` 说明**重建为主、对抗为辅**；各级权重随 epoch ramp 调整。
+
+## 训练配置
+
+```
+batch_size      8
+epochs          201
+optimizer       Adam(lr=1e-4, betas=(0.9, 0.999), weight_decay=1e-3)
+scheduler       StepLR(step_size=40, gamma=0.2)
+D_choose        1     # 开/关对抗训练的开关
+```
+
+## 价值点（这个项目补了什么）
+
+- **无序 3D 集合数据**：FPS 下采样、Chamfer Distance、置换不变的最大池化——和作品集里 2D / 多模态工作完全不同的数据范式
+- **编码-解码 + GAN，超越 2D**：不是分类 / 检测，而是结构化生成
+- **多尺度残差设计**：coarse→fine 分层金字塔，理解为什么直接回归 512 点不如逐级残差
+- **3D 点云脉络**：和课程里 PointNet → PointNet++ → PF-Net → RPMNet 这条线连起来
+
+<DemoStatus
+  title="Demo 真实材料对应"
+  description="互动 Demo 复演一次补全：完整点云 → FPS 按 5 视角之一裁掉 512 点留下空洞 → 多尺度 FPS 金字塔 [2048,1024,512] → 分层解码器 center1(64)→center2(128)→fine(512) 逐级把缺失区域填回来 → Chamfer Distance 读数 + 对抗损失开关。裁剪策略、point_scales_list、1920 维 latent、三级残差解码、errG/errG_l2 复合损失、超参都来自咕泡 DL 系统班 3D 点云源码（代码端到端读过）。课程为 HLS 流式视频无字幕，架构由源码 + 章节标题重建（高置信度）；权重未随站点发布，点云形状 / 坐标 / CD 数值为示意，浏览器内不跑模型——只演示真实的裁剪→编码→分层补全机制。"
+/>

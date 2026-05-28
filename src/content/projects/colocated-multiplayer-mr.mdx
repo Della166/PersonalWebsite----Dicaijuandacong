@@ -1,0 +1,76 @@
+---
+title: "大空间多人联机 MR"
+title_en: "Colocated Large-Space Multiplayer MR"
+date: "2026-05-28"
+category: project
+tags: ["Spatial Anchors", "Colocation", "Spatial Alignment", "Pico", "Multiplayer", "Unity"]
+lang: both
+cover: "/projects/colocated-multiplayer-mr/cover.svg"
+excerpt: "从 SpatialXR 视频课程整理的研究型案例：共址（colocation）多人 MR 的核心难题——多台头显各自的本地坐标系如何经空间锚 + 空间对齐收敛到同一个共享 origin，再叠加玩家 / 物体状态同步。联机 Netcode SDK 来自视频、未核实。非已上线 Unity 应用。"
+excerpt_en: "A study-derived case from the SpatialXR video courses: the core hard problem of colocated multiplayer MR — how multiple headsets' independent local frames converge to ONE shared origin via spatial anchors + spatial alignment, plus player/object state sync. The networking Netcode SDK is unverified (video-only). Not a shipped Unity app."
+platforms: [website]
+github: ""
+demo: "/demo/colocated-multiplayer-mr"
+published: true
+---
+
+<Callout type="info">
+  This is a <strong>study-derived case</strong>, built from the SpatialXR (广州虚境起源) "VR-MR large-space multiplayer" Unity video course. The course is <strong>video-only (.sz = renamed MP4, no subtitles) + password-locked RAR materials</strong>, so what follows is the documented <strong>colocation pipeline</strong> — <strong>not a runnable Unity app</strong>. <strong>The Netcode SDK used for networking is not named in the readable materials (video-only — unverified).</strong>
+</Callout>
+
+## The hardest step in colocated MR: making multiple headsets agree on one coordinate system
+
+Single-user VR never hits this, but the moment two people share the <strong>same physical space</strong> looking at the same virtual content, you have to solve it: each headset builds <strong>its own local coordinate frame</strong> at boot — the origins do not coincide and the orientations differ. Without alignment, the table A sees on the left is on the right for B, and the shared experience collapses.
+
+The pipeline the course documents breaks this into clear steps:
+
+```
+spatial anchors
+  └─> spatial alignment       ← multiple headsets converge to ONE shared origin
+        └─> networked room
+              └─> player + interactable-object state sync
+                    └─> public-internet relay
+```
+
+The target platform is **Pico** (including enterprise large-space scenarios).
+
+## The 13-lesson sequence (from the course structure)
+
+| # | Lesson | Place in the pipeline |
+|---|---|---|
+| 1 | Environment setup | project baseline |
+| 2 | Room | networked room |
+| 3 | Player-data sync | state sync (player) |
+| 4 | Interactable-object sync | state sync (object) |
+| 5 | Complex-interaction sync | state sync (complex) |
+| 6 | Anchor + alignment principle | colocation principle |
+| 7 | Alignment implementation | spatial alignment |
+| 8 | Public-net networking | public-net relay |
+| 9 | Pico MR | platform adaptation |
+| 10 | Gesture adaptation | input adaptation |
+| 11 | Pico anchors | platform spatial anchors |
+
+> The course splits "principle" (lesson 6) from "implementation" (lesson 7) — first why you must snap multiple local frames onto one shared origin, then how to land it. That is exactly the conceptual crux of colocated MR.
+
+## Before vs after alignment (the core of the demo replay)
+
+- **Before alignment**: the two headsets are each in their own local frame. For the same grabbed object, A computes one position and B computes another (drawn as a dashed "ghost box" in the demo).
+- **After alignment**: spatial alignment snaps the two local frames onto <strong>one shared origin</strong>. From then on all avatars and the shared object live in one coordinate system — A and B agree on positions, and only then does state sync mean anything.
+
+The interactive demo uses a <strong>top-down floorplan</strong> to replay this step: the two headsets start with independent coordinate axes → scan and place spatial anchors → the "align" step <strong>snaps</strong> B's axes onto A's shared origin → the avatars and a shared grabbed object then stay positionally consistent across clients.
+
+## On Netcode: honestly marked as unverified
+
+Once alignment is done, the rest is classic networked state sync (player poses, object transforms, complex interactions) over a public-internet relay so people who are not on the same LAN can still join. **But which Netcode SDK is actually used is not named in the materials I could read (the 3 PDFs)** — everything else is subtitle-less video and encrypted RAR. So it is marked only as "unverified, from video," with no guessed framework name.
+
+## What this signals
+
+- **Colocation / shared coordinate frames**: understanding why "multiple headsets agreeing on one origin" is among the hardest XR problems, and the spatial-anchor → spatial-alignment convergence path
+- **Layered state sync**: player data / interactable objects / complex interactions synced in stages, not all at once
+- **Platform landing**: the concrete adaptation points for Pico large-space (incl. enterprise) + gesture adaptation + Pico spatial anchors
+- **Senior signal + honest scoping**: colocation is advanced XR engineering; at the same time, clear that this is a study-derived replay from a video-only course and the Netcode SDK is unverified — nothing fabricated
+
+<DemoStatus
+  title="What the demo replays"
+  description="The interactive demo uses a top-down floorplan to replay the documented colocation pipeline: two headsets with independent local frames → spatial-anchor scan → spatial alignment snaps both frames onto one shared origin → avatars and a shared grabbed object stay positionally consistent across clients. The pipeline steps (spatial anchors / spatial alignment / state sync / public-net relay) and the Pico large-space target are taken from the course structure. This is a study-derived replay from a video-only course (no runnable Unity project), not a shipped app; the multiplayer Netcode SDK is unverified (video-only)."
+/>

@@ -19,6 +19,7 @@ const filterTabs: { key: string; value: ProjectCategory | 'all' }[] = [
   { key: 'filter_ml', value: 'ml' },
   { key: 'filter_rl', value: 'rl' },
   { key: 'filter_devtools', value: 'devtools' },
+  { key: 'filter_spatial', value: 'spatial' },
 ];
 
 const categoryCoverStyles: Record<ProjectCategory, string> = {
@@ -28,6 +29,7 @@ const categoryCoverStyles: Record<ProjectCategory, string> = {
   ml: 'from-[var(--color-amber-300)]/25 via-[var(--color-amber-500)]/15 to-[var(--color-green-500)]/15',
   rl: 'from-[var(--color-green-300)]/30 via-[var(--color-amber-300)]/15 to-[var(--color-green-500)]/15',
   devtools: 'from-[var(--color-green-500)]/20 via-[var(--color-amber-300)]/20 to-[var(--color-green-300)]/15',
+  spatial: 'from-[var(--color-green-300)]/25 via-[var(--color-amber-300)]/15 to-[var(--color-green-500)]/20',
 };
 
 export default function Projects() {

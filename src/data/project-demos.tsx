@@ -22,6 +22,12 @@ import ClipCrossModalPreview from '@/components/mdx/ClipCrossModalPreview';
 import OpenClawMultiAgentPreview from '@/components/mdx/OpenClawMultiAgentPreview';
 import LlamaFromScratchPreview from '@/components/mdx/LlamaFromScratchPreview';
 import MultimodalVisionLlmPreview from '@/components/mdx/MultimodalVisionLlmPreview';
+import YoloSteelDefectPreview from '@/components/mdx/YoloSteelDefectPreview';
+import TensorRTInferenceOptPreview from '@/components/mdx/TensorRTInferenceOptPreview';
+import AiAnalystAgentPreview from '@/components/mdx/AiAnalystAgentPreview';
+import PfnetPointCloudPreview from '@/components/mdx/PfnetPointCloudPreview';
+import CrossPlatformSpatialInteractionPreview from '@/components/mdx/CrossPlatformSpatialInteractionPreview';
+import ColocatedMultiplayerMrPreview from '@/components/mdx/ColocatedMultiplayerMrPreview';
 
 interface LocalizedText {
   en: string;
@@ -1266,6 +1272,252 @@ export const projectDemos = {
         label: { en: 'Efficient transfer', zh: '高效迁移' },
         value: { en: 'VPT (visual prompt tuning) on a frozen ViT → pathology downstream', zh: 'VPT（视觉提示微调）在冻结 ViT 上 → 病理下游迁移' },
       },
+    ],
+  },
+  'yolo-steel-defect-detection': {
+    component: YoloSteelDefectPreview,
+    eyebrow: { en: 'Inference overlay replay', zh: '推理叠框复演' },
+    summary: {
+      en: 'Pick a steel-surface image and replay the trained best.pt: YOLOv12 loads, runs one forward pass, and defect boxes (class + confidence) land on the surface, ending in a per-class AP@0.5 table.',
+      zh: '挑一张钢材表面图，复演训练好的 best.pt：YOLOv12 加载、单次前向，缺陷框（类别 + 置信度）叠到表面上，最后给一张每类 AP@0.5 表。',
+    },
+    localNote: {
+      en: 'The training data (NEU-DET, ~5000 images) and code (3-yolo-steel.py / dataset.yaml) are real from the course, but best.pt weights are not shipped and no model runs in the browser. The boxes, scores, and per-class AP are representative of a typical NEU-DET YOLO run — labeled illustrative, not measured from shipped weights.',
+      zh: '训练数据（NEU-DET ~5000 张）和代码（3-yolo-steel.py / dataset.yaml）是课程里真实的，但 best.pt 权重未随站点发布、浏览器内不跑模型。框、置信度、每类 AP 是 NEU-DET 上 YOLO 典型量级的示意值——标注为 illustrative，非本站权重实测。',
+    },
+    whatToTry: {
+      en: [
+        'Switch between the three sample steel images and re-run inference.',
+        'Watch the load → predict → overlay stages light up, then boxes appear with per-class labels.',
+        'Read the per-class AP@0.5 table — note crazing is the known low-recall hard class.',
+      ],
+      zh: [
+        '在三张样例钢材图之间切换，重新跑推理。',
+        '看 加载 → 推理 → 叠框 三阶段依次点亮，缺陷框带每类标签出现。',
+        '看每类 AP@0.5 表——注意 crazing 是已知的低召回难类。',
+      ],
+    },
+    whatItProves: {
+      en: [
+        'You can run end-to-end industrial CV: dataset.yaml → training → val → inference, not just a classification API.',
+        'You know the object-detection levers: imgsz, conf threshold, and mosaic/mixup/copy-paste for imbalanced defect classes.',
+        'You picked YOLO deliberately — single-stage real-time detection fits a moving production line.',
+      ],
+      zh: [
+        '你能跑通端到端工业 CV：dataset.yaml → 训练 → val → 推理，不只是分类 API。',
+        '你懂目标检测的杠杆：imgsz、conf 阈值，以及 mosaic/mixup/copy-paste 应对缺陷类不均衡。',
+        '你刻意选了 YOLO——单阶段实时检测匹配高速产线。',
+      ],
+    },
+    highlights: [
+      { label: { en: 'Model', zh: '模型' }, value: { en: 'Ultralytics YOLOv12 · transfer from yolov12n.pt · imgsz 640', zh: 'Ultralytics YOLOv12 · 从 yolov12n.pt 迁移 · imgsz 640' } },
+      { label: { en: 'Dataset', zh: '数据集' }, value: { en: 'NEU-DET · ~5000 imgs · 6 classes (crazing / inclusion / pitted / scratches / patches / scale)', zh: 'NEU-DET · ~5000 张 · 6 类（crazing / inclusion / pitted / scratches / patches / scale）' } },
+      { label: { en: 'Pipeline', zh: '流水线' }, value: { en: 'train → val (mAP) → predict(best.pt) on an AutoDL GPU', zh: 'train → val (mAP) → predict(best.pt)，AutoDL GPU 训练' } },
+    ],
+  },
+  'tensorrt-inference-optimization': {
+    component: TensorRTInferenceOptPreview,
+    eyebrow: { en: 'Engine-build replay', zh: '引擎构建复演' },
+    summary: {
+      en: 'A guided replay of the TensorRT Builder compiling an ONNX model into an inference engine: raw Conv→BN→ReLU chains collapse into single CBR kernels (layer fusion), INT8 PTQ calibration runs, a custom NMS plugin slots into the graph, and a before/after latency bar closes it out.',
+      zh: '复演 TensorRT Builder 把 ONNX 模型编译成推理引擎：原始 Conv→BN→ReLU 链塌缩成单个 CBR kernel（层融合）→ INT8 PTQ 校准 → 自定义 NMS Plugin 插入计算图 → 前后延迟对比收尾。',
+    },
+    localNote: {
+      en: 'This replays TensorRT\'s standard, public-doc behavior; it runs no real engine build and calls no GPU. The source 贪心 course is video-only (133 MP4 files, with no code / slides / subtitles), so the techniques are grounded in TensorRT docs (which the course confirms teaching), not lifted from course code. The latency numbers are labeled illustrative — the course gave none, and nothing is presented as measured.',
+      zh: '这是 TensorRT 公开文档标准行为的复演，不真跑引擎构建、不调 GPU。来源贪心课程是 video-only（133 个 MP4，无代码 / 课件 / 字幕），所以技术细节基于 TensorRT 文档（课程确认在教这些），不是搬课程代码。延迟数字标注为示意——课程未给任何基准，没有数字被当作实测呈现。',
+    },
+    whatToTry: {
+      en: [
+        'Run the build and watch the most compelling step: three Conv→BN→ReLU chains visibly merge into single CBR kernels (9 → 3 kernel launches).',
+        'See INT8 PTQ calibration tag every fused node, then the custom NMS plugin slot into the graph as its own node.',
+        'Read the before/after latency bar — labeled illustrative, since the video-only course shipped no benchmarks.',
+      ],
+      zh: [
+        '构建引擎，看最有看头的一步：三条 Conv→BN→ReLU 链可见地合并成单个 CBR kernel（kernel launch 9 → 3）。',
+        '看 INT8 PTQ 校准给每个融合节点打标，再看自定义 NMS Plugin 作为独立节点插进计算图。',
+        '读前后延迟对比条——标注为示意，因为 video-only 课程没给任何基准。',
+      ],
+    },
+    whatItProves: {
+      en: [
+        'You can ship models to the edge — compile a trained model into a low-latency inference engine, not just train it.',
+        'You understand graph compilers: layer fusion, kernel auto-tuning, and the line between decomposable and non-decomposable ops.',
+        'You can write a custom C++/CUDA op (IPluginV2 NMS plugin) against a production inference runtime and reason about INT8 quantization trade-offs — the senior MLSys skill the rest of the portfolio lacks.',
+      ],
+      zh: [
+        '你能把模型部署到边缘——把训练好的模型编译成低延迟推理引擎，而不只是训出来。',
+        '你懂图编译器：层融合、kernel auto-tuning、算子可分解 / 不可分解的边界。',
+        '你能对着生产级推理运行时写自定义 C++/CUDA 算子（IPluginV2 NMS plugin），并能权衡 INT8 量化得失——这是作品集缺的 senior MLSys 信号。',
+      ],
+    },
+    highlights: [
+      { label: { en: 'Pipeline', zh: '完整管线' }, value: { en: 'ONNX → TensorRT engine build → fusion → INT8 PTQ → NMS plugin → SSD inference', zh: 'ONNX → TensorRT 引擎构建 → 融合 → INT8 PTQ → NMS Plugin → SSD 推理' } },
+      { label: { en: 'Custom op', zh: '自定义算子' }, value: { en: 'NMS as an IPluginV2 / IPluginV2DynamicExt CUDA plugin', zh: 'NMS 写成 IPluginV2 / IPluginV2DynamicExt CUDA plugin' } },
+      { label: { en: 'Best signal', zh: '最强信号' }, value: { en: 'Graph compilers + quantization + custom CUDA ops — edge deployment', zh: '图编译器 + 量化 + 自定义 CUDA 算子——边缘部署' } },
+    ],
+  },
+  'ai-analyst-agent': {
+    component: AiAnalystAgentPreview,
+    eyebrow: { en: 'Tool-orchestration replay', zh: '工具编排复演' },
+    summary: {
+      en: 'An LLM acting as an analyst, not just a NL→SQL translator. On a sample F&B business question, watch it orchestrate tools via Function-Calling: Text2SQL (create_sql_agent) pulls features, then it fits its own interpretable models — LinearRegression to decompose per-capita spend, DecisionTreeRegressor(max_depth=4) + export_text to find drivers — and returns a recommendation.',
+      zh: '一个 LLM 当分析师，不只是 NL→SQL 翻译器。在一个园区餐饮业务问题上，看它用 Function-Calling 编排工具：Text2SQL（create_sql_agent）拉特征，再自己拟合可解释模型——LinearRegression 拆解客单、DecisionTreeRegressor(max_depth=4) + export_text 找驱动因子——最后给出建议。',
+    },
+    localNote: {
+      en: 'The tools, libraries, and models (create_sql_agent + SQLDatabaseToolkit + LinearRegression / DecisionTreeRegressor + deepseek) come from the course\'s real code. The SQL, coefficients, and tree rules in the replay use illustrative sample values (labeled as such); the 58 video lessons have no subtitles, so this is anchored on the code, with no fabricated metrics.',
+      zh: '工具、库与模型（create_sql_agent + SQLDatabaseToolkit + LinearRegression / DecisionTreeRegressor + deepseek）来自课程的真实代码。复演里的 SQL、系数与决策树规则用的是说明性数值（已标注）；58 节视频没有字幕，所以这里以代码为锚，不编造任何指标。',
+    },
+    whatToTry: {
+      en: [
+        'Run the analysis and follow the tool calls: plan → Text2SQL → fit linear → fit tree → recommend.',
+        'Read the SQL the create_sql_agent emits, then the LinearRegression decomposition of per-capita spend (normal / card / promo terms).',
+        'See the DecisionTreeRegressor(max_depth=4) driver rules + feature importances, and how they turn into a recommendation.',
+      ],
+      zh: [
+        '运行分析，跟着工具调用走：规划 → Text2SQL → 拟合线性 → 拟合树 → 给建议。',
+        '看 create_sql_agent 生成的 SQL，再看 LinearRegression 对客单的拆解（正常 / 储值卡 / 促销 三项）。',
+        '看 DecisionTreeRegressor(max_depth=4) 的驱动因子规则 + 特征重要度，以及它们如何变成一条建议。',
+      ],
+    },
+    whatItProves: {
+      en: [
+        'You can make an LLM act as an analyst — pull data, fit its own model, read off drivers, recommend — not just translate NL to SQL.',
+        'You choose interpretable models on purpose (linear regression + a shallow tree) so coefficients and if-else rules can be explained to stakeholders.',
+        'You design tool orchestration: Text2SQL and auto-modeling as separate Function-Calling tools the LLM sequences itself.',
+      ],
+      zh: [
+        '你能让 LLM 当分析师——拉数据、自己建模、读出驱动因子、给建议——而不只是把 NL 翻译成 SQL。',
+        '你刻意选可解释模型（线性回归 + 浅决策树），让系数和 if-else 规则能讲给业务方听。',
+        '你设计工具编排：Text2SQL 和自动建模拆成独立的 Function-Calling 工具，由 LLM 自己排顺序。',
+      ],
+    },
+    highlights: [
+      { label: { en: 'Net-new angle', zh: '净新角度' }, value: { en: 'LLM auto-fits interpretable models (regression + tree) and recommends — not NL→SQL→chart', zh: 'LLM 自动拟合可解释模型（回归 + 树）并给建议——不是 NL→SQL→图表' } },
+      { label: { en: 'Stack', zh: '技术栈' }, value: { en: 'Function-Calling (deepseek-chat / Qwen-Agent) · LangChain create_sql_agent + SQLDatabaseToolkit · scikit-learn', zh: 'Function-Calling（deepseek-chat / Qwen-Agent）· LangChain create_sql_agent + SQLDatabaseToolkit · scikit-learn' } },
+      { label: { en: 'Models', zh: '模型' }, value: { en: 'LinearRegression (decompose spend) + DecisionTreeRegressor(max_depth=4) + export_text', zh: 'LinearRegression（拆解客单）+ DecisionTreeRegressor(max_depth=4) + export_text' } },
+    ],
+  },
+  'pfnet-point-cloud-completion': {
+    component: PfnetPointCloudPreview,
+    eyebrow: { en: 'Crop & complete replay', zh: '裁剪+补全复演' },
+    summary: {
+      en: 'Full cloud → FPS-crop the nearest 512 points (a hole appears) → multi-scale FPS pyramid → the fractal decoder fills the hole coarse(64) → center2(128) → fine(512), with a live Chamfer Distance readout and an adversarial-loss toggle.',
+      zh: '完整点云 → FPS 裁掉最近 512 点（出现空洞）→ 多尺度 FPS 金字塔 → 分形解码器 coarse(64)→center2(128)→fine(512) 逐级填洞，配 Chamfer Distance 读数与对抗损失开关。',
+    },
+    localNote: {
+      en: 'The crop strategy (5 viewpoints + distance-sort crop 512), point_scales_list, 1920-d latent, residual pyramid decoder, and errG/errG_l2 loss are PF-Net\'s real structure from the course\'s 3D point-cloud source. The course is HLS video with no subtitles, so architecture is reconstructed from code + titles (high confidence); weights are not shipped, the cloud/coords/CD values are illustrative, and no model runs in the browser.',
+      zh: '裁剪策略（5 视角 + 距离排序裁 512）、point_scales_list、1920 维 latent、残差金字塔解码器、errG/errG_l2 损失都是 PF-Net 真实结构，来自咕泡 DL 系统班 3D 点云源码。课程为 HLS 视频无字幕，架构由源码+标题重建（高置信度）；权重未随站点发布，点云/坐标/CD 数值为示意，浏览器内不跑模型。',
+    },
+    whatToTry: {
+      en: [
+        'Run it and watch FPS crop the nearest 512 points, leaving a hole in the partial cloud.',
+        'Watch the decoder fill the hole coarse → fine (center1 64 → center2 128 → fine 512), with Chamfer Distance dropping each level.',
+        'Toggle the adversarial loss (D_choose) on/off to see reconstruction-only vs GAN-assisted.',
+      ],
+      zh: [
+        '运行，看 FPS 裁掉最近 512 点，部分点云上留下空洞。',
+        '看解码器 coarse→fine（center1 64 → center2 128 → fine 512）逐级填洞，Chamfer Distance 逐级下降。',
+        '开关对抗损失（D_choose），对比纯重建与 GAN 辅助。',
+      ],
+    },
+    whatItProves: {
+      en: [
+        'You\'re comfortable with unordered 3D set data — FPS, Chamfer Distance, permutation-invariant max-pooling.',
+        'You can do encoder-decoder + GAN beyond 2D: structured generation, not classification/detection.',
+        'You understand multi-scale residual design — why a coarse→fine pyramid beats regressing 512 points directly.',
+      ],
+      zh: [
+        '你能驾驭无序 3D 集合数据——FPS、Chamfer Distance、置换不变的最大池化。',
+        '你能做超越 2D 的编码-解码 + GAN：结构化生成，而非分类/检测。',
+        '你理解多尺度残差设计——为什么 coarse→fine 金字塔优于直接回归 512 点。',
+      ],
+    },
+    highlights: [
+      { label: { en: 'Task', zh: '任务' }, value: { en: 'Point-cloud completion (GAN) · ShapeNet-Part 16 classes · npoints 2048', zh: '点云补全（GAN）· ShapeNet-Part 16 类 · npoints 2048' } },
+      { label: { en: 'Architecture', zh: '架构' }, value: { en: 'Multi-scale FPS encoder (1920-d) → residual pyramid decoder 64→128→512', zh: '多尺度 FPS 编码（1920 维）→ 残差金字塔解码 64→128→512' } },
+      { label: { en: 'Loss', zh: '损失' }, value: { en: 'Chamfer Distance ×100 + adversarial · errG_l2 weight wtl2=0.95', zh: 'Chamfer Distance ×100 + 对抗 · errG_l2 权重 wtl2=0.95' } },
+    ],
+  },
+  'cross-platform-spatial-interaction': {
+    component: CrossPlatformSpatialInteractionPreview,
+    eyebrow: { en: 'XRI interaction-flow replay', zh: 'XRI 交互流程复演' },
+    summary: {
+      en: 'A staged replay of the documented XRI interaction chain (hand-skeleton → pinch → ray → grab → poke World-Space UI), with a Quest ⟷ Vision Pro toggle: the device/render layer forks (Meta XR SDK vs PolySpatial/Metal) but the XR Interaction Toolkit layer stays constant.',
+      zh: '复演课程文档里的 XRI 交互链（手骨架 → 捏合 → 射线 → 抓取 → 戳 World-Space UI），带 Quest ⟷ Vision Pro 切换：设备/渲染层分叉（Meta XR SDK vs PolySpatial/Metal），但 XR Interaction Toolkit 交互层保持一致。',
+    },
+    localNote: {
+      en: 'Study-derived from the SpatialXR Unity video courses — there is no runnable Unity app. The courses are video-only (.sz = renamed MP4, no subtitles) + password-locked RAR; only 3 PDFs were readable. Component names (XRGrabInteractable / XR Poke Interactor / PolySpatial / Volume Camera, etc.) are taken verbatim from those PDFs; nothing beyond them is fabricated.',
+      zh: '从 SpatialXR Unity 视频课程整理——没有可运行的 Unity 应用。课程是纯视频（.sz 即改名 MP4、无字幕）+ 加密 RAR，只有 3 份 PDF 可读。组件名（XRGrabInteractable / XR Poke Interactor / PolySpatial / Volume Camera 等）原样取自 PDF；不臆造其他具体信息。',
+    },
+    whatToTry: {
+      en: [
+        'Run the chain: raw hand joints → pinch → ray hit → grab → poke a World-Space UI button.',
+        'Toggle Quest ⟷ Vision Pro and watch only the device/render layer swap SDKs — OpenXR and XRI stay green (constant).',
+        'Note the grab Movement Type: Kinematic (follows the hand) vs Velocity-Tracking (Throw On Detach lets you throw).',
+      ],
+      zh: [
+        '运行交互链：原始手关节 → 捏合 → 射线命中 → 抓取 → 戳 World-Space UI 按钮。',
+        '切换 Quest ⟷ Vision Pro，只有设备/渲染层换 SDK——OpenXR 和 XRI 保持绿色（一致）。',
+        '注意抓取 Movement Type：Kinematic（稳跟手）vs Velocity-Tracking（Throw On Detach 可投掷）。',
+      ],
+    },
+    whatItProves: {
+      en: [
+        'You think in cross-platform XR architecture: converge on OpenXR + XRI, accept the device-layer fork.',
+        'You understand the Apple side: PolySpatial (RealityKit) vs Metal render modes, plus Volume Camera / VisionOS hover + grounding-shadow components.',
+        'You scope honestly — a study-derived replay from a video-only course, not a pretend shipped app.',
+      ],
+      zh: [
+        '你有跨平台 XR 架构思维：在 OpenXR + XRI 上收敛，接受设备层必然分叉。',
+        '你懂 Apple 侧：PolySpatial（RealityKit）vs Metal 两种渲染模式，以及 Volume Camera / VisionOS 悬停 + 接地阴影组件。',
+        '你诚实界定范围——从纯视频课程整理的研究复演，不冒充已上线应用。',
+      ],
+    },
+    highlights: [
+      { label: { en: 'Layering', zh: '分层' }, value: { en: 'OpenXR → Meta XR SDK · PolySpatial/Metal → XRI (constant)', zh: 'OpenXR → Meta XR SDK · PolySpatial/Metal → XRI（一致）' } },
+      { label: { en: 'XRI components', zh: 'XRI 组件' }, value: { en: 'XRGrabInteractable · XR Poke Interactor · Tracked Device Graphic Raycaster', zh: 'XRGrabInteractable · XR Poke Interactor · Tracked Device Graphic Raycaster' } },
+      { label: { en: 'Best signal', zh: '最强信号' }, value: { en: 'Cross-platform XR portability with depth on the Apple PolySpatial/Metal split', zh: '跨平台 XR 可移植性 + Apple PolySpatial/Metal 之分的深度' } },
+    ],
+  },
+  'colocated-multiplayer-mr': {
+    component: ColocatedMultiplayerMrPreview,
+    eyebrow: { en: 'Colocation-flow replay', zh: '共址联机流程复演' },
+    summary: {
+      en: 'A top-down floorplan replay of the documented colocation pipeline: two headsets start with independent local frames; after a spatial-anchor scan, the alignment step snaps both onto ONE shared origin, after which avatars and a shared grabbed object stay positionally consistent across clients.',
+      zh: '用俯视平面图复演课程文档里的共址管线：两台头显起初各有本地坐标系；扫描空间锚后，对齐一步把两个系吸附到同一个共享 origin，之后 avatar 和共享被抓物体跨端位置一致。',
+    },
+    localNote: {
+      en: 'Study-derived from the SpatialXR "VR-MR large-space multiplayer" video course — no runnable Unity app (video-only + password-locked RAR). The pipeline steps and Pico large-space target come from the course structure. The networking Netcode SDK is NOT named in any readable file → marked unverified (video-only); no framework name is guessed.',
+      zh: '从 SpatialXR「VR-MR 大空间多人联机」视频课程整理——没有可运行的 Unity 应用（纯视频 + 加密 RAR）。管线步骤和 Pico 大空间目标来自课程结构。联机 Netcode SDK 未在任何可读文件点名 → 标"未核实（视频-only）"；不臆测框架名。',
+    },
+    whatToTry: {
+      en: [
+        'Run the flow: two independent local frames → spatial-anchor scan → alignment snaps both to one shared origin → state sync.',
+        'Before alignment, spot the dashed "ghost box": A and B disagree on the object position.',
+        'After alignment, watch avatars A/B and the shared object converge into one coordinate system.',
+      ],
+      zh: [
+        '运行流程：两个独立本地系 → 空间锚扫描 → 对齐把两者吸附到同一共享 origin → 状态同步。',
+        '对齐前注意虚线"幽灵框"：A 和 B 对物体位置不一致。',
+        '对齐后看 avatar A/B 和共享物体收敛到同一坐标系。',
+      ],
+    },
+    whatItProves: {
+      en: [
+        'You understand the hardest XR problem: making multiple headsets agree on one shared coordinate frame via spatial anchors → alignment.',
+        'You design layered state sync (player data / interactable objects / complex interactions) over a public-internet relay.',
+        'You scope honestly — study-derived from a video-only course, with the Netcode SDK explicitly marked unverified.',
+      ],
+      zh: [
+        '你理解 XR 最难的问题：用空间锚 → 对齐让多台头显认同同一个共享坐标系。',
+        '你能设计分层状态同步（玩家数据 / 可交互物体 / 复杂交互），并走公网中继。',
+        '你诚实界定范围——从纯视频课程整理，Netcode SDK 明确标"未核实"。',
+      ],
+    },
+    highlights: [
+      { label: { en: 'Pipeline', zh: '管线' }, value: { en: 'anchor → alignment → networked room → state sync → public relay', zh: '锚 → 对齐 → 联机房间 → 状态同步 → 公网中继' } },
+      { label: { en: 'Hard step', zh: '最难一步' }, value: { en: 'spatial alignment: multiple local frames → ONE shared origin', zh: '空间对齐：多个本地系 → 同一个共享 origin' } },
+      { label: { en: 'Honest gap', zh: '诚实缺口' }, value: { en: 'Netcode SDK unverified (video-only); targets Pico large-space', zh: 'Netcode SDK 未核实（视频-only）；目标 Pico 大空间' } },
     ],
   },
 } satisfies Record<string, ProjectDemoDefinition>;

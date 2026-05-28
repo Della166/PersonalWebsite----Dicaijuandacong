@@ -1,0 +1,75 @@
+---
+title: "TensorRT 推理优化实战"
+title_en: "TensorRT Inference Optimization in Practice"
+date: "2026-05-28"
+category: project
+tags: ["TensorRT", "INT8", "Layer Fusion", "CUDA Plugin", "ONNX", "SSD"]
+lang: both
+cover: "/projects/tensorrt-inference-optimization/cover.svg"
+excerpt: "把训练好的模型真正部署到边缘：ONNX → TensorRT 引擎构建 → 层/张量融合(Conv+BN+ReLU 塌缩成单个 CBR kernel) → INT8/FP16 PTQ 校准 → 自定义 NMS Plugin(IPluginV2) → SSD 目标检测推理。这是作品集里缺的那块 senior MLSys 拼图。"
+excerpt_en: "Actually shipping a trained model to the edge: ONNX → TensorRT engine build → layer/tensor fusion (Conv+BN+ReLU collapses into one CBR kernel) → INT8/FP16 PTQ calibration → a custom NMS plugin (IPluginV2) → SSD object-detection inference. The senior MLSys piece the rest of the portfolio lacks."
+platforms: [website]
+github: "https://github.com/NVIDIA/TensorRT"
+demo: "/demo/tensorrt-inference-optimization"
+published: true
+---
+
+<Callout type="info">
+  其它项目大多停在「训出一个模型」；这个项目讲的是<strong>把模型真正部署成低延迟推理引擎</strong>。用 NVIDIA <strong>TensorRT</strong> 把 ONNX 模型编译成引擎：层/张量融合、INT8/FP16 量化、再手写一个 NMS 自定义 Plugin，最终跑 SSD 目标检测推理。这是 RAG / 微调 / RL 几条线之外缺的 <strong>senior MLSys（部署 + 图编译器 + 量化）</strong>那块拼图。
+</Callout>
+
+## TensorRT 推理优化的整条管线
+
+```
+ONNX 模型 → Builder 引擎构建 → 层/张量融合 → INT8/FP16 PTQ 校准 → 自定义 NMS Plugin → SSD 推理
+```
+
+TensorRT 是 NVIDIA 的高性能深度学习推理 SDK，核心是把一张「计算图」编译成针对具体 GPU 优化过的推理引擎（`.plan`）。它做的事和训练框架完全不同——训练关心梯度，推理只关心**单图延迟和吞吐**。
+
+## 层/张量融合：最有看头的一步
+
+原始 ONNX 图里典型的卷积块是 `Conv → BN → ReLU` 三个独立算子，每个都要单独 launch 一个 CUDA kernel、单独读写显存。TensorRT 的**层融合**把这三个塌缩成**单个 CBR kernel**（Conv-BN-ReLU 合并），BN 的缩放/偏移被吸进 Conv 的权重里。
+
+效果：kernel launch 数量从 9 个降到 3 个，省掉中间张量的显存往返。这就是「计算图表示及优化」这一层在做的事——配合 **kernel auto-tuning**（在多个候选 kernel 里实测选最快的那个）。
+
+## INT8 / FP16 PTQ 校准
+
+训练后量化（Post-Training Quantization）把 FP32 权重压成 INT8：
+
+- calibrator 跑一遍**校准集**，收集每一层激活的直方图
+- 据此选每层的 **scale**（量化尺度），把浮点动态范围映射到 INT8 的 [-128, 127]
+- 权重和激活都转成整数算术，吞吐大幅提升
+
+代价是精度损失，必须用校准集体检确认掉点可接受。课程还覆盖 **Winograd 整数算术卷积**——用更少的乘法换更多加法来加速卷积。
+
+## 自定义 NMS Plugin（IPluginV2）
+
+不是所有算子 TensorRT 都内置支持。目标检测的 **NMS（非极大值抑制）** 就是典型——它逻辑特殊、不能被图编译器自动分解。解法是写一个**自定义 Plugin**：
+
+- 实现 `IPluginV2` / `IPluginV2DynamicExt` 接口
+- 自己写 CUDA kernel 做 NMS 计算
+- 通过 PluginCreator 注册，让 Builder 在构图时把它当成一个普通节点插进去
+
+这一步是整个项目里**最能体现 senior MLSys 能力**的地方：能对着生产级推理运行时写自定义 C++/CUDA 算子，而不只是调 API。
+
+## 相关：分布式训练（同一门课）
+
+这门课同时覆盖**分布式高性能训练**，作为推理优化的姊妹主题简要提及：
+
+- **Parameter Server vs Horovod ring-allreduce**：PS 架构有中心节点易成瓶颈；Horovod 用环形 all-reduce 让梯度在 worker 间环状传递，带宽利用更均衡
+- **Local SGD**：worker 本地多走几步再同步，减少通信频率
+- **混合精度训练**：FP16/BF16 算 + FP32 主权重，省显存提吞吐
+
+但本项目聚焦的是**推理优化**，不是训练。
+
+## 这个项目说明了什么
+
+- **能把模型部署到边缘**：不止训模型，还能编译成低延迟引擎真正上线
+- **懂图编译器**：层融合、kernel auto-tuning、算子分解 / 不可分解的边界
+- **懂量化权衡**：PTQ 的 scale 选择、INT8 掉点体检、Winograd 加速
+- **能写自定义算子**：对着 TensorRT 写 IPluginV2 的 C++/CUDA op——补全作品集缺的 senior MLSys 信号
+
+<DemoStatus
+  title="Demo 与素材诚实说明"
+  description="互动 Demo 复演 TensorRT Builder 把 ONNX 编译成引擎的过程：原始 Conv→BN→ReLU 链 → 层融合塌缩成 CBR kernel → INT8 PTQ 校准 → NMS 自定义 Plugin 插入 → 前后延迟对比。重要诚实声明：来源的贪心课程只有 133 个 MP4 视频，没有任何代码 / 课件 / 字幕，所以这里的技术细节是基于 TensorRT 公开文档的标准行为(课程确认教这些)，不是从课程代码搬来的；延迟数字标注为示意(课程未给任何基准)，没有真实引擎运行、没有任何数字被当作实测呈现。"
+/>

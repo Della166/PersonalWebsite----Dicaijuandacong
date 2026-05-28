@@ -1,0 +1,75 @@
+---
+title: "TensorRT 推理优化实战"
+title_en: "TensorRT Inference Optimization in Practice"
+date: "2026-05-28"
+category: project
+tags: ["TensorRT", "INT8", "Layer Fusion", "CUDA Plugin", "ONNX", "SSD"]
+lang: both
+cover: "/projects/tensorrt-inference-optimization/cover.svg"
+excerpt: "把训练好的模型真正部署到边缘：ONNX → TensorRT 引擎构建 → 层/张量融合(Conv+BN+ReLU 塌缩成单个 CBR kernel) → INT8/FP16 PTQ 校准 → 自定义 NMS Plugin(IPluginV2) → SSD 目标检测推理。这是作品集里缺的那块 senior MLSys 拼图。"
+excerpt_en: "Actually shipping a trained model to the edge: ONNX → TensorRT engine build → layer/tensor fusion (Conv+BN+ReLU collapses into one CBR kernel) → INT8/FP16 PTQ calibration → a custom NMS plugin (IPluginV2) → SSD object-detection inference. The senior MLSys piece the rest of the portfolio lacks."
+platforms: [website]
+github: "https://github.com/NVIDIA/TensorRT"
+demo: "/demo/tensorrt-inference-optimization"
+published: true
+---
+
+<Callout type="info">
+  Most of the other projects stop at "train a model"; this one is about <strong>actually deploying a model as a low-latency inference engine</strong>. Using NVIDIA <strong>TensorRT</strong> to compile an ONNX model into an engine: layer/tensor fusion, INT8/FP16 quantization, and a hand-written custom NMS plugin, finally running SSD object-detection inference. This is the <strong>senior MLSys (deployment + graph compilers + quantization)</strong> piece the RAG / fine-tuning / RL tracks don't cover.
+</Callout>
+
+## The full TensorRT inference-optimization pipeline
+
+```
+ONNX model → Builder engine build → layer/tensor fusion → INT8/FP16 PTQ calibration → custom NMS plugin → SSD inference
+```
+
+TensorRT is NVIDIA's high-performance deep-learning inference SDK. At its core it compiles a "compute graph" into an inference engine (`.plan`) optimized for a specific GPU. What it does is completely different from a training framework — training cares about gradients; inference cares only about **per-image latency and throughput**.
+
+## Layer/tensor fusion: the most compelling step
+
+A typical conv block in the raw ONNX graph is three separate ops: `Conv → BN → ReLU`, each launching its own CUDA kernel and reading/writing memory separately. TensorRT's **layer fusion** collapses these three into a **single CBR kernel** (Conv-BN-ReLU merged), folding BN's scale/shift into the Conv weights.
+
+The effect: kernel launches drop from 9 to 3, eliminating the intermediate-tensor memory round trips. This is exactly what the "graph representation and optimization" layer does — paired with **kernel auto-tuning** (benchmarking several candidate kernels and picking the fastest).
+
+## INT8 / FP16 PTQ calibration
+
+Post-Training Quantization compresses FP32 weights to INT8:
+
+- the calibrator runs the **calibration set** once, collecting per-layer activation histograms
+- from those it picks a per-layer **scale**, mapping the floating-point dynamic range into INT8's [-128, 127]
+- weights and activations both move to integer arithmetic, lifting throughput sharply
+
+The cost is accuracy loss, which must be audited on the calibration set to confirm the drop is acceptable. The course also covers **Winograd integer-arithmetic convolution** — trading more additions for fewer multiplications to accelerate convolution.
+
+## Custom NMS plugin (IPluginV2)
+
+Not every op is built into TensorRT. **NMS (non-maximum suppression)** in object detection is the classic example — its logic is special and the graph compiler can't decompose it automatically. The solution is a **custom plugin**:
+
+- implement the `IPluginV2` / `IPluginV2DynamicExt` interface
+- write the CUDA kernel for the NMS computation yourself
+- register it via a PluginCreator so the Builder slots it into the graph as an ordinary node
+
+This step is where the project most clearly shows **senior MLSys skill**: writing a custom C++/CUDA op against a production inference runtime, not just calling an API.
+
+## Related: distributed training (same course)
+
+The same course also covers **distributed high-performance training**, mentioned briefly as the sibling topic to inference optimization:
+
+- **Parameter Server vs Horovod ring-allreduce**: a PS architecture has a central node that becomes a bottleneck; Horovod's ring all-reduce passes gradients around a ring of workers, balancing bandwidth use
+- **Local SGD**: workers take several local steps before syncing, cutting communication frequency
+- **Mixed-precision training**: compute in FP16/BF16 with an FP32 master copy, saving memory and lifting throughput
+
+But this project's focus is **inference optimization**, not training.
+
+## What this signals
+
+- **Can ship models to the edge**: not just train a model, but compile it into a low-latency engine and actually deploy it
+- **Understands graph compilers**: layer fusion, kernel auto-tuning, the line between decomposable and non-decomposable ops
+- **Understands quantization trade-offs**: PTQ scale selection, INT8 accuracy auditing, Winograd acceleration
+- **Can write custom ops**: an IPluginV2 C++/CUDA op against TensorRT — the senior MLSys signal the rest of the portfolio lacks
+
+<DemoStatus
+  title="An honest note on the demo and source material"
+  description="The interactive demo replays the TensorRT Builder compiling ONNX into an engine: raw Conv→BN→ReLU chains → layer fusion collapsing them into a CBR kernel → INT8 PTQ calibration → a custom NMS plugin slotting in → before/after latency. Important honesty note: the source 贪心 course is video-only (133 MP4 files, with no code / slides / subtitles), so the technical details here are grounded in TensorRT's standard public-doc behavior (which the course confirms teaching), not lifted from course code; the latency numbers are labeled illustrative (the course gave none), with no real engine runs and nothing presented as a measured figure."
+/>

@@ -1,0 +1,105 @@
+---
+title: "PF-Net 3D 点云补全实战"
+title_en: "PF-Net 3D Point-Cloud Completion in Practice"
+date: "2026-05-28"
+category: project
+tags: ["PF-Net", "Point Cloud", "GAN", "Chamfer Distance", "ShapeNet", "PointNet"]
+lang: both
+cover: "/projects/pfnet-point-cloud-completion/cover.svg"
+excerpt: "把一块点云挖空再生成回来：基于 PF-Net(Point Fractal Network) 的 GAN 点云补全。ShapeNet-Part 上自监督裁剪 512 点当 GT，多尺度 FPS 编码 + 分层残差解码 coarse→fine 填洞，Chamfer Distance + 对抗损失双约束。补上作品集里 3D 无序集合数据这块。"
+excerpt_en: "Carve a hole in a point cloud and regenerate it: GAN-based completion with PF-Net (Point Fractal Network). On ShapeNet-Part, self-supervised crop of 512 points as GT, multi-scale FPS encoder + residual pyramid decoder fill the hole coarse→fine, constrained by Chamfer Distance + an adversarial loss. The 3D unordered-set piece of the portfolio."
+platforms: [website]
+demo: "/demo/pfnet-point-cloud-completion"
+published: true
+---
+
+<Callout type="info">
+  The earlier portfolio projects are all 2D image / text / multimodal. This one switches the data: <strong>3D unordered point sets</strong>. The task is <strong>point-cloud completion</strong> — given a partial cloud with a missing region, regenerate that region. It uses <strong>PF-Net (Point Fractal Network)</strong>, a GAN architecture. From the course's ch.14 (3D point clouds); the code was read end to end.
+</Callout>
+
+## The task: point-cloud completion
+
+A point cloud is a set of N unordered 3D points — no pixel grid, no fixed neighbor structure. **Completion**: input a partial cloud (occluded / under-scanned), output the points of the full shape that are missing. PF-Net's trick is to **generate only the missing region** rather than reconstruct the whole shape — keep the known part, focus on the hole.
+
+## Data and self-supervised cropping
+
+The dataset is **ShapeNet-Part** (`shapenet_part_loader.py`), 16 categories. Each shape is resampled to `npoints=2048` and normalized to the unit sphere: subtract the centroid, divide by the max radius.
+
+The supervision signal comes from **self-supervised cropping** (`Train_PFNet.py`):
+
+1. Pick a random direction from **5 fixed viewpoints**
+2. Sort all points by squared distance to that viewpoint
+3. Zero out the nearest `crop_point_num=512` points (the hole)
+4. Those 512 cropped points become the **`real_center` ground truth** to regenerate
+
+Crop-and-complete, no extra labels needed.
+
+## Multi-scale FPS encoder (MRE feature extraction)
+
+The partial cloud is fed at **3 resolutions** via FPS downsampling: `point_scales_list = [2048, 1024, 512]`. Each scale runs a PointNet-style `Convlayer`:
+
+```python
+# Convlayer: per scale, independent
+Conv2d 1 → 64 → 64 → 128 → 256 → 512 → 1024  # per-point MLP
+max-pool                                        # symmetric aggregation (order-invariant)
+# concat the global feature of all three scales → 1920-d latent
+```
+
+Max-pooling guarantees **permutation invariance** (point order doesn't matter); concatenating three scales yields a **1920-d** global latent.
+
+## Pyramid / fractal decoder (hierarchical prediction)
+
+The decoder `_netG` is the heart of PF-Net — a **coarse-to-fine three-level pyramid**, each level a residual refinement:
+
+| Level | Output | How |
+|---|---|---|
+| **center1** | 64 pts | an FC head predicts a coarse skeleton straight from the latent |
+| **center2** | 128 pts | adds a residual on top of center1 |
+| **fine** | 512 pts | adds another residual on top of center2 → fills the missing region |
+
+That is what "Fractal" means: generate the cloud hierarchically and self-similarly, coarse to fine.
+
+## Discriminator
+
+`_netlocalD` is a local discriminator:
+
+```python
+Conv2d 1 → 64 → 128 → 256
+max-pool
+FC 448 → 256 → 128 → 16 → 1
+```
+
+It judges whether the fine region is a real point cloud or generated, pushing the generator toward a more realistic surface.
+
+## Loss: Chamfer Distance + adversarial
+
+Reconstruction quality uses a symmetric **Chamfer Distance** (`PointLoss`, ×100). The generator's total loss:
+
+```
+errG = (1 − wtl2)·BCE_adv + wtl2·errG_l2          # wtl2 = 0.95
+errG_l2 = CD(fine, gt) + α₁·CD(center1, key1) + α₂·CD(center2, key2)
+```
+
+`key1 / key2` are FPS-downsampled versions of the GT missing region, so all three levels are supervised. `wtl2=0.95` means **reconstruction dominates, adversarial assists**; the per-level weights ramp with epoch.
+
+## Training config
+
+```
+batch_size      8
+epochs          201
+optimizer       Adam(lr=1e-4, betas=(0.9, 0.999), weight_decay=1e-3)
+scheduler       StepLR(step_size=40, gamma=0.2)
+D_choose        1     # toggles adversarial training on/off
+```
+
+## What this signals (what it adds)
+
+- **Unordered 3D set data**: FPS downsampling, Chamfer Distance, permutation-invariant max-pooling — a data paradigm entirely unlike the portfolio's 2D / multimodal work
+- **Encoder-decoder + GAN, beyond 2D**: not classification / detection but structured generation
+- **Multi-scale residual design**: the coarse→fine pyramid, and why residual-per-level beats regressing 512 points directly
+- **3D point-cloud lineage**: connects to the course's PointNet → PointNet++ → PF-Net → RPMNet thread
+
+<DemoStatus
+  title="What the demo replays"
+  description="The demo replays one completion: full cloud → FPS-crop the nearest 512 points along one of 5 viewpoints, leaving a hole → multi-scale FPS pyramid [2048,1024,512] → the pyramid decoder center1(64) → center2(128) → fine(512) fills the missing region level by level → a Chamfer Distance readout + an adversarial-loss toggle. The crop strategy, point_scales_list, the 1920-d latent, the three-level residual decoder, the errG/errG_l2 composite loss, and the hyperparameters all come from the course's 3D point-cloud source (read end to end). The course is HLS-streamed video with no subtitles, so the architecture was reconstructed from code + chapter titles (high confidence); weights are not shipped, the cloud shape / coords / CD values are illustrative, and no model runs in the browser — it only demonstrates the real crop → encode → hierarchical-completion mechanism."
+/>

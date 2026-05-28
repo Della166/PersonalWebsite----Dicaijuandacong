@@ -49,6 +49,7 @@
     "filter_ml": "Model Tuning",
     "filter_rl": "Reinforcement Learning",
     "filter_devtools": "Developer Tools",
+    "filter_spatial": "Spatial Computing",
     "case_study": "Case Study",
     "featured_case_study": "Featured",
     "action_details": "View",
