@@ -10,7 +10,7 @@ excerpt: "在 Coze（字节扣子）上拼出来的「文案 → 图片 → 视�
 excerpt_en: "An end-to-end short-video generation pipeline on Coze (ByteDance Kouzi), with 5 interconnected workflows — text → image → video, each shipping as its own workflow zip."
 platforms: [website]
 github: ""
-demo: ""
+demo: "/demo/coze-multimodal-video-agent"
 published: true
 ---
 
@@ -42,6 +42,6 @@ Each workflow is a Coze JSON/YAML export — importable into any other Coze work
   for custom code
 
 <DemoStatus
-  title="Demo to be added"
-  description="A workflow graph viewer + sample-output gallery is on the roadmap. The 5 .zip files in 案例10 工作流合集 are directly importable into any Coze workspace."
+  title="What the demo replays"
+  description="The interactive demo replays the 5-workflow chain on the sample brief ('Shenzhen rush-hour metro, 60s'): produce routes → get_produce writes the title + 6 storyboard shots + narration → create_image generates per shot → create_video makes per-shot clips → get_video merges the final cut. The 5 .zip files (with their draft IDs) come from 案例10 工作流合集; no real image/video models run in the browser."
 />

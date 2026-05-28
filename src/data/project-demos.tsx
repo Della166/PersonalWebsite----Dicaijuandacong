@@ -9,6 +9,10 @@ import DeepResearchPreview from '@/components/mdx/DeepResearchPreview';
 import EnterpriseNl2sqlPreview from '@/components/mdx/EnterpriseNl2sqlPreview';
 import FunctionCallingAgentPreview from '@/components/mdx/FunctionCallingAgentPreview';
 import StructuredExtractionPreview from '@/components/mdx/StructuredExtractionPreview';
+import DifyLongContentPreview from '@/components/mdx/DifyLongContentPreview';
+import DeepSeekOcrAnalysisPreview from '@/components/mdx/DeepSeekOcrAnalysisPreview';
+import ChartVqaFinetunePreview from '@/components/mdx/ChartVqaFinetunePreview';
+import CozeVideoPipelinePreview from '@/components/mdx/CozeVideoPipelinePreview';
 
 interface LocalizedText {
   en: string;
@@ -563,6 +567,218 @@ export const projectDemos = {
       {
         label: { en: 'Pipeline', zh: '完整 pipeline' },
         value: { en: 'OCR (MinerU / PaddleOCR-VL / DeepSeek-OCR) → LangExtract → KG + vector → LangChain 1.1 Agent', zh: 'OCR（MinerU / PaddleOCR-VL / DeepSeek-OCR）→ LangExtract → 图谱+向量 → LangChain 1.1 Agent' },
+      },
+    ],
+  },
+  'dify-long-content-agent': {
+    component: DifyLongContentPreview,
+    eyebrow: {
+      en: 'Workflow replay sandbox',
+      zh: '工作流复演沙盒',
+    },
+    summary: {
+      en: 'A guided replay of the real Dify advanced-chat graph: a start node reads the word budget, then a loop runs expand → count chars → check budget until the budget is met, followed by a style-checker tool.',
+      zh: '复演真实 Dify advanced-chat graph：开始节点读入字数预算，循环里反复「扩写 → 数字数 → 判断达标」，达标后跑风格校验工具。',
+    },
+    localNote: {
+      en: 'This replays the graph from the real workflow YAML (循环扩充文本.yml + Tool-StyleChecker.yml) on a sample story topic. It calls no live Dify/DeepSeek — the loop logic, char counting, and exit condition are the real node behavior.',
+      zh: '这是用真实工作流 YAML（循环扩充文本.yml + Tool-StyleChecker.yml）的节点逻辑在一个样例故事主题上的复演，不调真实 Dify/DeepSeek。循环、字数统计、退出条件都是真实节点行为。',
+    },
+    whatToTry: {
+      en: [
+        'Run the workflow and watch each loop iteration append a beat and accumulate the char count.',
+        'Notice the if-else exit: the loop ends only once len(history) ≥ the word budget.',
+        'Read the StyleChecker JSON verdict — style match plus concrete revision notes.',
+      ],
+      zh: [
+        '运行工作流，看每轮迭代扩写一段并累加字数。',
+        '注意 if-else 退出条件：只有 len(history) ≥ 字数预算时循环才结束。',
+        '看 StyleChecker 的 JSON 结论——风格是否一致 + 具体修改建议。',
+      ],
+    },
+    whatItProves: {
+      en: [
+        'You can design a stateful Dify loop with typed conversation variables, code nodes, and an if-else exit — not a single mega-prompt.',
+        'You separate in-progress state (conversation.history) from model calls, so failures are recoverable per iteration.',
+        'You know when low-code orchestration beats writing a long agent loop in code.',
+      ],
+      zh: [
+        '你能设计有状态的 Dify 循环：类型化 conversation 变量 + code 节点 + if-else 退出，而不是一个超大 prompt。',
+        '你把进行中的状态（conversation.history）和模型调用分离，单轮失败可独立恢复。',
+        '你清楚什么时候低代码编排比手写长 agent 循环更合适。',
+      ],
+    },
+    highlights: [
+      {
+        label: { en: 'Real workflow', zh: '真实工作流' },
+        value: { en: '3 YAML files: 长文本扩展 + 循环扩充文本 + Tool-StyleChecker', zh: '3 个 YAML：长文本扩展 + 循环扩充文本 + Tool-StyleChecker' },
+      },
+      {
+        label: { en: 'Loop control', zh: '循环控制' },
+        value: { en: 'Dify loop node · conversation vars zishu/tetx_new/history · if-else ≥ budget', zh: 'Dify loop 节点 · conversation 变量 zishu/tetx_new/history · if-else ≥ 预算' },
+      },
+      {
+        label: { en: 'Best signal', zh: '最强信号' },
+        value: { en: 'Stateful low-code orchestration with per-step model choice', zh: '有状态的低代码编排，且每步可独立选模型' },
+      },
+    ],
+  },
+  'deepseek-ocr-data-analysis-agent': {
+    component: DeepSeekOcrAnalysisPreview,
+    eyebrow: {
+      en: 'Layered pipeline sandbox',
+      zh: '分层管线沙盒',
+    },
+    summary: {
+      en: 'A guided replay of the three-layer system on a sample financial table: ocr_service parses table structure, analysis_service computes KPIs + an LLM summary, visualization_service lets the LLM pick the chart type and renders it.',
+      zh: '在一张样例财报表格上复演三层系统：ocr_service 解析表结构，analysis_service 算 KPI + LLM 摘要，visualization_service 让 LLM 选图表类型再渲染。',
+    },
+    localNote: {
+      en: 'This replays the architecture from the real project (core/ocr · core/analysis · core/visualization wired by integration_service). It calls no live vLLM/LLM — the sample table, KPIs, and chart-type choice illustrate the real per-layer behavior.',
+      zh: '这是用真实项目的架构（core/ocr · core/analysis · core/visualization，由 integration_service 串起）做的复演，不调真实 vLLM/LLM。样例表格、KPI、图表选型展示的是每层真实行为。',
+    },
+    whatToTry: {
+      en: [
+        'Run the pipeline and watch a PDF table become structured cells, then KPIs, then a chart.',
+        'Note the OCR latency badge — vLLM brings DeepSeek-OCR-2 to 0.6s/page vs ~3s on bare transformers.',
+        'See that the LLM picks the chart type before rendering, instead of a hard-coded if-else.',
+      ],
+      zh: [
+        '运行管线，看一张 PDF 表格依次变成结构化单元格、KPI、图表。',
+        '注意 OCR 延迟徽标——vLLM 把 DeepSeek-OCR-2 压到 0.6s/页，裸 transformers 约 3s。',
+        '注意图表类型是 LLM 先选定再渲染，而不是硬编码 if-else。',
+      ],
+    },
+    whatItProves: {
+      en: [
+        'You build layered AI systems — OCR / analysis / visualization as separate service + core, not a monolith.',
+        'You match the OCR engine to the task: table-structure-aware (DeepSeek-OCR-2) beats flat-text OCR for financial / research tables.',
+        'You care about inference latency, deploying on vLLM rather than bare transformers.',
+      ],
+      zh: [
+        '你能构建分层 AI 系统——OCR / 分析 / 可视化各为独立 service + core，不是 monolith。',
+        '你按任务选 OCR：表结构感知（DeepSeek-OCR-2）在财报/科研表格上碾压纯文本 OCR。',
+        '你关注推理延迟，用 vLLM 上线而不是裸 transformers。',
+      ],
+    },
+    highlights: [
+      {
+        label: { en: 'Architecture', zh: '架构' },
+        value: { en: 'ocr_service · analysis_service · visualization_service · integration_service', zh: 'ocr_service · analysis_service · visualization_service · integration_service' },
+      },
+      {
+        label: { en: 'OCR latency', zh: 'OCR 延迟' },
+        value: { en: 'DeepSeek-OCR-2 on vLLM: ~0.6s/page (vs ~3s on bare transformers)', zh: 'DeepSeek-OCR-2 跑 vLLM：约 0.6s/页（裸 transformers ~3s）' },
+      },
+      {
+        label: { en: 'Best signal', zh: '最强信号' },
+        value: { en: 'Swappable layers + latency-aware deployment for a real-time loop', zh: '可替换分层 + 面向实时循环的延迟意识' },
+      },
+    ],
+  },
+  'multimodal-finetune-chart-vqa': {
+    component: ChartVqaFinetunePreview,
+    eyebrow: {
+      en: 'Before/after comparison',
+      zh: '微调前后对比',
+    },
+    summary: {
+      en: 'Same Chinese chart, same question — a general VLM vs the LoRA fine-tuned model. The base model misreads Chinese labels; the fine-tuned model returns the exact label + number from the training target.',
+      zh: '同一张中文图表、同一个问题，对比通用 VLM 和 LoRA 微调模型。通用模型读不准中文标签，微调模型给出训练目标里精确的标签 + 数值。',
+    },
+    localNote: {
+      en: 'The fine-tuned answers are the real assistant targets from llamafactory_train.jsonl; the training command is the real LlamaFactory setup. No model runs in the browser — this isolates the strongest signal: what fine-tuning fixes.',
+      zh: '微调答案是 llamafactory_train.jsonl 里真实的 assistant 目标；训练命令是真实的 LlamaFactory 设置。浏览器里不跑模型——这样能聚焦最强信号：微调到底修好了什么。',
+    },
+    whatToTry: {
+      en: [
+        'Switch between the three sample questions and re-run both models.',
+        'Compare the base model (vague, misreads Chinese labels) with the fine-tuned model (exact label + number).',
+        'Read the LlamaFactory setup — qwen2_vl template, 448 image resolution, LoRA rank 16 / alpha 32.',
+      ],
+      zh: [
+        '在三个样例问题之间切换，重新跑两个模型。',
+        '对比通用模型（含糊、读不准中文标签）和微调模型（标签 + 数值精确）。',
+        '看 LlamaFactory 设置——qwen2_vl 模板、448 图像分辨率、LoRA rank 16 / alpha 32。',
+      ],
+    },
+    whatItProves: {
+      en: [
+        'You can run an end-to-end vertical multimodal fine-tune, not just call an API.',
+        'You understand data construction is as important as training — the data-gen tool is its own React + FastAPI project.',
+        'You stay inside the LlamaFactory ecosystem, so this composes with the NL2SQL / function-calling / Qwen-VL RL projects.',
+      ],
+      zh: [
+        '你能端到端跑垂直领域多模态微调，而不只是调 API。',
+        '你理解数据构造和训练同等重要——数据生成工具本身是个独立的 React + FastAPI 项目。',
+        '你留在 LlamaFactory 生态里，能和 NL2SQL / 函数调用 / Qwen-VL RL 几个项目组合复用。',
+      ],
+    },
+    highlights: [
+      {
+        label: { en: 'Base model', zh: '基座模型' },
+        value: { en: 'Qwen2.5-VL-7B-Instruct · LoRA (rank 16, alpha 32) · template qwen2_vl', zh: 'Qwen2.5-VL-7B-Instruct · LoRA（rank 16, alpha 32）· 模板 qwen2_vl' },
+      },
+      {
+        label: { en: 'Data', zh: '数据' },
+        value: { en: 'llamafactory_train.jsonl — synthetic Chinese charts → 5–10 Q&A per image', zh: 'llamafactory_train.jsonl —— 合成中文图表 → 每图 5–10 组 Q&A' },
+      },
+      {
+        label: { en: 'Best signal', zh: '最强信号' },
+        value: { en: 'A targeted fine-tune that puts domain labels into the vocabulary', zh: '把领域标签塞进词表的针对性微调' },
+      },
+    ],
+  },
+  'coze-multimodal-video-agent': {
+    component: CozeVideoPipelinePreview,
+    eyebrow: {
+      en: 'Workflow-chain replay',
+      zh: '工作流链复演',
+    },
+    summary: {
+      en: 'A guided replay of the 5 Coze workflows on a sample brief: produce routes the job, get_produce writes the title + 6 storyboard shots, create_image / create_video generate per shot, and get_video merges the final cut.',
+      zh: '在一个样例选题上复演 5 个 Coze 工作流：produce 分发任务，get_produce 写标题 + 6 个分镜，create_image / create_video 逐镜生成，get_video 合并成片。',
+    },
+    localNote: {
+      en: 'This replays the real workflow chain (the 5 zips with their draft IDs) on the sample brief from the case. It generates no real media — the point is the modular workflow design, not live image/video models.',
+      zh: '这是用真实工作流链（5 个带 draft ID 的 zip）在案例样例选题上的复演，不生成真实媒体——重点是模块化 workflow 设计，不是真跑图生/视频模型。',
+    },
+    whatToTry: {
+      en: [
+        'Run the pipeline and watch the 5 workflows hand off: produce → get_produce → create_image → create_video → get_video.',
+        'Notice each shot lights up an image badge, then a clip badge, as the later workflows run.',
+        'See why the chain is split into 5 zips: independent failure, model swap, caching, and debugging.',
+      ],
+      zh: [
+        '运行流水线，看 5 个 workflow 依次接力：produce → get_produce → create_image → create_video → get_video。',
+        '注意每个分镜先点亮「图」徽标，再点亮「片段」徽标。',
+        '体会为什么拆成 5 个 zip：独立失败 / 独立换模型 / 独立 cache / 独立调试。',
+      ],
+    },
+    whatItProves: {
+      en: [
+        'You know when a low-code platform beats writing long code — content pipelines lean on built-in image/video plugins.',
+        'You design modular workflows split by capability and composed by reference (draft IDs), not one mega-flow.',
+        'You can choose between Coze / Dify / LangChain by scenario: content vs conversational vs custom logic.',
+      ],
+      zh: [
+        '你知道什么时候低代码平台胜过写长代码——内容流水线依赖平台内置的图生/视频插件。',
+        '你按能力拆分、按引用（draft ID）组合 workflow，而不是一个超大流程。',
+        '你能按场景在 Coze / Dify / LangChain 之间选型：内容 / 对话 / 自定义逻辑。',
+      ],
+    },
+    highlights: [
+      {
+        label: { en: '5 workflows', zh: '5 个工作流' },
+        value: { en: 'produce · get_produce · create_image · create_video · get_video', zh: 'produce · get_produce · create_image · create_video · get_video' },
+      },
+      {
+        label: { en: 'Why Coze', zh: '为什么 Coze' },
+        value: { en: 'ByteDance image/video models ship as built-in plugins — no API keys, no rate-limit plumbing', zh: '字节系图生/视频模型内置成插件——不用接 API key、不用管限流' },
+      },
+      {
+        label: { en: 'Best signal', zh: '最强信号' },
+        value: { en: 'Modular orchestration + right-tool-for-the-job platform judgment', zh: '模块化编排 + 按场景选平台的判断力' },
       },
     ],
   },

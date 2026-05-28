@@ -10,7 +10,7 @@ excerpt: "用 Dify advanced-chat workflow 把「写长文」拆成可控的迭�
 excerpt_en: "A Dify advanced-chat workflow that breaks long-form writing into a controllable iterative loop: outline first, then section-by-section expansion, finally a style-checker tool — each step independently observable and intervenable."
 platforms: [website]
 github: ""
-demo: ""
+demo: "/demo/dify-long-content-agent"
 published: true
 ---
 
@@ -65,6 +65,6 @@ workflow:
   style-check, real code node for the loop control
 
 <DemoStatus
-  title="Demo to be added"
-  description="A Dify workflow replay (similar to deep-research-agent) is on the roadmap. The case study above explains the graph design; the YAML files ship in 案例2 工作流合集."
+  title="What the demo replays"
+  description="The interactive demo replays 循环扩充文本.yml on a sample story topic: a start node reads the word budget → the loop runs 文章扩充节点(deepseek) → 节点统计 len(history) → 条件分支 ≥ budget repeatedly → after exit, Tool-StyleChecker returns a JSON verdict. The loop, char counting, and exit condition are the real node behavior — no live Dify/DeepSeek calls."
 />

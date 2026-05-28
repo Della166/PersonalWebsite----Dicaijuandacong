@@ -10,7 +10,7 @@ excerpt: "扔一张 PDF 报表或者一张表格图：DeepSeek-OCR 把它读成�
 excerpt_en: "Drop in a PDF report or a table image: DeepSeek-OCR turns it into structured data, the FastAPI backend runs analysis, charts get auto-generated. OCR / analysis / visualization are three swappable layers."
 platforms: [website]
 github: ""
-demo: ""
+demo: "/demo/deepseek-ocr-data-analysis-agent"
 published: true
 ---
 
@@ -114,6 +114,6 @@ python -m vllm.entrypoints.openai.api_server \
 - **关注推理延迟**：vLLM 上线而不是裸 transformers
 
 <DemoStatus
-  title="Demo 待补"
-  description="上传样例 PDF → 看 OCR 结果 → 看图表 的引导式 sandbox 在 roadmap 上。这个案例页讲清了三层架构和每一层选型动机。"
+  title="Demo 真实材料对应"
+  description="互动 Demo 在一张样例财报表格上复演三层管线：ocr_service 解析出带坐标的单元格 → analysis_service 算 KPI + 标异常 → visualization_service 让 LLM 选图表类型再渲染。展示的是 core/ocr · core/analysis · core/visualization 每层真实行为，不调真实 vLLM/LLM。"
 />

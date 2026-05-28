@@ -149,6 +149,7 @@ export const projects: Project[] = [
     description_en: 'A Dify advanced-chat workflow that breaks long-form writing into a controllable iterative loop: outline → section-by-section expansion → style-checker tool.',
     category: 'agent',
     tags: ['Dify', 'DeepSeek', 'Workflow', 'Iteration'],
+    demo: '/demo/dify-long-content-agent',
     cover: '/projects/dify-long-content-agent/cover.svg',
   },
   {
@@ -159,6 +160,7 @@ export const projects: Project[] = [
     description_en: 'Drop in a PDF / table image: DeepSeek-OCR parses structured data, FastAPI runs analysis, charts auto-render. OCR / analysis / viz are three swappable layers.',
     category: 'document',
     tags: ['DeepSeek-OCR', 'vLLM', 'Data Analysis', 'Visualization', 'FastAPI'],
+    demo: '/demo/deepseek-ocr-data-analysis-agent',
     cover: '/projects/deepseek-ocr-data-analysis-agent/cover.svg',
   },
   {
@@ -169,6 +171,7 @@ export const projects: Project[] = [
     description_en: 'Fine-tuning a general VLM into a Chinese chart-VQA specialist using LlamaFactory and a zh-train chart dataset. The data-generation tool is a companion React + FastAPI project.',
     category: 'ml',
     tags: ['Multimodal', 'LlamaFactory', 'Qwen-VL', 'Chart VQA', 'Fine-tuning'],
+    demo: '/demo/multimodal-finetune-chart-vqa',
     cover: '/projects/multimodal-finetune-chart-vqa/cover.svg',
   },
   {
@@ -179,6 +182,7 @@ export const projects: Project[] = [
     description_en: 'An end-to-end short-video pipeline on Coze (ByteDance Kouzi) — text → image → video — with 5 interconnected workflows, each shipping as its own workflow zip.',
     category: 'agent',
     tags: ['Coze', 'Workflow', 'Image Generation', 'Video Generation', 'Multimodal'],
+    demo: '/demo/coze-multimodal-video-agent',
     cover: '/projects/coze-multimodal-video-agent/cover.svg',
   },
 ];

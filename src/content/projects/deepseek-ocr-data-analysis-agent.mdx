@@ -10,7 +10,7 @@ excerpt: "扔一张 PDF 报表或者一张表格图：DeepSeek-OCR 把它读成�
 excerpt_en: "Drop in a PDF report or a table image: DeepSeek-OCR turns it into structured data, the FastAPI backend runs analysis, charts get auto-generated. OCR / analysis / visualization are three swappable layers."
 platforms: [website]
 github: ""
-demo: ""
+demo: "/demo/deepseek-ocr-data-analysis-agent"
 published: true
 ---
 
@@ -63,6 +63,6 @@ continuous batching.
 - You care about **inference latency** — vLLM serving instead of raw transformers
 
 <DemoStatus
-  title="Demo to be added"
-  description="A guided sandbox (upload sample PDF → see OCR result → see chart) is on the roadmap. For now, this case study covers the layered design and why each layer choice matters."
+  title="What the demo replays"
+  description="The interactive demo replays the three-layer pipeline on a sample financial table: ocr_service parses cells with coordinates → analysis_service computes KPIs and flags anomalies → visualization_service lets the LLM pick the chart type, then renders it. It shows the real per-layer behavior of core/ocr · core/analysis · core/visualization — no live vLLM/LLM calls."
 />

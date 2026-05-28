@@ -10,7 +10,7 @@ excerpt: "LlamaFactory + 中文图表数据集 zh.train，把通用 VLM 微调�
 excerpt_en: "Fine-tuning a general VLM into a Chinese chart VQA specialist using LlamaFactory and a curated zh-train chart dataset. The data-generation tool is a companion React + FastAPI project; the whole pipeline is reusable."
 platforms: [website]
 github: ""
-demo: ""
+demo: "/demo/multimodal-finetune-chart-vqa"
 published: true
 ---
 
@@ -111,6 +111,6 @@ llamafactory-cli train \
 - 留在 **LlamaFactory 生态**里——跟 NL2SQL / 函数调用 / Qwen-VL RL 几个项目能组合复用
 
 <DemoStatus
-  title="Demo 待补"
-  description="「丢一张图表 → 看 Q&A」的交互式 demo 在 roadmap 上。这个案例页讲清了数据构造 + 训练 setup。"
+  title="Demo 真实材料对应"
+  description="互动 Demo 用同一张中文图表 + 同一个问题，对比通用 VLM 和微调后模型：通用模型读不准中文标签，微调模型给出精确标签 + 数值。微调答案取自 llamafactory_train.jsonl 的真实 assistant 目标，训练命令是真实 LlamaFactory 设置，浏览器里不跑模型。"
 />

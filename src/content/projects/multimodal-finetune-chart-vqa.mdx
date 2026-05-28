@@ -10,7 +10,7 @@ excerpt: "LlamaFactory + 中文图表数据集 zh.train，把通用 VLM 微调�
 excerpt_en: "Fine-tuning a general VLM into a Chinese chart VQA specialist using LlamaFactory and a curated zh-train chart dataset. The data-generation tool is a companion React + FastAPI project; the whole pipeline is reusable."
 platforms: [website]
 github: ""
-demo: ""
+demo: "/demo/multimodal-finetune-chart-vqa"
 published: true
 ---
 
@@ -80,6 +80,6 @@ llamafactory-cli train \
   (NL2SQL / function-calling / Qwen-VL RL)
 
 <DemoStatus
-  title="Demo to be added"
-  description="A chart VQA preview (drop in a chart image, see Q&A) is on the roadmap. The case study above covers the data construction + training setup."
+  title="What the demo replays"
+  description="The interactive demo takes the same Chinese chart + the same question and compares a general VLM with the fine-tuned model: the base model misreads Chinese labels, the fine-tuned one returns the exact label + number. The fine-tuned answers are the real assistant targets from llamafactory_train.jsonl, and the training command is the real LlamaFactory setup — no model runs in the browser."
 />
