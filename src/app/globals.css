@@ -705,7 +705,7 @@ html.light a:hover {
   height: auto;
 }
 
-/* 行内 code（不在 pre 里）*/
+/* 行内 code（不在 pre 里）—— 稍微加粗 + 绿色 mono 药丸，跟 strong（衬线 600 主色）保持区别 */
 .prose :not(pre) > code {
   background: var(--color-bg-card);
   color: var(--color-green-200);
@@ -713,6 +713,7 @@ html.light a:hover {
   border-radius: 0.35rem;
   font-family: var(--font-mono);
   font-size: 0.86em;
+  font-weight: 600;
   border: 1px solid color-mix(in srgb, var(--color-border-default) 60%, transparent);
 }
 
