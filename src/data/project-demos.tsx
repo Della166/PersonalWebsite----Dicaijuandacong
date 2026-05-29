@@ -1446,8 +1446,8 @@ export const projectDemos = {
       zh: '复演课程文档里的 XRI 交互链（手骨架 → 捏合 → 射线 → 抓取 → 戳 World-Space UI），带 Quest ⟷ Vision Pro 切换：设备/渲染层分叉（Meta XR SDK vs PolySpatial/Metal），但 XR Interaction Toolkit 交互层保持一致。',
     },
     localNote: {
-      en: 'Study-derived from the SpatialXR Unity video courses — there is no runnable Unity app. The courses are video-only (.sz = renamed MP4, no subtitles) + password-locked RAR; only 3 PDFs were readable. Component names (XRGrabInteractable / XR Poke Interactor / PolySpatial / Volume Camera, etc.) are taken verbatim from those PDFs; nothing beyond them is fabricated.',
-      zh: '从 SpatialXR Unity 视频课程整理——没有可运行的 Unity 应用。课程是纯视频（.sz 即改名 MP4、无字幕）+ 加密 RAR，只有 3 份 PDF 可读。组件名（XRGrabInteractable / XR Poke Interactor / PolySpatial / Volume Camera 等）原样取自 PDF；不臆造其他具体信息。',
+      en: 'This web demo visualizes the documented interaction flow; the runnable piece is a companion Unity 6 project (spatial-xr-interaction/, OpenXR + XRI). The layering comes from the SpatialXR video courses (video-only + locked RAR, 3 readable PDFs); component names are taken verbatim from those PDFs. The Unity code is authored from public Unity XR docs + that vocabulary and not yet compiled here — verify on open.',
+      zh: '这个网页 Demo 复演文档化的交互流程；可运行的是配套 Unity 6 工程（spatial-xr-interaction/，OpenXR + XRI）。分层思路来自 SpatialXR 视频课程（纯视频 + 加密 RAR，3 份可读 PDF），组件名原样取自 PDF。Unity 代码基于公开 Unity XR 文档 + 该词汇编写，尚未在本机编译——以打开后为准。',
     },
     whatToTry: {
       en: [

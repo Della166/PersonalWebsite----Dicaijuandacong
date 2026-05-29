@@ -6,8 +6,8 @@ category: project
 tags: ["OpenXR", "XR Interaction Toolkit", "Meta XR SDK", "PolySpatial", "Unity", "Vision Pro"]
 lang: both
 cover: "/projects/cross-platform-spatial-interaction/cover.svg"
-excerpt: "从 SpatialXR Unity 视频课程整理的研究型案例：把 Quest 和 Vision Pro 的 XR 交互归到一条统一链路——底层 OpenXR，设备层分叉（Meta XR SDK vs PolySpatial/Metal），但上面的 XR Interaction Toolkit 保持一致。非已上线 Unity 应用。"
-excerpt_en: "A study-derived case from the SpatialXR Unity video courses: unify XR interaction across Quest and Vision Pro — OpenXR at the base, a forking device layer (Meta XR SDK vs PolySpatial/Metal), but a constant XR Interaction Toolkit on top. Not a shipped Unity app."
+excerpt: "把 Quest 和 Vision Pro 的 XR 交互归到一条统一链路——底层 OpenXR，设备层分叉（Meta XR SDK vs PolySpatial/Metal），但上面的 XR Interaction Toolkit 保持一致。配套一个可在 Unity 6 打开、构建到设备的真实 Unity 工程（OpenXR + XRI）。"
+excerpt_en: "Unify XR interaction across Quest and Vision Pro — OpenXR at the base, a forking device layer (Meta XR SDK vs PolySpatial/Metal), but a constant XR Interaction Toolkit on top. Ships a real Unity project (OpenXR + XRI) you open in Unity 6 and build to device."
 platforms: [website]
 github: ""
 demo: "/demo/cross-platform-spatial-interaction"
@@ -15,7 +15,7 @@ published: true
 ---
 
 <Callout type="info">
-  这是一篇<strong>研究型案例</strong>，材料来自 SpatialXR（广州虚境起源）的 Unity 空间计算视频课程（Meta Quest / Apple Vision Pro 两套）。课程是<strong>纯视频（.sz 即改名 MP4、无字幕）+ 加密 RAR 素材</strong>，只有 3 份 PDF 可读，给出了真实的 SDK / 组件词汇。所以这里梳理的是文档化的<strong>交互流程与分层架构</strong>，<strong>不是一个跑得起来的 Unity 应用</strong>。
+  分层思路来自 SpatialXR（广州虚境起源）的 Unity 空间计算视频课程（Meta Quest / Apple Vision Pro 两套）。课程是<strong>纯视频（.sz 即改名 MP4、无字幕）+ 加密 RAR 素材</strong>，只有 3 份 PDF 可读、给出真实 SDK / 组件词汇——所以下面的<strong>交互流程与分层架构</strong>是从文档梳理的。在此之上，<strong>另配了一个可运行的 Unity 工程</strong>（OpenXR + XRI，Quest-first，含 Vision Pro / PolySpatial 路径说明），见下方「配套 Unity 工程」。
 </Callout>
 
 ## 核心判断：设备层会分叉，交互层不该分叉
@@ -81,14 +81,24 @@ published: true
 
 互动 Demo 把这条链路做成可点的复演，并带一个 **Quest ⟷ Vision Pro 切换**：切换时只有"设备 / 渲染层"那一格换 SDK 名，"OpenXR"和"XRI"两格保持绿色（一致）——直观展示分叉点在哪、可移植性来自哪。
 
+## 配套 Unity 工程（可运行）
+
+网页 Demo 是交互流程的可视化复演；真正可跑的是一个独立的 **Unity 6 工程**：`spatial-xr-interaction/`。
+
+- **代码即交互**：`SpatialInteractionBootstrap` 运行时生成两个可抓方块（Kinematic vs Velocity-Tracking）+ 一个 World-Space 戳按钮；`HandPinchDetector` 用 XR Hands 做拇指↔食指捏合；`PlatformLayer` 检测 Quest / Vision Pro / 编辑器并打日志，标出「分叉点」
+- **跨平台靠分层**：OpenXR + XRI 的 Starter Assets 提供 XR Origin 与 interactor，工程代码只写「要交互的内容」，不为平台改写交互
+- **怎么跑**：Unity 6 打开 → 导入 XRI Starter Assets 样例 → XR Plug-in Management 开 OpenXR + Meta Quest feature group → 装上 bootstrap 脚本 → 编辑器内用 XR Device Simulator 试玩，或 Build And Run 到 Quest（Android）；Vision Pro 走 PolySpatial（README 有 opt-in 步骤）
+
+> 诚实说明：工程代码基于**公开 Unity XR 文档 + 课程文档化的组件词汇**编写（课程纯视频、无源码），且**尚未在本机 Unity 里编译过**（本机只装了 Unity Hub、未装 Editor）——以打开后为准，XRI 小版本可能需个别 API 名微调。README 里都写清楚了。
+
 ## 价值点
 
 - **跨平台 XR 架构判断力**：知道哪些该收敛（OpenXR + XRI），哪些必然分叉（Meta XR SDK vs PolySpatial/Metal）
 - **OpenXR 可移植性**：以标准为地基而不是绑死单一厂商
 - **Apple 空间计算深度**：理解 visionOS 的 **PolySpatial（RealityKit）vs Metal** 两种渲染模式之分，以及 `Volume Camera` / `VisionOSHoverEffect` / `VisionOSGroundingShadow` 这些 Apple 专属反馈组件
-- **诚实边界**：明确这是从纯视频课程整理的研究复演，不冒充已上线的 Unity 应用
+- **从文档到能跑的工程**：把视频课文档化的架构落成一个真实可构建的 Unity 6 工程（OpenXR + XRI），而不是停在 PPT 复述
 
 <DemoStatus
   title="Demo 真实材料对应"
-  description="互动 Demo 复演课程文档里的 XRI 交互链（手骨架 → 捏合 → 射线 → 抓取 → 戳 World-Space UI），并带 Quest ⟷ Vision Pro 切换，展示设备/渲染层在哪里分叉、XRI 层为何保持一致。组件名（XRGrabInteractable / XR Poke Interactor / PolySpatial / Volume Camera 等）均取自课程 PDF。这是从纯视频课程（无可运行 Unity 工程）整理的研究复演，不是已上线应用。"
+  description="网页互动 Demo 复演课程文档里的 XRI 交互链（手骨架 → 捏合 → 射线 → 抓取 → 戳 World-Space UI），带 Quest ⟷ Vision Pro 切换。组件名（XRGrabInteractable / XR Poke Interactor / PolySpatial / Volume Camera 等）取自课程 PDF。真正可运行的是配套的 Unity 6 工程（spatial-xr-interaction/，OpenXR + XRI）——代码基于公开 Unity XR 文档 + 课程组件词汇编写（课程纯视频无源码），尚未在本机编译，以打开 Unity 后为准。"
 />

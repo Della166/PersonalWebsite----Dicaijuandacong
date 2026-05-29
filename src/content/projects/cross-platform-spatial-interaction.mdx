@@ -15,7 +15,7 @@ published: true
 ---
 
 <Callout type="info">
-  This is a <strong>study-derived case</strong>, built from the SpatialXR (广州虚境起源) Unity spatial-computing video courses (the Meta Quest and Apple Vision Pro tracks). The courses are <strong>video-only (.sz = renamed MP4, no subtitles) + password-locked RAR materials</strong>; only 3 PDFs were readable, which supplied the real SDK / component vocabulary. So what follows is the documented <strong>interaction flow and layered architecture</strong> — <strong>not a runnable Unity app</strong>.
+  The layering approach comes from the SpatialXR (广州虚境起源) Unity spatial-computing video courses (the Meta Quest and Apple Vision Pro tracks). The courses are <strong>video-only (.sz = renamed MP4, no subtitles) + password-locked RAR materials</strong>; only 3 PDFs were readable, which supplied the real SDK / component vocabulary — so the <strong>interaction flow and layered architecture</strong> below are documented from those. On top of that, this <strong>ships a runnable Unity project</strong> (OpenXR + XRI, Quest-first, with a Vision Pro / PolySpatial path) — see "Companion Unity project" below.
 </Callout>
 
 ## The core judgment: the device layer forks, the interaction layer should not
@@ -81,14 +81,24 @@ raw hand joints
 
 The interactive demo makes this chain a clickable replay with a **Quest ⟷ Vision Pro toggle**: toggling swaps only the "device / render layer" cell's SDK name; the "OpenXR" and "XRI" cells stay green (constant) — making it obvious where the fork is and where portability comes from.
 
+## Companion Unity project (runnable)
+
+The web demo visualizes the interaction flow; the actually-runnable piece is a standalone **Unity 6 project**: `spatial-xr-interaction/`.
+
+- **Code is the interaction**: `SpatialInteractionBootstrap` spawns, at runtime, two grabbables (Kinematic vs Velocity-Tracking) + a World-Space poke button; `HandPinchDetector` does thumb↔index pinch via XR Hands; `PlatformLayer` detects Quest / Vision Pro / Editor and logs the fork point.
+- **Cross-platform via layering**: OpenXR + the XRI Starter Assets provide the XR Origin and interactors; the project code only writes the *content to interact with*, never per-platform interaction code.
+- **How to run**: open in Unity 6 → import the XRI Starter Assets sample → enable OpenXR + the Meta Quest feature group in XR Plug-in Management → attach the bootstrap script → play in-editor via the XR Device Simulator, or Build And Run to a Quest (Android). Vision Pro goes through PolySpatial (opt-in steps in the README).
+
+> Honest note: the project code is authored from **public Unity XR docs + the course's documented component vocabulary** (the course is video-only, no source), and has **not yet been compiled in a Unity Editor on this machine** (only Unity Hub is installed, no Editor) — verify on open; an XRI minor-version API name may need a tweak. The README spells this out.
+
 ## What this signals
 
 - **Cross-platform XR architecture judgment**: knowing what should converge (OpenXR + XRI) and what must fork (Meta XR SDK vs PolySpatial/Metal)
 - **OpenXR portability**: building on the standard instead of locking to a single vendor
 - **Depth on Apple spatial computing**: understanding visionOS's **PolySpatial (RealityKit) vs Metal** render-mode split, plus Apple-specific feedback components like `Volume Camera` / `VisionOSHoverEffect` / `VisionOSGroundingShadow`
-- **Honest scoping**: clear that this is a study-derived replay from a video-only course, not a pretend shipped Unity app
+- **From docs to a buildable project**: turning a video course's documented architecture into a real, buildable Unity 6 project (OpenXR + XRI), not stopping at slide recitation
 
 <DemoStatus
   title="What the demo replays"
-  description="The interactive demo replays the documented XRI interaction chain (hand-skeleton → pinch → ray → grab → poke World-Space UI), with a Quest ⟷ Vision Pro toggle showing where the device/render layer forks and why the XRI layer stays constant. Component names (XRGrabInteractable / XR Poke Interactor / PolySpatial / Volume Camera, etc.) are taken from the course PDFs. This is a study-derived replay from a video-only course (no runnable Unity project), not a shipped app."
+  description="The web demo replays the documented XRI interaction chain (hand-skeleton → pinch → ray → grab → poke World-Space UI), with a Quest ⟷ Vision Pro toggle showing where the device/render layer forks and why XRI stays constant. Component names (XRGrabInteractable / XR Poke Interactor / PolySpatial / Volume Camera, etc.) are from the course PDFs. The actually-runnable piece is the companion Unity 6 project (spatial-xr-interaction/, OpenXR + XRI) — code authored from public Unity XR docs + the course vocabulary (course is video-only, no source), not yet compiled here, so verify on open."
 />
