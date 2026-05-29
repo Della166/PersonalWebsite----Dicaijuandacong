@@ -94,7 +94,7 @@ export default function Projects() {
                 tone: 'neutral' as const,
                 external: true,
               },
-            ];
+            ].filter((action) => action.href);
 
             return (
               <motion.div
