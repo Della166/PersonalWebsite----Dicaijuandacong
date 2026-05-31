@@ -1,23 +1,23 @@
 'use client';
 
-import { Fragment } from 'react';
-import { motion } from 'framer-motion';
-import { wordReveal, fadeUp } from '@/lib/motion';
+import { motion, type Variants } from 'framer-motion';
+import SplitText from './SplitText';
+import { fadeUp } from '@/lib/motion';
 
 interface SectionTitleProps {
   title: string;
   subtitle?: string;
+  /** 拆分粒度：'char' 字符级揭示（默认），'word' 词级 */
+  splitBy?: 'word' | 'char';
 }
 
-/** 标题容器 —— 词逐个 reveal，副标题与装饰条随后浮现 */
-const container = {
+/** 外层容器 —— 标题独立 inView 自驱，subtitle / bar 在标题展开过半后接力浮现 */
+const container: Variants = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.07, delayChildren: 0.05 } },
+  show: { transition: { staggerChildren: 0.12, delayChildren: 0.3 } },
 };
 
-export default function SectionTitle({ title, subtitle }: SectionTitleProps) {
-  const words = title.split(' ');
-
+export default function SectionTitle({ title, subtitle, splitBy = 'char' }: SectionTitleProps) {
   return (
     <motion.div
       variants={container}
@@ -27,16 +27,12 @@ export default function SectionTitle({ title, subtitle }: SectionTitleProps) {
       className="text-center mb-12"
     >
       <h2 className="text-3xl md:text-4xl font-bold text-[var(--color-text-primary)] mb-3">
-        {words.map((word, i) => (
-          <Fragment key={i}>
-            <span className="inline-block overflow-hidden align-top">
-              <motion.span variants={wordReveal} className="inline-block">
-                {word}
-              </motion.span>
-            </span>
-            {i < words.length - 1 ? ' ' : ''}
-          </Fragment>
-        ))}
+        <SplitText
+          text={title}
+          splitBy={splitBy}
+          trigger="inView"
+          stagger={splitBy === 'char' ? 0.025 : 0.07}
+        />
       </h2>
       {subtitle && (
         <motion.p

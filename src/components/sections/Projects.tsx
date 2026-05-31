@@ -99,7 +99,7 @@ export default function Projects() {
             return (
               <motion.div
                 key={project.title}
-                className="h-full"
+                className="group h-full"
                 layout
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -116,10 +116,10 @@ export default function Projects() {
                             alt={locale === 'zh' ? project.title : project.title_en}
                             fill
                             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                            className="object-cover"
+                            className="object-cover transition-transform duration-[700ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.06]"
                           />
                         ) : (
-                          <div className={`relative h-full w-full bg-gradient-to-br ${categoryCoverStyles[project.category]}`}>
+                          <div className={`relative h-full w-full bg-gradient-to-br ${categoryCoverStyles[project.category]} transition-transform duration-[700ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.04]`}>
                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.14),transparent_42%),radial-gradient(circle_at_bottom_right,rgba(127,188,140,0.18),transparent_45%)]" />
                             <div className="relative flex h-full flex-col justify-between p-5">
                               <div className="flex items-start justify-between gap-3">
@@ -164,7 +164,7 @@ export default function Projects() {
                     );
                   })()}
 
-                  <h3 className="mb-2 text-lg font-bold leading-[1.2] tracking-[-0.02em] text-[var(--color-text-primary)]">
+                  <h3 className="mb-2 text-lg font-bold leading-[1.2] tracking-[-0.02em] text-[var(--color-text-primary)] transition-[transform,color] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-1.5 group-hover:text-[var(--color-green-300)]">
                     {locale === 'zh' ? project.title : project.title_en}
                   </h3>
                   <p className="mb-4 max-w-[42ch] flex-grow text-[15px] font-medium leading-[1.65] tracking-[-0.006em] text-[var(--color-text-soft)]">

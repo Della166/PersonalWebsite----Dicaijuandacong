@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import SectionTitle from '@/components/ui/SectionTitle';
 import GlassCard from '@/components/ui/GlassCard';
+import SkillsMarquee from '@/components/ui/SkillsMarquee';
 import { skillClusters, skillHighlight } from '@/data/skills';
 import { staggerContainer, fadeUp } from '@/lib/motion';
 
@@ -85,6 +86,17 @@ export default function Skills() {
             </GlassCard>
           </motion.div>
         ))}
+      </motion.div>
+
+      {/* 技术栈跑马灯 —— 双行反向流动，scroll velocity 反应，hover 暂停 */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: '-60px' }}
+        transition={{ duration: 0.6 }}
+        className="mt-10"
+      >
+        <SkillsMarquee items={skillClusters.flatMap((c) => c.items)} />
       </motion.div>
     </section>
   );

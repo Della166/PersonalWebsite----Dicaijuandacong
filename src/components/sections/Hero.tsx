@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import AnimatedBackground from '@/components/ui/AnimatedBackground';
 import Magnetic from '@/components/ui/Magnetic';
+import SplitText from '@/components/ui/SplitText';
 import { staggerContainer, fadeUp } from '@/lib/motion';
 
 const identityTags = [
@@ -27,13 +28,20 @@ export default function Hero() {
         animate="show"
         className="relative z-10 text-center px-4 max-w-4xl mx-auto"
       >
-        <motion.h1 variants={fadeUp} className="text-5xl sm:text-6xl md:text-7xl font-extrabold mb-4">
-          <span className="text-[var(--color-text-primary)]">{t('greeting')}</span>
+        <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold mb-4">
+          <motion.span variants={fadeUp} className="inline-block text-[var(--color-text-primary)]">
+            {t('greeting')}
+          </motion.span>
           <br />
-          <span className="hero-name-shimmer bg-gradient-to-r from-[var(--color-green-300)] via-[var(--color-amber-300)] to-[var(--color-green-300)] bg-clip-text text-transparent">
-            {t('name')}
-          </span>
-        </motion.h1>
+          <SplitText
+            text={t('name')}
+            splitBy="char"
+            trigger="parent"
+            stagger={0.045}
+            delayChildren={0.05}
+            charClassName="hero-name-shimmer bg-gradient-to-r from-[var(--color-green-300)] via-[var(--color-amber-300)] to-[var(--color-green-300)] bg-clip-text text-transparent"
+          />
+        </h1>
 
         <motion.p
           variants={fadeUp}
