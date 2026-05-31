@@ -116,10 +116,10 @@ export default function Projects() {
                             alt={locale === 'zh' ? project.title : project.title_en}
                             fill
                             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                            className="object-cover transition-transform duration-[700ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.15]"
+                            className="object-cover transition-transform duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.3]"
                           />
                         ) : (
-                          <div className={`relative h-full w-full bg-gradient-to-br ${categoryCoverStyles[project.category]} transition-transform duration-[700ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.1]`}>
+                          <div className={`relative h-full w-full bg-gradient-to-br ${categoryCoverStyles[project.category]} transition-transform duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.22]`}>
                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.14),transparent_42%),radial-gradient(circle_at_bottom_right,rgba(127,188,140,0.18),transparent_45%)]" />
                             <div className="relative flex h-full flex-col justify-between p-5">
                               <div className="flex items-start justify-between gap-3">
