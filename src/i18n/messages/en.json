@@ -12,20 +12,20 @@
   "hero": {
     "greeting": "Hi, I'm",
     "name": "Fuling Chen",
-    "tagline": "AI Engineer · Full-Stack Developer · Content Creator",
+    "tagline": "AI Engineer · Full-Stack Builder · Content Creator",
     "description": "Focused on video generation, image generation, and multimodal AI research. Also a passionate content creator making AI-powered short films.",
     "cta_projects": "View Projects",
     "cta_contact": "Contact Me"
   },
   "about": {
     "title": "About Me",
-    "subtitle": "AI Researcher × Full-Stack Engineer × Content Creator",
+    "subtitle": "AI Researcher × Full-Stack Builder × Content Creator",
     "career_direction": "Career Direction",
     "career_roles": "AI Engineer / Machine Learning Engineer",
     "research_title": "Research Areas",
     "research_areas": ["Video Models & Generation", "Image Generation", "Temporal Models", "Multimodal Learning"],
     "identity_title": "Triple Identity",
-    "identity_dev": "Full-Stack Developer",
+    "identity_dev": "Full-Stack Builder",
     "identity_dev_desc": "Product design, algorithm R&D, engineering, testing & deployment — end-to-end capability",
     "identity_researcher": "AI Researcher",
     "identity_researcher_desc": "Deep dive into video generation and multimodal domains, tracking cutting-edge papers",

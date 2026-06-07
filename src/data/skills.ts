@@ -20,9 +20,9 @@ export const skillHighlight: SkillHighlight = {
   label: '当前求职技能画像',
   label_en: 'Current Skill Positioning',
   summary:
-    '面向 Applied AI / GenAI 的全栈 AI 工程师，重点覆盖 LLM 微调、Agent 系统、RAG 架构与生产化后端能力，并以因果推断与效果评估作为差异化优势。',
+    '面向 Applied AI / GenAI 的 Full-Stack Builder，重点覆盖 LLM 微调、Agent 系统、RAG 架构与生产化后端能力，并以因果推断与效果评估作为差异化优势。',
   summary_en:
-    'Full-stack AI Engineer focused on LLM fine-tuning, agent systems, RAG architecture, and production-oriented backend delivery, differentiated by causal inference and measurement skills.',
+    'Full-Stack Builder focused on LLM fine-tuning, agent systems, RAG architecture, and production-oriented backend delivery, differentiated by causal inference and measurement skills.',
   leadWith: [
     'LangGraph',
     'MCP Protocol',

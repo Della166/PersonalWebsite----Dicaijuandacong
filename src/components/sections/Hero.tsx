@@ -9,7 +9,7 @@ import SplitText from '@/components/ui/SplitText';
 import { staggerContainer, fadeUp } from '@/lib/motion';
 
 const identityTags = [
-  { zh: '全栈开发者', en: 'Full-Stack Dev', icon: '⚡' },
+  { zh: 'Full-Stack Builder', en: 'Full-Stack Builder', icon: '⚡' },
   { zh: 'AI 研究者', en: 'AI Researcher', icon: '🧠' },
   { zh: '内容创作者', en: 'Creator', icon: '🎬' },
 ];

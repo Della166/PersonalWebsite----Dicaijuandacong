@@ -12,20 +12,20 @@
   "hero": {
     "greeting": "你好，我是",
     "name": "陈符灵",
-    "tagline": "AI 工程师 · 全栈开发者 · 内容创作者",
+    "tagline": "AI 工程师 · Full-Stack Builder · 内容创作者",
     "description": "专注于视频生成、图像生成与多模态 AI 研究，同时是一个热爱用 AI 创作短片的全能博主。",
     "cta_projects": "查看项目",
     "cta_contact": "联系我"
   },
   "about": {
     "title": "关于我",
-    "subtitle": "AI 研究者 × 全栈工程师 × 内容创作者",
+    "subtitle": "AI 研究者 × Full-Stack Builder × 内容创作者",
     "career_direction": "求职方向",
     "career_roles": "AI Engineer / Machine Learning Engineer",
     "research_title": "研究领域",
     "research_areas": ["视频模型与视频生成", "图像生成", "时序模型", "多模态学习"],
     "identity_title": "三重身份",
-    "identity_dev": "全栈开发者",
+    "identity_dev": "Full-Stack Builder",
     "identity_dev_desc": "产品设计、算法研发、工程开发、测试部署，全链路能力",
     "identity_researcher": "AI 研究者",
     "identity_researcher_desc": "深耕视频生成与多模态领域，追踪前沿论文与技术",
