@@ -14,7 +14,7 @@ export interface Stat {
 
 export const stats: Stat[] = [
   { value: 20, suffix: '+', label: '开源项目', label_en: 'Projects' },
-  { value: 3, suffix: '+', label: '年开发经验', label_en: 'Years Coding' },
+  { value: 12, suffix: '+', label: '年开发经验', label_en: 'Years Coding' },
   { value: 100, suffix: '+', label: 'GitHub Stars', label_en: 'GitHub Stars' },
   { value: 30, suffix: '+', label: '技术文章', label_en: 'Articles' },
 ];
